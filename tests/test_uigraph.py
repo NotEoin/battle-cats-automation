@@ -132,3 +132,32 @@ def test_find_buttons_keeps_controls_and_drops_scattered_gold():
     assert hit(0.295, 0.78), "Exchange"
     assert not any(b.h > 0.5 for b in buttons), "backdrop merged into a button"
     assert not hit(0.13, 0.035), "title lettering taken for a button"
+
+
+def test_a_similar_title_does_not_pass_for_another():
+    """Stage Select is not Storage, though "Stage S" and "Storage" are 83% alike."""
+    from bcgacha.uigraph import TITLE_MATCH, title_match
+
+    assert title_match("Storage", "Stage Select") < TITLE_MATCH
+    assert title_match("Take Back Earth!", "Back") < TITLE_MATCH
+    # A card holds only its own name: the Back card is not a chapter called "... Back ...".
+    assert title_match("Back", "The Ancients Arise: Take Back Earth!", within=False) < TITLE_MATCH
+    # Real readings still match: exact, OCR-mangled, and with a stray word.
+    assert title_match("Cat Base", "Cat Base") >= TITLE_MATCH
+    assert title_match("Revival of Bahamut-Cat", "Revival of Bahamut, Cat") >= TITLE_MATCH
+    assert title_match("Rare Capsules", "Rare Capsules 3") >= TITLE_MATCH
+
+
+def test_a_notice_is_read_with_the_extra_words_on_its_line():
+    """Legend Stages' notice reads "Stage Clear Reward (13 more)"."""
+    import numpy as np
+
+    graph = UIGraph.load(carousels=False)
+
+    class NoticeReads:
+        def __call__(self, crop):
+            return [([[0, 0], [300, 0], [300, 30], [0, 30]], "Stage Clear Reward (13 more)", 0.9)], None
+
+    graph._ocr = NoticeReads()
+    names = [n for _, n in graph.candidates(np.zeros((1170, 2532, 3), np.uint8), title="")]
+    assert "stage_reward_notice" in names

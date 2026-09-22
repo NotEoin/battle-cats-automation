@@ -95,3 +95,24 @@ def test_ocr_pieces_are_read_in_line_order():
 
     frame = np.zeros((1170, 2532, 3), np.uint8)
     assert graph.read_title(frame, carousel.CARD_NAME_BOX) == "The Battle Cats Rising"
+
+
+def test_the_back_card_does_not_claim_a_chapter_with_back_in_its_name(monkeypatch):
+    """Into The Future's Chapter 3 is "The Ancients Arise: Take Back Earth!"."""
+    import numpy as np
+
+    from bcgacha import vision
+
+    # Every anchor present, so only the card's name can tell the screens apart.
+    monkeypatch.setattr(vision, "match", lambda frame, anchor: 1.0)
+    graph = _graph()
+
+    class CardReads:
+        def __call__(self, crop):
+            return [([[0, 0], [300, 0], [300, 30], [0, 30]],
+                     "The Ancients Arise: Take Back Earth!", 0.9)], None
+
+    graph._ocr = CardReads()
+    names = [n for _, n in graph.candidates(np.zeros((1170, 2532, 3), np.uint8), title="")]
+    assert "chapter:into_the_future:3" in names
+    assert "chapter_back_card" not in names

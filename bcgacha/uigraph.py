@@ -36,6 +36,34 @@ GRAPH_FILE = Path(__file__).resolve().parent.parent / "data" / "ui_graph.json"
 TITLE_BOX = (0.015, 0.005, 0.260, 0.060)
 TITLE_SCALE = 2
 TITLE_MATCH = 78
+# A title found inside a longer reading must line up with whole words and
+# match this closely. Loosely, "Storage" passes for the "Stage S" of
+# "Stage Select" at 83.
+TITLE_PART_MATCH = 90
+
+
+def title_match(expected: str, read: str, within: bool = True) -> float:
+    """How well an OCR reading shows `expected`, 0..100.
+
+    The whole reading is compared first. Failing that, and when `within`
+    allows it, the title may sit among other words -- but only as whole
+    words, closely, and never the reverse: "Back" read off a card is not
+    "Take Back Earth!". A carousel card holds nothing but its name, so card
+    screens pass within=False: the Back card must not claim "The Ancients
+    Arise: Take Back Earth!". A notice's line may carry more, and keeps it.
+    """
+    expected, read = expected.lower(), read.lower()
+    whole = fuzz.ratio(expected, read)
+    if whole >= TITLE_MATCH or not within:
+        return whole
+    words, n = read.split(), len(expected.split())
+    best = 0.0
+    for k in (n - 1, n, n + 1):
+        if k < 1 or k > len(words) or k == len(words):
+            continue
+        for i in range(len(words) - k + 1):
+            best = max(best, fuzz.ratio(expected, " ".join(words[i:i + k])))
+    return best if best >= TITLE_PART_MATCH else whole
 
 
 @dataclass(frozen=True)
@@ -234,12 +262,8 @@ class UIGraph:
             if screen.title:
                 title = text_in(screen.title_box or TITLE_BOX)
                 if title:
-                    expected, read = screen.title.lower(), title.lower()
-                    match = fuzz.ratio(expected, read)
-                    # Look for the title inside a longer reading, never the
-                    # reverse: "Back" is not "Take Back Earth!".
-                    if len(read) >= len(expected):
-                        match = max(match, fuzz.partial_ratio(expected, read))
+                    match = title_match(screen.title, title,
+                                        within=screen.parent is None)
                     if match >= TITLE_MATCH:
                         score += match
                     elif needs_title:
