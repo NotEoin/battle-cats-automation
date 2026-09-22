@@ -43,6 +43,9 @@ STORAGE_MARGIN = 4
 # dark panel and the recogniser misses it entirely at native size.
 RESULT_NAME_BOX = (0.320, 0.772, 0.690, 0.858)
 RESULT_NAME_SCALE = 3
+# How close the reading must be to one of the expected cat's form names. Loose
+# on purpose: this is here to catch a wholly different cat, not to grade OCR.
+VERIFY_SCORE = 68
 
 
 class Mode(str, Enum):
@@ -207,7 +210,9 @@ class Runner:
         """
         import cv2
 
-        from .catindex import clean_name, match_name
+        from rapidfuzz import fuzz
+
+        from .catindex import clean_name
 
         frame = cv2.imread(str(frame_path))
         if frame is None:
@@ -231,9 +236,20 @@ class Runner:
         forms = [f for f in forms if f]
         if not forms:
             return True, "no name on record"
-        hit = match_name(raw, forms)
-        if hit:
-            return True, hit
+        # Score against this cat's own forms only, and accept the best of them.
+        # match_name's margin rule is wrong here: every candidate is a form of
+        # the SAME unit, so being unsure which form was shown does not mean the
+        # roll was wrong. "Rich Cat III" coming back as 'Rich Cat "' is an OCR
+        # slip, not a desync, and stopping the run over it would be worse than
+        # the drift this check exists to catch.
+        # fuzz.ratio, not WRatio: WRatio's partial matching scored a mangled
+        # "Rich Cat III" higher against "Sword Master Cat" than against the
+        # right unit, which would have let a genuine desync through.
+        best = max(
+            (fuzz.ratio(raw.lower(), form.lower()), form) for form in forms
+        )
+        if best[0] >= VERIFY_SCORE:
+            return True, best[1]
         return False, raw
 
     def advance_state(self, step) -> None:

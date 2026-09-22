@@ -261,3 +261,31 @@ def test_deeper_lookahead_keeps_the_uber_route():
         return None
 
     assert run(6) == "46A"
+
+
+def test_verification_tolerates_an_ocr_slip_but_not_a_wrong_cat():
+    """The check must survive mangled text without waving through a desync.
+
+    "Rich Cat III" comes back from OCR as 'Rich Cat "'. That must still verify,
+    while a genuinely different unit must not.
+    """
+    from rapidfuzz import fuzz
+
+    from bcgacha.runner import VERIFY_SCORE
+
+    ds = load()
+
+    def forms_of(name):
+        for entry in ds.cats.values():
+            names = [n for n in (entry.get("name") or []) if n]
+            if name in names:
+                return names
+        raise AssertionError(name)
+
+    def score(raw, target):
+        return max(fuzz.ratio(raw.lower(), f.lower()) for f in forms_of(target))
+
+    assert score('rich cat "', "Rich Cat III") >= VERIFY_SCORE
+    assert score("Viking Cat", "Viking Cat") >= VERIFY_SCORE
+    assert score('rich cat "', "Swordsman Cat") < VERIFY_SCORE
+    assert score("Bath Cat", "Rich Cat III") < VERIFY_SCORE
