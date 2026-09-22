@@ -216,6 +216,7 @@ def cmd_plan(args) -> int:
 def cmd_run(args) -> int:
     from pathlib import Path
 
+    from .bannerpick import BannerPicker
     from .runner import Mode, Runner
     from .safety import SafeTapper
     from .session import DeviceSession
@@ -228,7 +229,12 @@ def cmd_run(args) -> int:
     human = Humaniser(scale=args.speed, enabled=not args.no_humanise)
     with DeviceSession() as session:
         tapper = SafeTapper(session, capture_dir=Path(args.captures), humaniser=human)
-        runner = Runner(tapper, ds, account, planner, capture_dir=Path(args.captures))
+        picker = None if args.pin_banner else BannerPicker(session, ds)
+        runner = Runner(
+            tapper, ds, account, planner,
+            capture_dir=Path(args.captures),
+            picker=picker, pin_banner=args.pin_banner,
+        )
         report = runner.run(mode=Mode(args.mode), max_tickets=args.max_tickets)
     account.save()
     print(f"\nrolled {report.rolled}, tickets spent {report.tickets_spent}, "
@@ -287,6 +293,8 @@ def main(argv=None) -> int:
     p.add_argument("--speed", type=float, default=1.0, help="delay multiplier")
     p.add_argument("--no-humanise", action="store_true")
     p.add_argument("--captures", default="captures")
+    p.add_argument("--pin-banner", action="store_true",
+                   help="never switch banners; roll on whatever is selected")
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("ubers", help="which upcoming positions yield an uber")

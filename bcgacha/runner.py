@@ -19,6 +19,7 @@ from . import vision
 from .data import LEGEND, UBER, Dataset
 from .gacha import next_position
 from .layout import CAPSULE_SCREEN, RESULT_SCREEN, SENT_TO_STORAGE_SCREEN, STORAGE_SCREEN
+from .bannerpick import BannerPicker
 from .planner import PLATINUM_TICKET, Plan, Planner
 from .roller import RollAborted
 from .safety import SafeTapper, UnsafeTap
@@ -50,12 +51,18 @@ class Runner:
         account: Account,
         planner: Planner,
         capture_dir: Path | None = None,
+        picker: BannerPicker | None = None,
+        pin_banner: bool = False,
     ):
         self.tapper = tapper
         self.dataset = dataset
         self.account = account
         self.planner = planner
         self.capture_dir = Path(capture_dir) if capture_dir else None
+        self.picker = picker
+        # When the carousel cannot be driven, stay put and roll where we are
+        # rather than silently rolling on the wrong banner.
+        self.pin_banner = pin_banner
 
     # -- screen helpers -----------------------------------------------------
 
@@ -177,6 +184,21 @@ class Runner:
                 break
 
             frame = self.to_capsule()
+
+            if self.picker is not None and not self.pin_banner:
+                wanted = next(
+                    (b for b in self.planner.banners if b.key == step.banner_key), None
+                )
+                if wanted is not None:
+                    current = self.picker.identify(frame, self.planner.banners)
+                    if current is None or current.key != wanted.key:
+                        if not self.picker.select(wanted, self.planner.banners):
+                            report.stopped_because = (
+                                f"could not switch to {wanted.name[:45]}"
+                            )
+                            break
+                        frame = self.to_capsule()
+
             tickets = vision.read_counter(frame, "tickets", vision.DigitAtlas())
             if tickets is not None and tickets < 1:
                 report.stopped_because = "out of rare tickets"
