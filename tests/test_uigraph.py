@@ -4,7 +4,12 @@ These are the properties that make position-free navigation work. Each one
 corresponds to a failure the roll loop actually hit.
 """
 
-from bcgacha.uigraph import UIGraph
+from pathlib import Path
+
+import cv2
+import pytest
+
+from bcgacha.uigraph import UIGraph, find_buttons
 
 
 def _graph():
@@ -113,3 +118,20 @@ def test_convergent_routes_are_distinct_buttons():
         # identified by the action rather than by where it would be tapped.
         controls = {t.action or (round(t.x, 2), round(t.y, 2)) for t in edges}
         assert len(controls) == len(edges), f"{src} -> {dst} repeats a control"
+
+
+def test_find_buttons_keeps_controls_and_drops_scattered_gold():
+    """The result screen's three controls survive; the backdrop and title do not."""
+    path = Path(__file__).resolve().parent / "fixtures" / "result_viking_cat.png"
+    if not path.exists():
+        pytest.skip("screenshots are machine-local (*.png is git-ignored)")
+    buttons = find_buttons(cv2.imread(str(path)))
+
+    def hit(x, y):
+        return any(b.left <= x <= b.left + b.w and b.top <= y <= b.top + b.h for b in buttons)
+
+    assert hit(0.7355, 0.8139), "Ok"
+    assert hit(0.223, 0.78), "Use now"
+    assert hit(0.295, 0.78), "Exchange"
+    assert not any(b.h > 0.5 for b in buttons), "backdrop merged into a button"
+    assert not hit(0.13, 0.035), "title lettering taken for a button"

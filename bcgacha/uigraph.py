@@ -410,17 +410,28 @@ BUTTON_HSV_HIGH = (34, 255, 255)
 BUTTON_MIN_AREA = 2600
 BUTTON_MAX_AREA_FRACTION = 0.22
 BUTTON_ASPECT = (0.45, 9.0)
+# Share of its bounding box a blob must fill. Gold scattered across the frame --
+# the XP and Cat Food counters, the floor, joined by the frame edge -- merges
+# into one sprawling blob at 10%, and title lettering reaches 16%. The round
+# Use now button is the sparsest real control, at 22%.
+BUTTON_MIN_FILL = 0.19
 
 
 @dataclass(frozen=True)
 class Button:
-    """A detected control, in screen fractions."""
+    """A detected control, in screen fractions.
+
+    x, y is the centroid, which is where to tap; left, top, w, h is the
+    bounding box, which a lopsided blob does not share a centre with.
+    """
 
     x: float
     y: float
     w: float
     h: float
     area: int
+    left: float = 0.0
+    top: float = 0.0
 
     @property
     def centre(self) -> tuple[float, float]:
@@ -446,9 +457,12 @@ def find_buttons(frame: np.ndarray) -> list[Button]:
             continue
         if not (BUTTON_ASPECT[0] <= bw / bh <= BUTTON_ASPECT[1]):
             continue
+        if area < BUTTON_MIN_FILL * bw * bh:
+            continue
         out.append(Button(
             x=float(cent[i][0]) / w, y=float(cent[i][1]) / h,
             w=bw / w, h=bh / h, area=area,
+            left=float(stats[i, 0]) / w, top=float(stats[i, 1]) / h,
         ))
     out.sort(key=lambda b: (round(b.y, 2), b.x))
     return out
