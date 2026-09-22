@@ -52,6 +52,12 @@ class Screen:
     # unreachable, but they must still be recognised and routed OUT of.
     reactive: bool = False
     note: str = ""
+    # Where to read `title` from, when it is not the top-left name -- the
+    # centre card of a carousel, a line of text on a notice.
+    title_box: tuple[float, float, float, float] | None = None
+    # A more specific version of another screen: one card of a carousel is
+    # still that carousel, so reaching it counts as reaching the parent.
+    parent: str | None = None
 
 
 @dataclass(frozen=True)
@@ -90,12 +96,19 @@ class UIGraph:
     # -- persistence --------------------------------------------------------
 
     @classmethod
-    def load(cls, path: Path | None = None) -> "UIGraph":
+    def load(cls, path: Path | None = None, carousels: bool | Path = True) -> "UIGraph":
+        """The base map, plus this save's sagas and chapters when they are known.
+
+        The base file describes screens every save has. Which sagas and
+        chapters exist depends on how far a save has got, so those are scanned
+        from the device into state/ and layered on top (see carousel.py).
+        Pass carousels=False for the base map alone.
+        """
         path = Path(path or GRAPH_FILE)
         if not path.exists():
             return cls()
         raw = json.loads(path.read_text())
-        return cls(
+        graph = cls(
             screens={
                 s["name"]: Screen(
                     name=s["name"],
@@ -105,11 +118,20 @@ class UIGraph:
                     forbidden=s.get("forbidden", False),
                     reactive=s.get("reactive", False),
                     note=s.get("note", ""),
+                    title_box=tuple(s["title_box"]) if s.get("title_box") else None,
+                    parent=s.get("parent"),
                 )
                 for s in raw.get("screens", [])
             },
             transitions=[Transition(**t) for t in raw.get("transitions", [])],
         )
+        if carousels:
+            from . import carousel
+
+            catalogue = carousel.load_catalogue(None if carousels is True else carousels)
+            if catalogue:
+                carousel.extend(graph, catalogue)
+        return graph
 
     def save(self, path: Path | None = None) -> Path:
         path = Path(path or GRAPH_FILE)
@@ -120,6 +142,8 @@ class UIGraph:
                     "name": s.name, "title": s.title, "anchors": list(s.anchors),
                     "absent": list(s.absent), "forbidden": s.forbidden,
                     "reactive": s.reactive, "note": s.note,
+                    **({"title_box": list(s.title_box)} if s.title_box else {}),
+                    **({"parent": s.parent} if s.parent else {}),
                 }
                 for s in sorted(self.screens.values(), key=lambda s: s.name)
             ],
@@ -137,18 +161,33 @@ class UIGraph:
             self._ocr = RapidOCR()
         return self._ocr
 
-    def read_title(self, frame: np.ndarray) -> str:
+    def read_title(self, frame: np.ndarray, box=TITLE_BOX) -> str:
         h, w = frame.shape[:2]
-        x0, y0, x1, y1 = TITLE_BOX
+        x0, y0, x1, y1 = box
         crop = frame[int(y0 * h): int(y1 * h), int(x0 * w): int(x1 * w)]
         crop = cv2.resize(
             crop, None, fx=TITLE_SCALE, fy=TITLE_SCALE, interpolation=cv2.INTER_CUBIC
         )
         result, _ = self.ocr(crop)
-        return " ".join(r[1] for r in (result or [])).strip()
+        # Pieces come back in detection order; a two-line card name needs
+        # reading order -- line by line, top to bottom, then left to right.
+        line = 12 * TITLE_SCALE
+        pieces = sorted(result or [], key=lambda r: (
+            int(min(p[1] for p in r[0]) // line), min(p[0] for p in r[0])))
+        return " ".join(r[1] for r in pieces).strip()
 
-    def identify(self, frame: np.ndarray) -> str | None:
-        """Name the screen in `frame`, or None if it is not in the map.
+    def identify(self, frame: np.ndarray, title: str | None = None) -> str | None:
+        """Name the screen in `frame`, or None if it is not in the map."""
+        found = self.candidates(frame, title)
+        return max(found)[1] if found else None
+
+    def candidates(
+        self, frame: np.ndarray, title: str | None = None
+    ) -> list[tuple[float, str]]:
+        """Every screen the frame could be, scored. `identify` takes the best.
+
+        `title` is the already-read top-left text, for a caller that wants to
+        show it as well without paying for the OCR twice.
 
         Either kind of evidence is enough on its own. Titles are convenient but
         the recogniser is unreliable on them -- the very same "Cat Base" header
@@ -166,7 +205,14 @@ class UIGraph:
                 return False
             return vision.match(frame, anchor) > anchor.threshold
 
-        title = self.read_title(frame)
+        # Text is read once per region, and only when a screen needs it.
+        texts: dict[tuple, str] = {} if title is None else {TITLE_BOX: title}
+
+        def text_in(box) -> str:
+            if box not in texts:
+                texts[box] = self.read_title(frame, box)
+            return texts[box]
+
         candidates: list[tuple[float, str]] = []
         for screen in self.screens.values():
             # Forbidden screens are still identified. Refusing to recognise one
@@ -182,25 +228,29 @@ class UIGraph:
             if any(anchor_hit(a) for a in screen.absent):
                 continue
 
+            # A carousel card is only that card if its name reads; otherwise
+            # the carousel it refines is all the frame can be said to show.
+            needs_title = not screen.anchors or screen.parent is not None
             if screen.title:
+                title = text_in(screen.title_box or TITLE_BOX)
                 if title:
-                    match = max(
-                        fuzz.partial_ratio(screen.title.lower(), title.lower()),
-                        fuzz.ratio(screen.title.lower(), title.lower()),
-                    )
+                    expected, read = screen.title.lower(), title.lower()
+                    match = fuzz.ratio(expected, read)
+                    # Look for the title inside a longer reading, never the
+                    # reverse: "Back" is not "Take Back Earth!".
+                    if len(read) >= len(expected):
+                        match = max(match, fuzz.partial_ratio(expected, read))
                     if match >= TITLE_MATCH:
                         score += match
-                    elif not screen.anchors:
-                        continue        # title was the only evidence, and it failed
-                elif not screen.anchors:
+                    elif needs_title:
+                        continue        # title was needed, and it failed
+                elif needs_title:
                     continue            # needed a title, did not get one
             elif not screen.anchors:
                 continue                # nothing to identify this screen by
 
             candidates.append((score, screen.name))
-        if not candidates:
-            return None
-        return max(candidates)[1]
+        return candidates
 
     # -- routing ------------------------------------------------------------
 
@@ -314,20 +364,17 @@ class Navigator:
     def _run_action(self, step: Transition, log=None) -> bool:
         """Carry out a transition that needs a routine rather than a tap."""
         kind, _, argument = (step.action or "").partition(":")
-        if kind == "swipe":
+        if kind in ("swipe", "drag"):
             # Carousels do not respond to taps on their side items at all --
-            # only the centre one is live, and the selection is moved by
-            # flicking. Routing never needs a particular entry, since every
-            # one of them lands on a Cat Base, so this exists for completeness.
-            from .layout import landscape_to_hid
+            # only the centre one is live, and the selection moves by drag.
+            from . import carousel
 
-            left = argument == "left"
-            x0, x1 = (0.70, 0.30) if left else (0.30, 0.70)
-            self.session.swipe(
-                *landscape_to_hid(x0, 0.58), *landscape_to_hid(x1, 0.58),
-                steps=22, duration=0.26,
-            )
-            self.human.sleep(1.3)
+            carousel.drag(self.session, argument)
+            return True
+        if kind == "seek":
+            from . import carousel
+
+            carousel.seek_end(self.session, self.graph, argument)
             return True
         if kind == "banner":
             import datetime as dt
@@ -365,7 +412,9 @@ class Navigator:
                 continue
 
             here = self.graph.identify(frame)
-            if here == destination:
+            if here == destination or (
+                here and self.graph.screens[here].parent == destination
+            ):
                 return True
             if here is None:
                 # Not on the map. Backing out is almost always right: nearly

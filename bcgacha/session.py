@@ -138,6 +138,39 @@ class DeviceSession:
             service_id=DIGITIZER_SURFACE_MAIN_TOUCHSCREEN,
         )
 
+    def drag(
+        self, x1: int, y1: int, x2: int, y2: int,
+        duration: float = 0.8, hold: float = 0.3, steps: int = 40,
+    ) -> None:
+        """Move a finger slowly, then hold it still before lifting.
+
+        A swipe lets go while the finger is still moving, and the carousels
+        carry that speed on: the same flick moves one card one way and two the
+        other. Stopping first leaves nothing to carry, so one drag is one card.
+        """
+        self._submit(self._drag(x1, y1, x2, y2, duration, hold, steps)).result(timeout=60)
+
+    async def _drag(self, x1, y1, x2, y2, duration, hold, steps) -> None:
+        for i in range(steps + 1):
+            t = i / steps
+            await self._touch.send_touchscreen(
+                TOUCHSCREEN_STATE_CONTACT,
+                round(x1 + (x2 - x1) * t), round(y1 + (y2 - y1) * t),
+                service_id=DIGITIZER_SURFACE_MAIN_TOUCHSCREEN,
+            )
+            await asyncio.sleep(duration / steps)
+        still = max(1, round(hold / 0.05))
+        for _ in range(still):
+            await self._touch.send_touchscreen(
+                TOUCHSCREEN_STATE_CONTACT, x2, y2,
+                service_id=DIGITIZER_SURFACE_MAIN_TOUCHSCREEN,
+            )
+            await asyncio.sleep(0.05)
+        await self._touch.send_touchscreen(
+            TOUCHSCREEN_STATE_RELEASE, x2, y2,
+            service_id=DIGITIZER_SURFACE_MAIN_TOUCHSCREEN,
+        )
+
     def tap(self, x: int, y: int, hold: float = CONTACT_HOLD) -> None:
         """One contact and release at normalised coordinates (0..65535)."""
         self._submit(self._tap(x, y, hold)).result(timeout=60)

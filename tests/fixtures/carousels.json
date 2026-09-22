@@ -1,0 +1,19 @@
+{
+ "scanned": "2026-09-22T22:40:00",
+ "sagas": [
+  {"name": "Empire of Cats", "enters": "chapters", "chapters": [
+   {"number": 1, "name": "The Battle Cats Rising"},
+   {"number": 2, "name": "The Emperor of Darkness"},
+   {"number": 3, "name": "Revival of Bahamut-Cat"}]},
+  {"name": "Into The Future", "enters": "chapters", "chapters": [
+   {"number": 1, "name": "Time Enough For Cats"},
+   {"number": 2, "name": "Alien Intrigue: A Maiden's Revenge"},
+   {"number": 3, "name": "The Ancients Arise: Take Back Earth!"}]},
+  {"name": "Cats of the Cosmos", "enters": "chapters", "chapters": [
+   {"number": 1, "name": "Beyond the Exosphere"},
+   {"number": 2, "name": "The Passion of Catgod"},
+   {"number": 3, "name": "Even Stars Burn Out"}]},
+  {"name": "Legend Stages", "enters": "cat_base", "notice": "stage_reward_notice"},
+  {"name": "Catclaw Dojo", "enters": "screen", "screen": {"name": "catclaw_dojo", "title": "Catclaw Dojo"}}
+ ]
+}

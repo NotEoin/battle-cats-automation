@@ -11,14 +11,19 @@ import pytest
 
 from bcgacha.uigraph import UIGraph, find_buttons
 
-
-def _graph():
-    return UIGraph.load()
+FIXTURE_CAROUSELS = Path(__file__).resolve().parent / "fixtures" / "carousels.json"
 
 
-def test_every_screen_can_be_identified():
+@pytest.fixture(params=["base", "with-carousels"])
+def graph(request):
+    """Every invariant holds for the base map and with a save's carousels on top."""
+    if request.param == "base":
+        return UIGraph.load(carousels=False)
+    return UIGraph.load(carousels=FIXTURE_CAROUSELS)
+
+
+def test_every_screen_can_be_identified(graph):
     """A screen with neither a title nor anchors can never be recognised."""
-    graph = _graph()
     blind = [
         s.name for s in graph.screens.values()
         if not s.title and not s.anchors and not s.forbidden
@@ -26,9 +31,8 @@ def test_every_screen_can_be_identified():
     assert not blind, f"unidentifiable: {blind}"
 
 
-def test_every_screen_reaches_the_cat_base():
+def test_every_screen_reaches_the_cat_base(graph):
     """Whatever the bot wakes up on, it must be able to get home."""
-    graph = _graph()
     stranded = []
     for name, screen in graph.screens.items():
         if screen.forbidden or name == "cat_base":
@@ -40,9 +44,8 @@ def test_every_screen_reaches_the_cat_base():
     assert not stranded, f"cannot reach cat_base from: {stranded}"
 
 
-def test_both_capsule_machines_are_routable():
+def test_both_capsule_machines_are_routable(graph):
     """Platinum has no fixed tab, so it is reached by a routine, not a tap."""
-    graph = _graph()
     for destination in ("rare_capsules", "platinum_capsules"):
         path = graph.route("cat_base", destination)
         assert path, destination
@@ -50,8 +53,7 @@ def test_both_capsule_machines_are_routable():
     assert hop.action, "platinum must be reached by an action, not a memorised tab"
 
 
-def test_no_route_passes_through_settings():
-    graph = _graph()
+def test_no_route_passes_through_settings(graph):
     assert graph.screens["settings"].forbidden
     for name in graph.screens:
         if graph.screens[name].forbidden:
@@ -63,9 +65,8 @@ def test_no_route_passes_through_settings():
         assert all(t.dst != "settings" for t in path), name
 
 
-def test_only_reactive_screens_have_nothing_leading_to_them():
+def test_only_reactive_screens_have_nothing_leading_to_them(graph):
     """Reveals and popups appear on their own; everything else is navigable."""
-    graph = _graph()
     incoming = {t.dst for t in graph.transitions}
     orphans = [
         n for n, s in graph.screens.items()
@@ -74,8 +75,7 @@ def test_only_reactive_screens_have_nothing_leading_to_them():
     assert not orphans, f"unreachable and not marked reactive: {orphans}"
 
 
-def test_every_screen_has_a_way_out():
-    graph = _graph()
+def test_every_screen_has_a_way_out(graph):
     outgoing = {t.src for t in graph.transitions}
     stuck = [
         n for n, s in graph.screens.items() if n not in outgoing and not s.forbidden
@@ -83,21 +83,19 @@ def test_every_screen_has_a_way_out():
     assert not stuck, f"no exit recorded: {stuck}"
 
 
-def test_the_post_draw_overlay_can_exit_to_either_machine():
+def test_the_post_draw_overlay_can_exit_to_either_machine(graph):
     """The reveal looks the same on both machines, so it must not assume one."""
-    graph = _graph()
     exits = {t.dst for t in graph.transitions if t.src == "sent_to_storage"}
     assert {"rare_capsules", "platinum_capsules"} <= exits
 
 
-def test_no_duplicate_transitions():
+def test_no_duplicate_transitions(graph):
     """Two edges may share a destination, but not a destination AND a tap.
 
     Convergence is normal and expected -- every chapter enters a Cat Base, and
     every saga opens the same chapter carousel. What is not normal is the same
     button recorded twice, which is what a crawler leaves behind.
     """
-    graph = _graph()
     seen = set()
     for t in graph.transitions:
         key = (t.src, t.dst, t.action, round(t.x, 2), round(t.y, 2))
@@ -105,9 +103,8 @@ def test_no_duplicate_transitions():
         seen.add(key)
 
 
-def test_convergent_routes_are_distinct_buttons():
+def test_convergent_routes_are_distinct_buttons(graph):
     """Where several edges share a destination, each must be its own control."""
-    graph = _graph()
     grouped: dict[tuple[str, str], list] = {}
     for t in graph.transitions:
         grouped.setdefault((t.src, t.dst), []).append(t)

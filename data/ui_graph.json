@@ -43,6 +43,24 @@
    "note": "Reached from Missions"
   },
   {
+   "name": "chapter_back_card",
+   "title": "Back",
+   "anchors": [
+    "select_close"
+   ],
+   "absent": [],
+   "forbidden": false,
+   "reactive": false,
+   "note": "The Back card centred, left of Chapter 1. Tapping it returns to the saga carousel.",
+   "title_box": [
+    0.4,
+    0.475,
+    0.6,
+    0.665
+   ],
+   "parent": "base_select"
+  },
+  {
    "name": "gamatoto",
    "title": null,
    "anchors": [
@@ -196,6 +214,21 @@
    "forbidden": true,
    "reactive": false,
    "note": "OFF LIMITS. Carries Change Account/Device, which can move the save. Never routed into and never crawled; recognised only so it can be left."
+  },
+  {
+   "name": "stage_reward_notice",
+   "title": "Stage Clear Reward",
+   "anchors": [],
+   "absent": [],
+   "forbidden": false,
+   "reactive": true,
+   "note": "Reward notice raised on entering Legend Stages: 'Stage Clear Reward (13 more)' over a silhouette. Ok dismisses it into the Cat Base.",
+   "title_box": [
+    0.3,
+    0.67,
+    0.7,
+    0.745
+   ]
   },
   {
    "name": "storage",
@@ -614,6 +647,33 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.4,
+   "action": null
+  },
+  {
+   "src": "stage_reward_notice",
+   "dst": "cat_base",
+   "x": 0.678,
+   "y": 0.585,
+   "label": "Ok",
+   "settle": 2.5,
+   "action": null
+  },
+  {
+   "src": "base_select",
+   "dst": "chapter_back_card",
+   "x": 0.0,
+   "y": 0.0,
+   "label": "drag to the Back card",
+   "settle": 1.0,
+   "action": "seek:start"
+  },
+  {
+   "src": "chapter_back_card",
+   "dst": "saga_select",
+   "x": 0.5,
+   "y": 0.552,
+   "label": "Back card",
+   "settle": 2.2,
    "action": null
   }
  ]

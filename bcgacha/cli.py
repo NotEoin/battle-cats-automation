@@ -8,7 +8,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import device
+from . import carousel, device
 from .data import RARITY_NAMES, load
 from .gacha import Gacha, TRACK_A, TRACK_B
 from .seedfind import resolve_names, search
@@ -340,6 +340,7 @@ def cmd_goal(args) -> int:
 
     human = Humaniser(scale=args.speed, enabled=not args.no_humanise)
     with DeviceSession() as session:
+        carousel.ensure(session)
         tapper = SafeTapper(session, capture_dir=Path(args.captures), humaniser=human)
         runner = Runner(
             tapper, ds, account, planner, capture_dir=Path(args.captures),
@@ -370,6 +371,7 @@ def cmd_run(args) -> int:
     planner, _owned, _tiers = _build_planner(ds, args)
     human = Humaniser(scale=args.speed, enabled=not args.no_humanise)
     with DeviceSession() as session:
+        carousel.ensure(session)
         tapper = SafeTapper(session, capture_dir=Path(args.captures), humaniser=human)
         picker = None if args.pin_banner else BannerPicker(session, ds)
         runner = Runner(
@@ -387,6 +389,19 @@ def cmd_run(args) -> int:
     if report.new_units:
         print("new units:", ", ".join(report.new_units))
     print("stopped:", report.stopped_because)
+    return 0
+
+
+def cmd_scan_carousels(args) -> int:
+    from .session import DeviceSession
+
+    with DeviceSession() as session:
+        catalogue = carousel.ensure(session, rescan=True)
+    for saga in catalogue["sagas"]:
+        chapters = saga.get("chapters")
+        detail = (", ".join(f"{c['number']}. {c['name']}" for c in chapters) if chapters
+                  else f"opens {saga.get('screen', {}).get('name') or saga.get('enters')}")
+        print(f"{saga['name']}: {detail}")
     return 0
 
 
@@ -456,6 +471,10 @@ def main(argv=None) -> int:
                    help="play the goal out on paper over this many rare tickets")
     p.add_argument("--count", type=int, default=25, help="rolls to show with --dry-run")
     p.set_defaults(func=cmd_goal)
+
+    sub.add_parser(
+        "scan-carousels", help="read this save's sagas and chapters into state/carousels.json"
+    ).set_defaults(func=cmd_scan_carousels)
 
     p = sub.add_parser("resync", help="fix the position after untracked rolls")
     p.add_argument("--cat", required=True, help="the last cat actually rolled")
