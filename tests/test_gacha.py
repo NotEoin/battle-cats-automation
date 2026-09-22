@@ -59,3 +59,40 @@ def test_rarity_weights_sum_to_base():
     for banner in list(ds.banners.values())[:400]:
         total = banner.rare + banner.supa + banner.uber + banner.legend
         assert total == 10000, f"{banner.key} weights sum to {total}"
+
+
+def test_seed_search_recovers_known_seed():
+    """A narrow scan around a known seed must return it, and nothing else."""
+    from bcgacha.seedfind import search
+
+    ds = load()
+    banner = ds.find_banner("2026-09-21_1081")
+    observed = [38, 33, 198, 524, 373, 496, 31, 200]  # seed 123456789
+    found = search(banner, observed, ds, seed_range=(123456789 - (1 << 20), 123456789 + 1))
+    assert [c.seed for c in found] == [123456789]
+
+
+def test_resolve_names_rejects_cats_outside_pool():
+    from bcgacha.seedfind import resolve_names
+
+    ds = load()
+    banner = ds.find_banner("2026-09-21_1081")
+    assert resolve_names(["Pogo Cat", "Hip Hop Cat"], banner, ds) == [38, 33]
+    with pytest.raises(KeyError):
+        resolve_names(["Not A Real Cat"], banner, ds)
+
+
+def test_guaranteed_uber_matches_reference():
+    """The 11th-roll uber is read off the table, not rolled -- check every cell."""
+    from parse_godfat import parse_guaranteed
+
+    ref = parse_guaranteed((FIXTURES / "guaranteed.html").read_text())
+    assert ref
+    ds = load()
+    gacha = Gacha(ds.find_banner("2026-08-21_1075"), 4242424242, ds)
+    wrong = [
+        (pos, expected, ds.cat_name(gacha._guaranteed_for(*pos)))
+        for pos, (_, expected) in sorted(ref.items())
+        if ds.cat_name(gacha._guaranteed_for(*pos)) != expected
+    ]
+    assert not wrong, f"{len(wrong)}/{len(ref)} guaranteed ubers wrong: {wrong[:3]}"
