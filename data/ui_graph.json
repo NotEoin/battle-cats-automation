@@ -1,0 +1,219 @@
+{
+ "screens": [
+  {
+   "name": "base_select",
+   "title": null,
+   "anchors": [
+    "select_back",
+    "select_close"
+   ],
+   "absent": [],
+   "forbidden": false,
+   "note": "Chapter carousel over the title screen; any chapter enters a Cat Base"
+  },
+  {
+   "name": "cat_base",
+   "title": "Cat Base",
+   "anchors": [
+    "base_start",
+    "base_menu"
+   ],
+   "absent": [],
+   "forbidden": false,
+   "note": ""
+  },
+  {
+   "name": "cat_guide",
+   "title": "Cat Guide",
+   "anchors": [],
+   "absent": [],
+   "forbidden": false,
+   "note": ""
+  },
+  {
+   "name": "menu",
+   "title": null,
+   "anchors": [
+    "menu_dialog"
+   ],
+   "absent": [],
+   "forbidden": false,
+   "note": "Cat Guide / Enemy Guide / Meow Medals / Officers' Club"
+  },
+  {
+   "name": "opening",
+   "title": null,
+   "anchors": [
+    "opening_skip"
+   ],
+   "absent": [],
+   "forbidden": false,
+   "note": "Intro text on first launch; Skip bottom right"
+  },
+  {
+   "name": "rare_capsules",
+   "title": "Rare Capsules",
+   "anchors": [],
+   "absent": [],
+   "forbidden": false,
+   "note": ""
+  },
+  {
+   "name": "settings",
+   "title": null,
+   "anchors": [],
+   "absent": [],
+   "forbidden": true,
+   "note": "OFF LIMITS -- never routed through"
+  },
+  {
+   "name": "storage",
+   "title": "Storage",
+   "anchors": [],
+   "absent": [],
+   "forbidden": false,
+   "note": ""
+  },
+  {
+   "name": "title",
+   "title": null,
+   "anchors": [
+    "title_play",
+    "title_settings"
+   ],
+   "absent": [],
+   "forbidden": false,
+   "note": "Play / Settings / Mailbox"
+  }
+ ],
+ "transitions": [
+  {
+   "src": "opening",
+   "dst": "title",
+   "x": 0.889,
+   "y": 0.895,
+   "label": "Skip",
+   "settle": 2.5
+  },
+  {
+   "src": "title",
+   "dst": "settings",
+   "x": 0.5,
+   "y": 0.712,
+   "label": "Settings",
+   "settle": 1.8
+  },
+  {
+   "src": "title",
+   "dst": "base_select",
+   "x": 0.5,
+   "y": 0.578,
+   "label": "Play",
+   "settle": 3.0
+  },
+  {
+   "src": "base_select",
+   "dst": "cat_base",
+   "x": 0.497,
+   "y": 0.585,
+   "label": "Chapter 1",
+   "settle": 3.5
+  },
+  {
+   "src": "base_select",
+   "dst": "cat_base",
+   "x": 0.691,
+   "y": 0.598,
+   "label": "Chapter 2",
+   "settle": 3.5
+  },
+  {
+   "src": "base_select",
+   "dst": "cat_base",
+   "x": 0.873,
+   "y": 0.598,
+   "label": "Chapter 3",
+   "settle": 3.5
+  },
+  {
+   "src": "base_select",
+   "dst": "title",
+   "x": 0.29,
+   "y": 0.617,
+   "label": "Back",
+   "settle": 2.0
+  },
+  {
+   "src": "cat_base",
+   "dst": "menu",
+   "x": 0.124,
+   "y": 0.719,
+   "label": "Menu",
+   "settle": 2.0
+  },
+  {
+   "src": "menu",
+   "dst": "cat_guide",
+   "x": 0.4158,
+   "y": 0.3425,
+   "label": "Cat Guide",
+   "settle": 2.5
+  },
+  {
+   "src": "menu",
+   "dst": "cat_base",
+   "x": 0.671,
+   "y": 0.178,
+   "label": "Close",
+   "settle": 1.5
+  },
+  {
+   "src": "cat_base",
+   "dst": "rare_capsules",
+   "x": 0.526,
+   "y": 0.776,
+   "label": "Rare Capsule",
+   "settle": 2.5
+  },
+  {
+   "src": "cat_base",
+   "dst": "storage",
+   "x": 0.377,
+   "y": 0.776,
+   "label": "Storage",
+   "settle": 2.2
+  },
+  {
+   "src": "rare_capsules",
+   "dst": "storage",
+   "x": 0.172,
+   "y": 0.8,
+   "label": "Storage",
+   "settle": 2.2
+  },
+  {
+   "src": "rare_capsules",
+   "dst": "cat_base",
+   "x": 0.084,
+   "y": 0.89,
+   "label": "Back",
+   "settle": 2.0
+  },
+  {
+   "src": "storage",
+   "dst": "cat_base",
+   "x": 0.088,
+   "y": 0.877,
+   "label": "Back",
+   "settle": 2.0
+  },
+  {
+   "src": "cat_guide",
+   "dst": "cat_base",
+   "x": 0.089,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.0
+  }
+ ]
+}

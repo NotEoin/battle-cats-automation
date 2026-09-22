@@ -63,6 +63,11 @@ ANCHORS = {
     "storage_useall": Anchor("storage_useall", (0.405, 0.860, 0.545, 0.940)),
     # The Ok button pulses a pink outline, so it is a poor anchor. The
     # Use now / Exchange pair beside the name plate is static.
+    "opening_skip": Anchor("opening_skip", (0.845, 0.855, 0.935, 0.935)),
+    "select_back": Anchor("select_back", (0.225, 0.560, 0.360, 0.680)),
+    "select_close": Anchor("select_close", (0.870, 0.310, 0.945, 0.400)),
+    "title_play": Anchor("title_play", (0.415, 0.545, 0.585, 0.615)),
+    "title_settings": Anchor("title_settings", (0.415, 0.680, 0.585, 0.750)),
     "base_start": Anchor("base_start", (0.075, 0.235, 0.330, 0.320)),
     "base_menu": Anchor("base_menu", (0.095, 0.640, 0.155, 0.790)),
     "menu_dialog": Anchor("menu_dialog", (0.440, 0.170, 0.570, 0.250)),
