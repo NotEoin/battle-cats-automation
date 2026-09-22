@@ -21,7 +21,10 @@ it is on the screen it expects.
 | Screen classification | capsule / result / sent-to-storage / storage / dialog |
 | Counter and capacity reading | tickets, Cat Food, XP, storage N/M |
 | Single-draw roll loop | working, ten consecutive draws verified |
-| Banner targeting | planner written, not yet wired to the roll loop |
+| Banner targeting | planner wired to the loop, switches by carousel flick |
+| Collection index | reads the Cat Guide, ~1.6s per entry |
+| Tier rankings | 267 entries scraped, 185 cats matched |
+| Desync detection | each result checked against the prediction |
 
 ### Requirements
 
@@ -144,3 +147,38 @@ as BOT and/or cheat tools". This project is one. Running it risks the account.
 Cat pools and rarity weights come from godfat's `battle-cats-rolls` dataset,
 refreshed by `scripts/fetch_data.py`. The tests diff this engine against live
 bc.godfat.org output saved under `tests/fixtures`.
+
+
+## Modules
+
+| Module | Does |
+|---|---|
+| `prng` | xorshift32 forward and inverse |
+| `data` | godfat's dataset: cat pools, rarity weights, schedule |
+| `gacha` | positions, tracks, dupe rerolls, guaranteed ubers |
+| `seedfind` | brute-force seed recovery from observed rolls |
+| `tiers` | community rankings, with nickname aliases |
+| `catindex` | reads the Cat Guide to learn what is owned |
+| `scoring` | what an outcome is worth: new, tier, duplicate |
+| `planner` | which banner at each position, and when to spend Platinum |
+| `session` | one persistent tunnel for taps and frames |
+| `vision` | screen classification, counters, storage capacity |
+| `safety` | verify-before-tap, dialog handling |
+| `layout` | tap targets, and the portrait/landscape rotation |
+| `timing` | jittered, human-looking delays |
+| `roller` | a single draw, bracketed by checks |
+| `runner` | the loop: plan, roll, drain storage, stop |
+
+## Known limitations
+
+The Cat Guide walk reads a name per entry with OCR, which mangles the odd
+letter on a stylised font. Matching is fuzzy and requires a clear winner, so a
+missed entry is recorded as unowned rather than guessed at -- the failure mode
+is chasing a cat you already have, never skipping one you do not.
+
+Storage contents are not part of the index: a cat sitting in Cat Storage has
+not joined the roster yet and does not appear in the Guide as unlocked.
+
+The seed position is the one piece of state that must stay correct. It lives in
+`state/account.json`, which is deliberately not committed. Losing it costs
+another ten tickets to rediscover.
