@@ -287,20 +287,6 @@ class Runner:
 
             frame = self.to_capsule()
 
-            if self.picker is not None and not self.pin_banner:
-                wanted = next(
-                    (b for b in self.planner.banners if b.key == step.banner_key), None
-                )
-                if wanted is not None:
-                    current = self.picker.identify(frame, self.planner.banners)
-                    if current is None or current.key != wanted.key:
-                        if not self.picker.select(wanted, self.planner.banners):
-                            report.stopped_because = (
-                                f"could not switch to {wanted.name[:45]}"
-                            )
-                            break
-                        frame = self.to_capsule()
-
             tickets = vision.read_counter(frame, "tickets", vision.DigitAtlas())
             if tickets is not None and tickets < 1:
                 report.stopped_because = "out of rare tickets"
@@ -332,6 +318,24 @@ class Runner:
                         f"storage full at {predicted}/{self.account.storage_capacity}"
                     )
                     break
+
+            # Selecting the banner has to be the LAST thing before rolling.
+            # The storage check navigates away to the storage screen and back,
+            # and coming back resets the capsule screen to its default banner,
+            # so a selection made before it is silently thrown away.
+            if self.picker is not None and not self.pin_banner:
+                wanted = next(
+                    (b for b in self.planner.banners if b.key == step.banner_key), None
+                )
+                if wanted is not None:
+                    current = self.picker.identify(frame, self.planner.banners)
+                    if current is None or current.key != wanted.key:
+                        if not self.picker.select(wanted, self.planner.banners):
+                            report.stopped_because = (
+                                f"could not switch to {wanted.name[:45]}"
+                            )
+                            break
+                        frame = self.to_capsule()
 
             try:
                 result = roller.roll_once(report.rolled + 1)

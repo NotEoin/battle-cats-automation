@@ -30,9 +30,17 @@ PLATINUM_TICKET = "platinum_ticket"
 # reroll that follows flips the track, which can divert the path away from an
 # Uber several rolls out. The planner has to see that far to avoid trading a
 # 12-point Rare for a 600-point Uber.
-# Six is where this stops mattering: it finds the same route as eight and does
-# it ten times faster, while two misses Ubers entirely.
-DEFAULT_LOOKAHEAD = 6
+# With the search memoised, depth is nearly free -- eighty positions cost about
+# forty milliseconds -- so the real horizon is set by the discount, not by how
+# far the search is allowed to walk.
+DEFAULT_LOOKAHEAD = 60
+
+# How much a reward one roll further away is worth. At 0.85 a prize thirty
+# rolls out was worth under a hundredth of its face value, which made the
+# planner blind to anything but the next few rolls. At 0.97 a 900-point Uber
+# sixty rolls away is still worth ~140, comfortably more than the new Rares it
+# would otherwise stop for, so the route bends towards it.
+DISCOUNT = 0.97
 
 
 def platinum_targets(
@@ -174,6 +182,9 @@ class Planner:
         lookahead: int = DEFAULT_LOOKAHEAD,
     ) -> Plan:
         cache: dict = {}
+        # Cleared per call: values depend on what is owned, which shifts as the
+        # plan assumes each pull.
+        self._memo: dict = {}
         plan = Plan()
         platinum_left = self.platinum_tickets
         owned_snapshot = set(self.scorer.owned)
@@ -200,10 +211,11 @@ class Planner:
                 future = self._best_ahead(
                     seed, cache, index + delta, nxt_track, roll.cat_id, lookahead
                 )
-                total = value + 0.85 * future
+                total = value + DISCOUNT * future
                 if best is None or total > best[0]:
                     best = (total, banner, roll, currency, value, index + delta, nxt_track)
 
+            self._memo.clear()   # the next roll is scored against a changed collection
             _, banner, roll, currency, value, next_index, next_track = best
             step = PlanStep(
                 index=index, track=track,
@@ -226,8 +238,24 @@ class Planner:
         return plan
 
     def _best_ahead(self, seed, cache, index, track, previous_cat, depth) -> float:
+        """Best discounted value reachable within `depth` further rolls.
+
+        Written as a search over banners, this looks exponential -- three
+        banners to a depth of eight is several thousand branches. It is not,
+        because the seed stream is deterministic: the path only forks where a
+        dupe reroll can fire, and that needs two identical Rares in a row, so
+        nearly every branch lands on a state some other branch already visited.
+        Memoising on that state collapses the tree to something linear in the
+        positions actually reachable, which is what makes a deep lookahead
+        affordable at all.
+        """
         if depth <= 0:
             return 0.0
+        key = (index, track, previous_cat, depth)
+        memo = self._memo
+        hit = memo.get(key)
+        if hit is not None:
+            return hit
         best = 0.0
         for banner in self.banners:
             roll = self._evaluate(self._gacha(seed, banner, cache), index, track, previous_cat)
@@ -235,9 +263,10 @@ class Planner:
             delta, nxt = next_position(track, roll.reroll_steps)
             value = max(
                 value,
-                0.85 * self._best_ahead(seed, cache, index + delta, nxt, roll.cat_id, depth - 1),
+                DISCOUNT * self._best_ahead(seed, cache, index + delta, nxt, roll.cat_id, depth - 1),
             )
             best = max(best, value)
+        memo[key] = best
         return best
 
     def find_cat(
