@@ -304,6 +304,25 @@ def cmd_goal(args) -> int:
     planner, goal, tier_list, owned = _goal_setup(ds, args)
     print(goal.describe(ds, tier_list, owned))
     print(f"\nseed {account.seed} at {account.position}\n")
+    if args.simulate:
+        from . import goals as G
+        from .data import LEGEND
+
+        unlocked = G.simulate(
+            planner, goal, account.seed, account.index, account.track,
+            account.last_cat_id, args.simulate, args.platinum,
+        )
+        print(f"{'roll':>5} {'pos':>6} {'kind':<7} {'tier':<5} unit")
+        for u in unlocked:
+            kind = "LEGEND" if u["rarity"] == LEGEND else "uber"
+            tier = tier_list.tier_of(u["cat_id"]) if tier_list else "?"
+            mark = " [PLATINUM]" if u["platinum"] else ""
+            print(f"{u['roll']:>5} {u['position']:>6} {kind:<7} {tier:<5} "
+                  f"{ds.cat_name(u['cat_id'])}{mark}")
+        left = len(goal.remaining(planner.scorer.owned))
+        print(f"\n{len(unlocked)} new unit(s) over {args.simulate} tickets; "
+              f"{left} still wanted afterwards")
+        return 0
     if args.dry_run:
         plan = planner.plan(
             account.seed, rolls=args.count, index=account.index,
@@ -426,6 +445,8 @@ def main(argv=None) -> int:
     p.add_argument("--captures", default="captures")
     p.add_argument("--max-tickets", type=int, default=10_000)
     p.add_argument("--dry-run", action="store_true", help="show the plan, roll nothing")
+    p.add_argument("--simulate", type=int, metavar="TICKETS",
+                   help="play the goal out on paper over this many rare tickets")
     p.add_argument("--count", type=int, default=25, help="rolls to show with --dry-run")
     p.set_defaults(func=cmd_goal)
 

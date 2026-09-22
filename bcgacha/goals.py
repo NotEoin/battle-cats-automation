@@ -115,3 +115,53 @@ def build(
     # not lose its ranking to an Uber that happens to share an id in a pool.
     goal.ubers -= goal.legendaries
     return goal
+
+
+def simulate(
+    planner,
+    goal: Goal,
+    seed: int,
+    index: int,
+    track: int,
+    previous_cat: int | None,
+    rare_tickets: int,
+    platinum_tickets: int = 0,
+) -> list[dict]:
+    """Play a goal out on paper, and report what it would unlock.
+
+    Costs nothing and takes a second, which makes it the right way to answer
+    "is this goal even reachable with the tickets I have" before spending any
+    of them. The roll sequence is deterministic, so this is a prediction rather
+    than an estimate.
+    """
+    from .gacha import next_position
+    from .planner import PLATINUM_TICKET
+
+    unlocked: list[dict] = []
+    platinum_left = platinum_tickets
+    for roll in range(rare_tickets):
+        step = planner.plan(
+            seed, rolls=14, index=index, track=track, previous_cat=previous_cat
+        ).steps[0]
+        if step.currency == PLATINUM_TICKET:
+            if platinum_left <= 0:
+                planner.platinum_tickets = 0
+                planner.platinum_wanted = set()
+                continue
+            platinum_left -= 1
+        if step.is_new and step.rarity >= UBER:
+            unlocked.append({
+                "roll": roll + 1,
+                "position": step.position,
+                "cat_id": step.cat_id,
+                "rarity": step.rarity,
+                "platinum": step.currency == PLATINUM_TICKET,
+                "banner": step.banner_key,
+            })
+        planner.scorer.owned.add(step.cat_id)
+        delta, track = next_position(track, step.reroll_steps)
+        index += delta
+        previous_cat = step.cat_id
+        if goal.complete(planner.scorer.owned):
+            break
+    return unlocked
