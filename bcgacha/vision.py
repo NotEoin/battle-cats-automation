@@ -32,6 +32,7 @@ class Screen(Enum):
     CAPSULE = "capsule"
     RESULT = "result"
     STORAGE = "storage"
+    SENT_TO_STORAGE = "sent_to_storage"
     CAT_BASE = "cat_base"
     DIALOG = "dialog"
 
@@ -58,6 +59,11 @@ class Anchor:
 ANCHORS = {
     "storage_title": Anchor("storage_title", (0.020, 0.005, 0.110, 0.055)),
     "storage_useall": Anchor("storage_useall", (0.405, 0.860, 0.545, 0.940)),
+    # The Ok button pulses a pink outline, so it is a poor anchor. The
+    # Use now / Exchange pair beside the name plate is static.
+    "sent_to_storage": Anchor("sent_to_storage", (0.28, 0.30, 0.72, 0.55)),
+    "result_actions": Anchor("result_actions", (0.180, 0.745, 0.345, 0.855)),
+    "result_ok": Anchor("result_ok", (0.677, 0.779, 0.792, 0.846), threshold=0.55),
     "storage_button": Anchor("storage_button", (0.135, 0.700, 0.215, 0.900)),
     "try_once_button": Anchor("try_once_button", (0.600, 0.690, 0.790, 0.880)),
     "back_arrow": Anchor("back_arrow", (0.055, 0.835, 0.115, 0.945)),
@@ -107,6 +113,12 @@ def classify(frame: np.ndarray) -> Screen:
     # the capsule screen's own anchors are absent there.
     if hit("storage_title") and hit("storage_useall"):
         return Screen.STORAGE
+    # Must precede RESULT: the notice overlays the result screen, whose
+    # action row is still partly visible behind it.
+    if hit("sent_to_storage"):
+        return Screen.SENT_TO_STORAGE
+    if hit("result_actions"):
+        return Screen.RESULT
     if hit("storage_button") and hit("try_once_button"):
         return Screen.CAPSULE
     return Screen.UNKNOWN

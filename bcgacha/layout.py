@@ -71,3 +71,17 @@ STORAGE_SCREEN = {
     "use_all": Target("use_all", 0.474, 0.900),
     "exchange_all": Target("exchange_all", 0.628, 0.900),
 }
+
+
+RESULT_SCREEN = {
+    "ok": Target("ok", 0.7355, 0.8139),
+    "use_now": Target("use_now", 0.220, 0.814),
+    "exchange": Target("exchange", 0.296, 0.814),
+}
+
+
+# The "Sent to Cat Storage" notice that follows each draw. Its Ok is nowhere
+# near the result screen's Ok, so it needs its own target.
+SENT_TO_STORAGE_SCREEN = {
+    "ok": Target("ok", 0.6501, 0.6265),
+}

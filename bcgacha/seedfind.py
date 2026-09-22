@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .data import BASE, RARE, Banner, Dataset
-from .gacha import Gacha, dig_rarity
+from .gacha import Gacha
 
 MASK = 0xFFFFFFFF
 CHUNK = 1 << 24
@@ -49,6 +49,8 @@ def _rarity_bounds(banner: Banner) -> list[tuple[int, int, int]]:
 
 @dataclass
 class SeedCandidate:
+    """A seed that reproduces the observed draws, on the track they fit."""
+
     seed: int
     track: str
     rolls: list[str]
@@ -76,6 +78,7 @@ def search(
     dataset: Dataset,
     progress=None,
     seed_range: tuple[int, int] = (0, 1 << 32),
+    previous_cat: int | None = None,
 ) -> list[SeedCandidate]:
     """Find every seed whose next rolls on `banner` are exactly `observed`.
 
@@ -90,12 +93,16 @@ def search(
     survivors: list[int] = []
     for base in range(lo, hi, CHUNK):
         seeds = np.arange(base, min(base + CHUNK, hi), dtype=np.uint32)
-        s1 = _advance_np(seeds.copy())
-        s2 = _advance_np(s1.copy())
+        # A roll costs TWO advances: one for rarity, one for the slot. Roll n
+        # on track A therefore reads S[2n-1] and S[2n] -- stepping a single
+        # advance between rolls would read track B of the previous row.
+        s1 = _advance_np(seeds.copy())          # S[1]  roll 1 rarity
+        s2 = _advance_np(s1.copy())             # S[2]  roll 1 slot
         keep = _cat_of(banner, s1, s2) == observed[0]
         if keep.any():
-            s3 = _advance_np(s2[keep].copy())
-            second = _cat_of(banner, s2[keep], s3)
+            s3 = _advance_np(s2[keep].copy())   # S[3]  roll 2 rarity
+            s4 = _advance_np(s3.copy())         # S[4]  roll 2 slot
+            second = _cat_of(banner, s3, s4)
             idx = np.nonzero(keep)[0][second == observed[1]]
             survivors.extend(seeds[idx].tolist())
         if progress:
@@ -104,7 +111,9 @@ def search(
     # Replay each survivor for real, so dupe rerolls are honoured.
     out: list[SeedCandidate] = []
     for seed in survivors:
-        rolls = Gacha(banner, seed, dataset).walk(len(observed))
+        rolls = Gacha(banner, seed, dataset).walk(
+            len(observed), previous_cat=previous_cat
+        )
         if [r.cat_id for r in rolls] == observed:
             out.append(
                 SeedCandidate(

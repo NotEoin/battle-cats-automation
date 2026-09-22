@@ -31,7 +31,7 @@ CASES = [
 
 @pytest.mark.parametrize("tag,event,seed", CASES)
 def test_table_matches_reference(tag, event, seed):
-    ref = parse((FIXTURES / f"{tag}.html").read_text())
+    ref = parse((FIXTURES / f"{tag}.html").read_text(encoding="utf-8"))
     assert ref, f"{tag}: fixture parsed to nothing"
     ds = load()
     gacha = Gacha(ds.find_banner(event), seed, ds)
@@ -86,7 +86,7 @@ def test_guaranteed_uber_matches_reference():
     """The 11th-roll uber is read off the table, not rolled -- check every cell."""
     from parse_godfat import parse_guaranteed
 
-    ref = parse_guaranteed((FIXTURES / "guaranteed.html").read_text())
+    ref = parse_guaranteed((FIXTURES / "guaranteed.html").read_text(encoding="utf-8"))
     assert ref
     ds = load()
     gacha = Gacha(ds.find_banner("2026-08-21_1075"), 4242424242, ds)
@@ -123,3 +123,21 @@ def test_platinum_rates_make_every_position_uber():
     assert platinum.uber == 10000
     gacha = Gacha(platinum, 123456789, ds)
     assert all(gacha.cell(n, TRACK_A).rarity == UBER for n in range(1, 30))
+
+
+def test_search_prefilter_steps_two_advances_per_roll():
+    """Roll 2 must be track A row 2, not track B row 1.
+
+    Picks a seed where those two differ, so a one-advance step cannot pass.
+    """
+    from bcgacha.gacha import TRACK_A, TRACK_B
+    from bcgacha.seedfind import search
+
+    ds = load()
+    banner = ds.find_banner("2026-09-21_979")
+    seed = 123456789
+    gacha = Gacha(banner, seed, ds)
+    assert gacha.cell(1, TRACK_B).cat_id != gacha.cell(2, TRACK_A).cat_id
+    observed = [r.cat_id for r in Gacha(banner, seed, ds).walk(6)]
+    found = search(banner, observed, ds, seed_range=(seed - (1 << 18), seed + 1))
+    assert [c.seed for c in found] == [seed]
