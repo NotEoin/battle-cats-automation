@@ -1,0 +1,25 @@
+[project]
+name = "bcgacha"
+version = "0.1.0"
+description = "Capsule automation for The Battle Cats on a USB-attached iPhone"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "PyYAML",
+    "httpx",
+    "Pillow",
+    "opencv-python-headless",
+    "beautifulsoup4",
+    "lxml",
+    "pymobiledevice3>=11.15",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["bcgacha"]
