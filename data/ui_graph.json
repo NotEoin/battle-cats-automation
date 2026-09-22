@@ -102,10 +102,36 @@
   {
    "name": "rare_capsules",
    "title": "Rare Capsules",
-   "anchors": [],
+   "anchors": [
+    "try_once_button",
+    "storage_button"
+   ],
+   "absent": [
+    "result_actions",
+    "sent_to_storage"
+   ],
+   "forbidden": false,
+   "note": "The draw screen proper, with neither overlay up"
+  },
+  {
+   "name": "roll_result",
+   "title": null,
+   "anchors": [
+    "result_actions"
+   ],
    "absent": [],
    "forbidden": false,
-   "note": ""
+   "note": "Reveal screen after a draw: Use now / Exchange / name plate / Ok"
+  },
+  {
+   "name": "sent_to_storage",
+   "title": null,
+   "anchors": [
+    "sent_to_storage"
+   ],
+   "absent": [],
+   "forbidden": false,
+   "note": "'Sent to Cat Storage' notice; keeps the Rare Capsules title"
   },
   {
    "name": "settings",
@@ -358,6 +384,22 @@
    "x": 0.3999,
    "y": 0.7137,
    "label": "button 6",
+   "settle": 1.8
+  },
+  {
+   "src": "roll_result",
+   "dst": "sent_to_storage",
+   "x": 0.7355,
+   "y": 0.8139,
+   "label": "Ok",
+   "settle": 1.8
+  },
+  {
+   "src": "sent_to_storage",
+   "dst": "rare_capsules",
+   "x": 0.6501,
+   "y": 0.6265,
+   "label": "Ok",
    "settle": 1.8
   }
  ]
