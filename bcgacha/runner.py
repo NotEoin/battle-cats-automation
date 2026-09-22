@@ -363,4 +363,18 @@ class Runner:
             else:
                 log(f"  #{report.rolled:>3} {step.position:>6}     {got}")
 
+        self.settle_on_exit(log=log)
         return report
+
+    def settle_on_exit(self, log=print) -> None:
+        """Leave the game on the capsule screen, whatever stopped the run.
+
+        A run that ends on the "Sent to Cat Storage" notice leaves the account
+        mid-flow: the next run has to clear it before it can do anything, and a
+        human picking the phone up finds a modal in the way. Walking back is
+        cheap and makes the stopping point somewhere sensible to resume from.
+        """
+        try:
+            self.to_capsule()
+        except Exception as exc:          # never let tidying up fail a run
+            log(f"  could not return to the capsule screen: {exc}")
