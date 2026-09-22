@@ -90,6 +90,7 @@ class Runner:
         # Storage counts as owned here: it cannot be rolled usefully again
         # even though the roster has not picked it up yet.
         self.owned_index = OwnedIndex.load()
+        self._navigator = None
         self.goal = goal
         # When the carousel cannot be driven, stay put and roll where we are
         # rather than silently rolling on the wrong banner.
@@ -97,63 +98,25 @@ class Runner:
 
     # -- screen helpers -----------------------------------------------------
 
-    def to_capsule(self, timeout: float = 40.0):
+    def to_capsule(self, timeout: float = 90.0):
         """Return to the capsule screen from wherever the game has ended up.
 
-        Every branch hands its own frame to the tap, because re-capturing
-        inside the tap opens a race: the screen cross-fades, and a tap chosen
-        against one frame gets refused when checked against a later one.
-        A refusal here means the game moved mid-decision, so it retries.
+        This defers to the UI graph rather than hand-coding the ways back. The
+        hand-rolled version only knew the screens the roll loop normally
+        touches, so anything further out -- the title screen after a restart,
+        the chapter carousel, a menu nobody had mapped -- stranded it. The
+        graph knows the whole route and re-reads the screen at every step, so
+        no position has to be remembered.
         """
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            try:
-                frame = self.tapper.capture()
-                screen = vision.classify(frame)
+        if self._navigator is None:
+            from .uigraph import Navigator
 
-                if screen is vision.Screen.CAPSULE:
-                    return frame
-                if screen is vision.Screen.SENT_TO_STORAGE:
-                    self.tapper.tap(
-                        SENT_TO_STORAGE_SCREEN["ok"],
-                        expect=vision.Screen.SENT_TO_STORAGE,
-                        require_anchor="sent_to_storage",
-                        frame=frame,
-                    )
-                    continue
-                if screen is vision.Screen.RESULT:
-                    self.tapper.tap(
-                        RESULT_SCREEN["ok"],
-                        expect=vision.Screen.RESULT,
-                        require_anchor="result_actions",
-                        frame=frame,
-                    )
-                    continue
-                if screen is vision.Screen.STORAGE:
-                    self.tapper.tap(
-                        STORAGE_SCREEN["back"],
-                        expect=vision.Screen.STORAGE,
-                        require_anchor="storage_title",
-                        frame=frame,
-                    )
-                    continue
-                # An unattended run can end up anywhere: a stray tap, a popup
-                # that navigated, or the game restarting on the base.
-                if screen is vision.Screen.CAT_BASE:
-                    self._blind_tap(CAT_BASE["rare_capsule"], 1.6)
-                    continue
-                if screen is vision.Screen.MENU:
-                    self._blind_tap(MENU_DIALOG["close"], 1.2)
-                    continue
-                if screen is vision.Screen.CAT_GUIDE:
-                    self._blind_tap((0.089, 0.872), 1.4)
-                    continue
-                if self.tapper.dismiss_dialog(frame):
-                    continue
-            except UnsafeTap:
-                pass          # the screen moved mid-decision; look again
-            self.tapper.human.sleep(0.4)
-        raise RollAborted("could not get back to the capsule screen")
+            self._navigator = Navigator(
+                self.tapper.session, humaniser=self.tapper.human
+            )
+        if not self._navigator.goto("rare_capsules"):
+            raise RollAborted("could not get back to the capsule screen")
+        return self.tapper.capture()
 
     def _blind_tap(self, point, settle: float) -> None:
         """Tap a fixed point without a screen check, for recovery steps."""
