@@ -21,10 +21,11 @@ it is on the screen it expects.
 | Screen classification | capsule / result / sent-to-storage / storage / dialog |
 | Counter and capacity reading | tickets, Cat Food, XP, storage N/M |
 | Single-draw roll loop | working, ten consecutive draws verified |
-| Banner targeting | planner wired to the loop, switches by carousel flick |
+| Banner targeting | planner wired to the loop, switches by tapping tabs |
 | Collection index | reads the Cat Guide, ~1.6s per entry |
 | Tier rankings | 267 entries scraped, 185 cats matched |
 | Desync detection | each result checked against the prediction |
+| End to end | verified: plan, switch, roll, verify, advance |
 
 ### Requirements
 
@@ -168,6 +169,20 @@ bc.godfat.org output saved under `tests/fixtures`.
 | `timing` | jittered, human-looking delays |
 | `roller` | a single draw, bracketed by checks |
 | `runner` | the loop: plan, roll, drain storage, stop |
+
+## When the position drifts
+
+The saved position is the one thing that must stay true. Any roll made by hand
+leaves it behind, and every later prediction is then wrong. The run loop reads
+the cat off each result screen and stops the moment one disagrees with the plan.
+
+Recovering does not need the seed finding again -- the seed has not changed,
+only the position. Give `resync` the cat that actually came out:
+
+    python -m bcgacha.cli resync --cat "Figure Skating Cats"
+
+It searches forward for the position that would have produced it and corrects
+the state, refusing when the answer is not unique.
 
 ## Known limitations
 
