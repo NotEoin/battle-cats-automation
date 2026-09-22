@@ -109,16 +109,45 @@ class DeviceSession:
             raise RuntimeError("could not decode the screenshot")
         return frame
 
-    def tap(self, x: int, y: int) -> None:
-        """One contact and release at normalised coordinates (0..65535)."""
-        self._submit(self._tap(x, y)).result(timeout=60)
+    def swipe(
+        self, x1: int, y1: int, x2: int, y2: int, steps: int = 24, duration: float = 0.28
+    ) -> None:
+        """Drag from one normalised point to another.
 
-    async def _tap(self, x: int, y: int) -> None:
+        Some of the game's grids page by flick rather than by button, so a
+        stream of contact reports is needed, not a tap.
+        """
+        self._submit(self._swipe(x1, y1, x2, y2, steps, duration)).result(timeout=60)
+
+    async def _swipe(self, x1, y1, x2, y2, steps, duration) -> None:
+        gap = duration / max(steps, 1)
+        for i in range(steps):
+            t = i / steps
+            await self._touch.send_touchscreen(
+                TOUCHSCREEN_STATE_CONTACT,
+                round(x1 + (x2 - x1) * t), round(y1 + (y2 - y1) * t),
+                service_id=DIGITIZER_SURFACE_MAIN_TOUCHSCREEN,
+            )
+            await asyncio.sleep(gap)
+        await self._touch.send_touchscreen(
+            TOUCHSCREEN_STATE_CONTACT, x2, y2,
+            service_id=DIGITIZER_SURFACE_MAIN_TOUCHSCREEN,
+        )
+        await self._touch.send_touchscreen(
+            TOUCHSCREEN_STATE_RELEASE, x2, y2,
+            service_id=DIGITIZER_SURFACE_MAIN_TOUCHSCREEN,
+        )
+
+    def tap(self, x: int, y: int, hold: float = CONTACT_HOLD) -> None:
+        """One contact and release at normalised coordinates (0..65535)."""
+        self._submit(self._tap(x, y, hold)).result(timeout=60)
+
+    async def _tap(self, x: int, y: int, hold: float = CONTACT_HOLD) -> None:
         await self._touch.send_touchscreen(
             TOUCHSCREEN_STATE_CONTACT, x, y,
             service_id=DIGITIZER_SURFACE_MAIN_TOUCHSCREEN,
         )
-        await asyncio.sleep(CONTACT_HOLD)
+        await asyncio.sleep(hold)
         await self._touch.send_touchscreen(
             TOUCHSCREEN_STATE_RELEASE, x, y,
             service_id=DIGITIZER_SURFACE_MAIN_TOUCHSCREEN,

@@ -149,6 +149,22 @@ class SafeTapper:
         self.human.sleep(self.settle)
         return self.capture()
 
+    def confirm_dialog(self, frame: np.ndarray | None = None) -> bool:
+        """Press Yes on a dialog. Only for prompts that spend nothing.
+
+        Refuses outright if the dialog is the Cat Food one, so a mis-sequenced
+        call can never buy anything.
+        """
+        frame = frame if frame is not None else self.capture()
+        dialog = inspect_dialog(frame)
+        if not dialog.present:
+            return False
+        if dialog.spends_cat_food:
+            raise UnsafeTap("refusing to confirm a Cat Food purchase")
+        self.session.tap(*self.human.jitter_point(*landscape_to_hid(*DIALOG_YES)))
+        self.human.sleep(self.settle)
+        return True
+
     def dismiss_dialog(self, frame: np.ndarray | None = None) -> bool:
         """Press No on whatever dialog is up. Never presses Yes."""
         frame = frame if frame is not None else self.capture()

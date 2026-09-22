@@ -34,6 +34,8 @@ class Screen(Enum):
     STORAGE = "storage"
     SENT_TO_STORAGE = "sent_to_storage"
     CAT_BASE = "cat_base"
+    MENU = "menu"
+    CAT_GUIDE = "cat_guide"
     DIALOG = "dialog"
 
 
@@ -61,6 +63,10 @@ ANCHORS = {
     "storage_useall": Anchor("storage_useall", (0.405, 0.860, 0.545, 0.940)),
     # The Ok button pulses a pink outline, so it is a poor anchor. The
     # Use now / Exchange pair beside the name plate is static.
+    "base_start": Anchor("base_start", (0.075, 0.235, 0.330, 0.320)),
+    "base_menu": Anchor("base_menu", (0.095, 0.640, 0.155, 0.790)),
+    "menu_dialog": Anchor("menu_dialog", (0.440, 0.170, 0.570, 0.250)),
+    "guide_title": Anchor("guide_title", (0.020, 0.005, 0.135, 0.060)),
     "sent_to_storage": Anchor("sent_to_storage", (0.28, 0.30, 0.72, 0.55)),
     "result_actions": Anchor("result_actions", (0.180, 0.745, 0.345, 0.855)),
     "result_ok": Anchor("result_ok", (0.677, 0.779, 0.792, 0.846), threshold=0.55),
@@ -118,6 +124,12 @@ def classify(frame: np.ndarray) -> Screen:
         return Screen.STORAGE
     # Must precede RESULT: the notice overlays the result screen, whose
     # action row is still partly visible behind it.
+    if hit("menu_dialog"):
+        return Screen.MENU
+    if hit("guide_title"):
+        return Screen.CAT_GUIDE
+    if hit("base_start") and hit("base_menu"):
+        return Screen.CAT_BASE
     if hit("sent_to_storage"):
         return Screen.SENT_TO_STORAGE
     if hit("result_actions"):

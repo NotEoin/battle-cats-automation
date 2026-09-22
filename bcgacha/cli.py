@@ -113,6 +113,132 @@ def cmd_ubers(args) -> int:
     return 0
 
 
+def _live_banners(ds, when=None):
+    import datetime as dt
+
+    when = when or dt.date.today()
+    live = ds.live_banners(when)
+    normal = [b for b in live if b.uber < 10000 and b.start_on >= when - dt.timedelta(days=45)]
+    platinum = next((b for b in live if b.uber == 10000), None)
+    return normal, platinum
+
+
+def _build_planner(ds, args):
+    from .catindex import OwnedIndex
+    from .planner import Planner
+    from .scoring import Scorer
+    from .tiers import TierList
+
+    owned = OwnedIndex.load().owned
+    try:
+        tier_list = TierList.load()
+    except FileNotFoundError:
+        tier_list = None
+        print("no tier data -- run 'bcgacha tiers' to fetch it", file=sys.stderr)
+    normal, platinum = _live_banners(ds)
+    scorer = Scorer(owned=owned, tiers=tier_list)
+    return Planner(
+        ds, normal, scorer,
+        platinum_banner=platinum,
+        platinum_tickets=getattr(args, "platinum", 0),
+    ), owned, tier_list
+
+
+def cmd_tiers(args) -> int:
+    from . import tiers as T
+
+    ds = load(args.lang)
+    entries = T.parse(T.fetch_text())
+    tier_list = T.match(entries, ds)
+    tier_list.save()
+    print(f"{len(entries)} entries, {len(tier_list.by_cat)} cats matched, "
+          f"{len(tier_list.unmatched)} unmatched")
+    for miss in tier_list.unmatched[:10]:
+        print("  unmatched:", miss)
+    return 0
+
+
+def cmd_index(args) -> int:
+    from .catindex import CatIndexer
+    from .data import BASIC, EX, LEGEND, RARE, SUPER_RARE, UBER
+    from .session import DeviceSession
+
+    ds = load(args.lang)
+    rarities = {BASIC, EX, RARE, SUPER_RARE, UBER, LEGEND}
+    with DeviceSession() as session:
+        indexer = CatIndexer(session, ds)
+        if not args.no_reset:
+            if not indexer.open_guide():
+                return 1
+            indexer.clear_filter()
+            indexer.tap((0.285, 0.258), settle=1.8)
+            indexer.dismiss_popup()
+        result = indexer.walk(rarities, limit=args.limit)
+    result.save()
+    print(f"owned={len(result.owned)} locked={result.locked_seen} "
+          f"walked={result.entries_walked} unresolved={len(result.unresolved)}")
+    return 0
+
+
+def cmd_owned(args) -> int:
+    from collections import Counter
+
+    from .catindex import OwnedIndex
+    from .data import RARITY_NAMES
+
+    ds = load(args.lang)
+    index = OwnedIndex.load()
+    counts = Counter(ds.rarity_of(c) for c in index.owned)
+    print(f"{len(index.owned)} cats indexed ({index.locked_seen} seen locked)")
+    for rarity, n in sorted(counts.items()):
+        print(f"  {RARITY_NAMES.get(rarity, rarity):<12} {n}")
+    return 0
+
+
+def cmd_plan(args) -> int:
+    from .state import Account
+
+    ds = load(args.lang)
+    account = Account.load()
+    planner, owned, _ = _build_planner(ds, args)
+    plan = planner.plan(
+        account.seed, rolls=args.count,
+        index=account.index, track=account.track,
+        previous_cat=account.last_cat_id,
+    )
+    print(f"seed {account.seed} at {account.position}, {len(owned)} cats owned\n")
+    print(plan.summary(ds))
+    print(f"\n{len(plan.new_units)} new unit(s), {plan.banner_switches()} banner switches, "
+          f"{plan.platinum_spent} platinum")
+    return 0
+
+
+def cmd_run(args) -> int:
+    from pathlib import Path
+
+    from .runner import Mode, Runner
+    from .safety import SafeTapper
+    from .session import DeviceSession
+    from .state import Account
+    from .timing import Humaniser
+
+    ds = load(args.lang)
+    account = Account.load()
+    planner, _owned, _tiers = _build_planner(ds, args)
+    human = Humaniser(scale=args.speed, enabled=not args.no_humanise)
+    with DeviceSession() as session:
+        tapper = SafeTapper(session, capture_dir=Path(args.captures), humaniser=human)
+        runner = Runner(tapper, ds, account, planner, capture_dir=Path(args.captures))
+        report = runner.run(mode=Mode(args.mode), max_tickets=args.max_tickets)
+    account.save()
+    print(f"\nrolled {report.rolled}, tickets spent {report.tickets_spent}, "
+          f"storage emptied {report.storage_emptied}x")
+    if report.new_units:
+        print("new units:", ", ".join(report.new_units))
+    print("stopped:", report.stopped_because)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="bcgacha", description=__doc__)
     ap.add_argument("--lang", default="en", choices=["en", "jp", "kr", "tw"])
@@ -138,6 +264,30 @@ def main(argv=None) -> int:
     p.add_argument("--start", type=int, default=1)
     p.add_argument("--track", default="A", choices=["A", "B", "a", "b"])
     p.set_defaults(func=cmd_predict)
+
+    sub.add_parser("tiers", help="refresh community tier rankings").set_defaults(func=cmd_tiers)
+
+    p = sub.add_parser("index", help="scan the Cat Guide for owned cats")
+    p.add_argument("--limit", type=int, default=1000)
+    p.add_argument("--no-reset", action="store_true", help="start from the current entry")
+    p.set_defaults(func=cmd_index)
+
+    sub.add_parser("owned", help="summarise the indexed collection").set_defaults(func=cmd_owned)
+
+    p = sub.add_parser("plan", help="show the planned rolls")
+    p.add_argument("--count", type=int, default=20)
+    p.add_argument("--platinum", type=int, default=0, help="platinum tickets available")
+    p.set_defaults(func=cmd_plan)
+
+    p = sub.add_parser("run", help="roll capsules according to a plan")
+    p.add_argument("--mode", default="until-target",
+                   choices=["until-target", "max-tickets", "until-storage-full", "all"])
+    p.add_argument("--max-tickets", type=int, default=50)
+    p.add_argument("--platinum", type=int, default=0)
+    p.add_argument("--speed", type=float, default=1.0, help="delay multiplier")
+    p.add_argument("--no-humanise", action="store_true")
+    p.add_argument("--captures", default="captures")
+    p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("ubers", help="which upcoming positions yield an uber")
     p.add_argument("--seed", type=int, required=True)
