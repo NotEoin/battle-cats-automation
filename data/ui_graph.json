@@ -9,6 +9,7 @@
    ],
    "absent": [],
    "forbidden": false,
+   "reactive": false,
    "note": "Chapter carousel over the title screen; any chapter enters a Cat Base"
   },
   {
@@ -20,6 +21,7 @@
    ],
    "absent": [],
    "forbidden": false,
+   "reactive": false,
    "note": ""
   },
   {
@@ -28,6 +30,7 @@
    "anchors": [],
    "absent": [],
    "forbidden": false,
+   "reactive": false,
    "note": ""
   },
   {
@@ -36,6 +39,7 @@
    "anchors": [],
    "absent": [],
    "forbidden": false,
+   "reactive": false,
    "note": "Reached from Missions"
   },
   {
@@ -48,6 +52,7 @@
     "gamatoto_rewards"
    ],
    "forbidden": false,
+   "reactive": false,
    "note": "GAMATOTO Expedition, playback finished; back works normally"
   },
   {
@@ -59,6 +64,7 @@
    ],
    "absent": [],
    "forbidden": false,
+   "reactive": true,
    "note": "Expedition log replaying. The back arrow is dimmed and inert while it plays; pressing Rewards skips the playback and is the only way out."
   },
   {
@@ -69,6 +75,7 @@
    ],
    "absent": [],
    "forbidden": false,
+   "reactive": false,
    "note": "Cat Guide / Enemy Guide / Meow Medals / Officers' Club"
   },
   {
@@ -79,6 +86,7 @@
    ],
    "absent": [],
    "forbidden": false,
+   "reactive": false,
    "note": "Intro text on first launch; Skip bottom right"
   },
   {
@@ -87,6 +95,7 @@
    "anchors": [],
    "absent": [],
    "forbidden": false,
+   "reactive": false,
    "note": "Reached from Equip on the Cat Base"
   },
   {
@@ -100,6 +109,7 @@
     "sent_to_storage"
    ],
    "forbidden": false,
+   "reactive": false,
    "note": "100% uber machine, spends a Platinum Ticket; draw button is on the right"
   },
   {
@@ -110,6 +120,7 @@
    ],
    "absent": [],
    "forbidden": false,
+   "reactive": true,
    "note": "REAL MONEY offer popup with a Buy button. Never crawled; only ever left by the back arrow in the bottom-left."
   },
   {
@@ -124,6 +135,7 @@
     "sent_to_storage"
    ],
    "forbidden": false,
+   "reactive": false,
    "note": "The draw screen proper, with neither overlay up"
   },
   {
@@ -134,6 +146,7 @@
    ],
    "absent": [],
    "forbidden": false,
+   "reactive": true,
    "note": "Reveal screen after a draw: Use now / Exchange / name plate / Ok"
   },
   {
@@ -144,6 +157,7 @@
    ],
    "absent": [],
    "forbidden": false,
+   "reactive": true,
    "note": "'Sent to Cat Storage' notice; keeps the Rare Capsules title"
   },
   {
@@ -152,6 +166,7 @@
    "anchors": [],
    "absent": [],
    "forbidden": true,
+   "reactive": false,
    "note": "OFF LIMITS -- never routed through"
   },
   {
@@ -160,6 +175,7 @@
    "anchors": [],
    "absent": [],
    "forbidden": false,
+   "reactive": false,
    "note": ""
   },
   {
@@ -171,6 +187,7 @@
    ],
    "absent": [],
    "forbidden": false,
+   "reactive": false,
    "note": "Play / Settings / Mailbox"
   },
   {
@@ -179,6 +196,7 @@
    "anchors": [],
    "absent": [],
    "forbidden": false,
+   "reactive": false,
    "note": ""
   }
  ],
@@ -189,7 +207,8 @@
    "x": 0.889,
    "y": 0.895,
    "label": "Skip",
-   "settle": 2.5
+   "settle": 2.5,
+   "action": null
   },
   {
    "src": "title",
@@ -197,7 +216,8 @@
    "x": 0.5,
    "y": 0.712,
    "label": "Settings",
-   "settle": 1.8
+   "settle": 1.8,
+   "action": null
   },
   {
    "src": "title",
@@ -205,7 +225,8 @@
    "x": 0.5,
    "y": 0.578,
    "label": "Play",
-   "settle": 3.0
+   "settle": 3.0,
+   "action": null
   },
   {
    "src": "base_select",
@@ -213,7 +234,8 @@
    "x": 0.497,
    "y": 0.585,
    "label": "Chapter 1",
-   "settle": 3.5
+   "settle": 3.5,
+   "action": null
   },
   {
    "src": "base_select",
@@ -221,7 +243,8 @@
    "x": 0.691,
    "y": 0.598,
    "label": "Chapter 2",
-   "settle": 3.5
+   "settle": 3.5,
+   "action": null
   },
   {
    "src": "base_select",
@@ -229,7 +252,8 @@
    "x": 0.873,
    "y": 0.598,
    "label": "Chapter 3",
-   "settle": 3.5
+   "settle": 3.5,
+   "action": null
   },
   {
    "src": "base_select",
@@ -237,7 +261,8 @@
    "x": 0.29,
    "y": 0.617,
    "label": "Back",
-   "settle": 2.0
+   "settle": 2.0,
+   "action": null
   },
   {
    "src": "cat_base",
@@ -245,7 +270,8 @@
    "x": 0.124,
    "y": 0.719,
    "label": "Menu",
-   "settle": 2.0
+   "settle": 2.0,
+   "action": null
   },
   {
    "src": "menu",
@@ -253,7 +279,8 @@
    "x": 0.4158,
    "y": 0.3425,
    "label": "Cat Guide",
-   "settle": 2.5
+   "settle": 2.5,
+   "action": null
   },
   {
    "src": "menu",
@@ -261,7 +288,8 @@
    "x": 0.671,
    "y": 0.178,
    "label": "Close",
-   "settle": 1.5
+   "settle": 1.5,
+   "action": null
   },
   {
    "src": "cat_base",
@@ -269,7 +297,8 @@
    "x": 0.526,
    "y": 0.776,
    "label": "Rare Capsule",
-   "settle": 2.5
+   "settle": 2.5,
+   "action": null
   },
   {
    "src": "cat_base",
@@ -277,7 +306,8 @@
    "x": 0.377,
    "y": 0.776,
    "label": "Storage",
-   "settle": 2.2
+   "settle": 2.2,
+   "action": null
   },
   {
    "src": "rare_capsules",
@@ -285,7 +315,8 @@
    "x": 0.172,
    "y": 0.8,
    "label": "Storage",
-   "settle": 2.2
+   "settle": 2.2,
+   "action": null
   },
   {
    "src": "rare_capsules",
@@ -293,7 +324,8 @@
    "x": 0.084,
    "y": 0.89,
    "label": "Back",
-   "settle": 2.0
+   "settle": 2.0,
+   "action": null
   },
   {
    "src": "storage",
@@ -301,7 +333,8 @@
    "x": 0.088,
    "y": 0.877,
    "label": "Back",
-   "settle": 2.0
+   "settle": 2.0,
+   "action": null
   },
   {
    "src": "cat_guide",
@@ -309,7 +342,8 @@
    "x": 0.089,
    "y": 0.872,
    "label": "Back",
-   "settle": 2.0
+   "settle": 2.0,
+   "action": null
   },
   {
    "src": "gamatoto_report",
@@ -317,7 +351,8 @@
    "x": 0.747,
    "y": 0.124,
    "label": "Rewards",
-   "settle": 2.5
+   "settle": 2.5,
+   "action": null
   },
   {
    "src": "gamatoto",
@@ -325,7 +360,8 @@
    "x": 0.091,
    "y": 0.872,
    "label": "Back",
-   "settle": 2.2
+   "settle": 2.2,
+   "action": null
   },
   {
    "src": "cat_base",
@@ -333,7 +369,8 @@
    "x": 0.2,
    "y": 0.719,
    "label": "GAMATOTO",
-   "settle": 3.0
+   "settle": 3.0,
+   "action": null
   },
   {
    "src": "cat_base",
@@ -341,7 +378,8 @@
    "x": 0.2,
    "y": 0.413,
    "label": "Upgrade",
-   "settle": 2.6
+   "settle": 2.6,
+   "action": null
   },
   {
    "src": "upgrade",
@@ -349,7 +387,8 @@
    "x": 0.091,
    "y": 0.872,
    "label": "Back",
-   "settle": 2.2
+   "settle": 2.2,
+   "action": null
   },
   {
    "src": "cat_base",
@@ -357,7 +396,8 @@
    "x": 0.2,
    "y": 0.525,
    "label": "Equip",
-   "settle": 2.6
+   "settle": 2.6,
+   "action": null
   },
   {
    "src": "organize_cats",
@@ -365,7 +405,8 @@
    "x": 0.091,
    "y": 0.872,
    "label": "Back",
-   "settle": 2.2
+   "settle": 2.2,
+   "action": null
   },
   {
    "src": "cat_base",
@@ -373,7 +414,8 @@
    "x": 0.283,
    "y": 0.719,
    "label": "Missions",
-   "settle": 2.6
+   "settle": 2.6,
+   "action": null
   },
   {
    "src": "catnip_challenges",
@@ -381,7 +423,8 @@
    "x": 0.091,
    "y": 0.872,
    "label": "Back",
-   "settle": 2.2
+   "settle": 2.2,
+   "action": null
   },
   {
    "src": "purchase_offer",
@@ -389,15 +432,8 @@
    "x": 0.085,
    "y": 0.933,
    "label": "Back",
-   "settle": 2.2
-  },
-  {
-   "src": "cat_base",
-   "dst": "storage",
-   "x": 0.3999,
-   "y": 0.7137,
-   "label": "button 6",
-   "settle": 1.8
+   "settle": 2.2,
+   "action": null
   },
   {
    "src": "roll_result",
@@ -405,7 +441,8 @@
    "x": 0.7355,
    "y": 0.8139,
    "label": "Ok",
-   "settle": 1.8
+   "settle": 1.8,
+   "action": null
   },
   {
    "src": "sent_to_storage",
@@ -413,7 +450,8 @@
    "x": 0.6501,
    "y": 0.6265,
    "label": "Ok",
-   "settle": 1.8
+   "settle": 1.8,
+   "action": null
   },
   {
    "src": "platinum_capsules",
@@ -421,7 +459,8 @@
    "x": 0.172,
    "y": 0.8,
    "label": "Storage",
-   "settle": 2.2
+   "settle": 2.2,
+   "action": null
   },
   {
    "src": "platinum_capsules",
@@ -429,7 +468,35 @@
    "x": 0.091,
    "y": 0.872,
    "label": "Back",
-   "settle": 2.2
+   "settle": 2.2,
+   "action": null
+  },
+  {
+   "src": "rare_capsules",
+   "dst": "platinum_capsules",
+   "x": 0.0,
+   "y": 0.0,
+   "label": "select platinum",
+   "settle": 2.0,
+   "action": "banner:platinum"
+  },
+  {
+   "src": "platinum_capsules",
+   "dst": "rare_capsules",
+   "x": 0.0,
+   "y": 0.0,
+   "label": "select rare",
+   "settle": 2.0,
+   "action": "banner:2026-09-21_979"
+  },
+  {
+   "src": "sent_to_storage",
+   "dst": "platinum_capsules",
+   "x": 0.6501,
+   "y": 0.6265,
+   "label": "Ok",
+   "settle": 1.8,
+   "action": null
   }
  ]
 }

@@ -47,19 +47,30 @@ class Screen:
     anchors: tuple[str, ...] = ()       # template anchors that must all match
     absent: tuple[str, ...] = ()        # anchors that must NOT match
     forbidden: bool = False             # never route through this
+    # Screens that appear of their own accord -- a reveal after a draw, a
+    # reward popup, an offer. Nothing navigates TO them, so they look
+    # unreachable, but they must still be recognised and routed OUT of.
+    reactive: bool = False
     note: str = ""
 
 
 @dataclass(frozen=True)
 class Transition:
-    """A tap that moves from one screen to another."""
+    """A move from one screen to another.
+
+    Most are a tap at a fixed point. Some need a routine instead: the banner
+    carousel has no fixed tab for a given event, so reaching the Platinum
+    machine means running the picker rather than tapping a memorised spot.
+    Those carry an `action` and their x/y are ignored.
+    """
 
     src: str
     dst: str
-    x: float
-    y: float
+    x: float = 0.0
+    y: float = 0.0
     label: str = ""
     settle: float = 1.8
+    action: str | None = None
 
 
 class UnknownScreen(RuntimeError):
@@ -92,6 +103,7 @@ class UIGraph:
                     anchors=tuple(s.get("anchors", ())),
                     absent=tuple(s.get("absent", ())),
                     forbidden=s.get("forbidden", False),
+                    reactive=s.get("reactive", False),
                     note=s.get("note", ""),
                 )
                 for s in raw.get("screens", [])
@@ -106,7 +118,8 @@ class UIGraph:
             "screens": [
                 {
                     "name": s.name, "title": s.title, "anchors": list(s.anchors),
-                    "absent": list(s.absent), "forbidden": s.forbidden, "note": s.note,
+                    "absent": list(s.absent), "forbidden": s.forbidden,
+                    "reactive": s.reactive, "note": s.note,
                 }
                 for s in sorted(self.screens.values(), key=lambda s: s.name)
             ],
@@ -287,6 +300,31 @@ class Navigator:
             return True
         return False
 
+    def _run_action(self, step: Transition, log=None) -> bool:
+        """Carry out a transition that needs a routine rather than a tap."""
+        kind, _, argument = (step.action or "").partition(":")
+        if kind == "banner":
+            import datetime as dt
+
+            from .bannerpick import BannerPicker
+            from .cli import _live_banners
+            from .data import load
+
+            dataset = load()
+            normal, platinum = _live_banners(dataset, dt.date.today())
+            candidates = normal + ([platinum] if platinum else [])
+            wanted = next((b for b in candidates if b.key == argument), None)
+            if wanted is None and argument == "platinum":
+                wanted = platinum
+            if wanted is None:
+                if log:
+                    log(f"  no banner matching {argument!r}")
+                return False
+            return BannerPicker(self.session, dataset).select(wanted, candidates)
+        if log:
+            log(f"  unknown action {step.action!r}")
+        return False
+
     def goto(self, destination: str, max_steps: int = 30, log=None) -> bool:
         """Reach `destination`. Returns False if it could not be found."""
         lost = 0
@@ -321,6 +359,10 @@ class Navigator:
             step = path[0]
             if log:
                 log(f"  {here} --{step.label}--> {step.dst}")
+            if step.action:
+                if not self._run_action(step, log=log):
+                    return False
+                continue
             self._tap(step.x, step.y, step.settle)
         return False
 
