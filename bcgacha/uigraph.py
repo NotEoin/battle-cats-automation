@@ -204,13 +204,22 @@ class UIGraph:
 
     # -- routing ------------------------------------------------------------
 
-    def route(self, src: str, dst: str) -> list[Transition]:
-        """Fewest taps from `src` to `dst`, never through a forbidden screen."""
+    def route(
+        self, src: str, dst: str, exclude: set | None = None
+    ) -> list[Transition]:
+        """Fewest taps from `src` to `dst`, never through a forbidden screen.
+
+        `exclude` drops edges already shown to do nothing, so a second attempt
+        picks a different control rather than repeating a dud.
+        """
         if src == dst:
             return []
+        exclude = exclude or set()
         outgoing: dict[str, list[Transition]] = {}
         for t in self.transitions:
             if self.screens.get(t.dst) and self.screens[t.dst].forbidden:
+                continue
+            if (t.src, t.dst, round(t.x, 3), round(t.y, 3)) in exclude:
                 continue
             outgoing.setdefault(t.src, []).append(t)
 
@@ -305,6 +314,21 @@ class Navigator:
     def _run_action(self, step: Transition, log=None) -> bool:
         """Carry out a transition that needs a routine rather than a tap."""
         kind, _, argument = (step.action or "").partition(":")
+        if kind == "swipe":
+            # Carousels do not respond to taps on their side items at all --
+            # only the centre one is live, and the selection is moved by
+            # flicking. Routing never needs a particular entry, since every
+            # one of them lands on a Cat Base, so this exists for completeness.
+            from .layout import landscape_to_hid
+
+            left = argument == "left"
+            x0, x1 = (0.70, 0.30) if left else (0.30, 0.70)
+            self.session.swipe(
+                *landscape_to_hid(x0, 0.58), *landscape_to_hid(x1, 0.58),
+                steps=22, duration=0.26,
+            )
+            self.human.sleep(1.3)
+            return True
         if kind == "banner":
             import datetime as dt
 
@@ -330,6 +354,11 @@ class Navigator:
     def goto(self, destination: str, max_steps: int = 30, log=None) -> bool:
         """Reach `destination`. Returns False if it could not be found."""
         lost = 0
+        # Edges that were taken and left us exactly where we started. In a
+        # carousel the side cards only move the selection, so tapping one for
+        # a second time repeats the same nothing; without this the walk spins
+        # on its first choice forever.
+        barren: set[tuple[str, str, float, float]] = set()
         for _ in range(max_steps):
             frame = self.session.screenshot()
             if self._clear_obstruction(frame):
@@ -353,7 +382,7 @@ class Navigator:
 
             lost = 0
             try:
-                path = self.graph.route(here, destination)
+                path = self.graph.route(here, destination, exclude=barren)
             except NoRoute:
                 if log:
                     log(f"no route from {here!r} to {destination!r}")
@@ -366,6 +395,10 @@ class Navigator:
                     return False
                 continue
             self._tap(step.x, step.y, step.settle)
+            if self.graph.identify(self.session.screenshot()) == here:
+                barren.add((step.src, step.dst, round(step.x, 3), round(step.y, 3)))
+                if log:
+                    log(f"    {step.label!r} changed nothing; trying another way")
         return False
 
 

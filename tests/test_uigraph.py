@@ -109,5 +109,7 @@ def test_convergent_routes_are_distinct_buttons():
     for (src, dst), edges in grouped.items():
         if len(edges) < 2:
             continue
-        points = {(round(t.x, 2), round(t.y, 2)) for t in edges}
-        assert len(points) == len(edges), f"{src} -> {dst} repeats a tap point"
+        # An action is its own control and carries no coordinates, so it is
+        # identified by the action rather than by where it would be tapped.
+        controls = {t.action or (round(t.x, 2), round(t.y, 2)) for t in edges}
+        assert len(controls) == len(edges), f"{src} -> {dst} repeats a control"
