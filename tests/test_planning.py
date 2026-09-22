@@ -289,3 +289,56 @@ def test_verification_tolerates_an_ocr_slip_but_not_a_wrong_cat():
     assert score("Viking Cat", "Viking Cat") >= VERIFY_SCORE
     assert score('rich cat "', "Swordsman Cat") < VERIFY_SCORE
     assert score("Bath Cat", "Rich Cat III") < VERIFY_SCORE
+
+
+def _goal_fixture():
+    from bcgacha import goals
+    from bcgacha.catindex import OwnedIndex
+
+    ds = load()
+    tier_list = T.TierList.load()
+    owned = OwnedIndex.load().owned
+    normal = [ds.find_banner(k) for k in
+              ("2026-09-21_1081", "2026-09-21_1021", "2026-09-21_979")]
+    platinum = next(b for b in ds.banners.values() if b.uber == 10000)
+    goal = goals.build(ds, tier_list, owned, normal, platinum,
+                       platinum_tickets=7, preferred_banner="2026-09-21_979")
+    return ds, tier_list, owned, normal, platinum, goal
+
+
+def test_goal_ranks_legendaries_above_every_uber():
+    _ds, _t, _owned, _n, _p, goal = _goal_fixture()
+    assert goal.legendaries and goal.ubers
+    assert min(goal.priority[c] for c in goal.legendaries) > max(
+        goal.priority[c] for c in goal.ubers
+    )
+
+
+def test_goal_prefers_the_named_banner_for_equal_legendaries():
+    """The Iron Legion legend must outrank the other one."""
+    ds, tier_list, owned, normal, platinum, goal = _goal_fixture()
+    iron = ds.find_banner("2026-09-21_979")
+    on_iron = [c for c in goal.legendaries if c in (iron.slots.get(LEGEND) or [])]
+    elsewhere = [c for c in goal.legendaries if c not in on_iron]
+    assert on_iron and elsewhere
+    assert max(goal.priority[c] for c in on_iron) > max(
+        goal.priority[c] for c in elsewhere
+    )
+
+
+def test_goal_completes_only_when_everything_is_owned():
+    _ds, _t, owned, _n, _p, goal = _goal_fixture()
+    assert not goal.complete(owned)
+    assert goal.complete(owned | goal.wanted)
+    assert goal.remaining(owned | goal.wanted) == set()
+
+
+def test_goal_priority_never_applies_to_a_duplicate():
+    from bcgacha.scoring import Scorer
+
+    ds, tier_list, owned, _n, _p, goal = _goal_fixture()
+    target = next(iter(goal.legendaries))
+    fresh = Scorer(owned=set(owned), tiers=tier_list, priority=goal.priority)
+    dupe = Scorer(owned=set(owned) | {target}, tiers=tier_list, priority=goal.priority)
+    assert fresh.value(target, ds.rarity_of(target)) > 10_000
+    assert dupe.value(target, ds.rarity_of(target)) < 1_000

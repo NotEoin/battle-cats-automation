@@ -323,3 +323,55 @@ class Navigator:
                 log(f"  {here} --{step.label}--> {step.dst}")
             self._tap(step.x, step.y, step.settle)
         return False
+
+
+# The game draws nearly every control as a gold button with a dark outline, at
+# a consistent hue. Detecting them beats hand-measuring coordinates: it finds
+# controls on screens nobody has mapped yet, and it survives layout drift.
+BUTTON_HSV_LOW = (16, 120, 140)
+BUTTON_HSV_HIGH = (34, 255, 255)
+BUTTON_MIN_AREA = 2600
+BUTTON_MAX_AREA_FRACTION = 0.22
+BUTTON_ASPECT = (0.45, 9.0)
+
+
+@dataclass(frozen=True)
+class Button:
+    """A detected control, in screen fractions."""
+
+    x: float
+    y: float
+    w: float
+    h: float
+    area: int
+
+    @property
+    def centre(self) -> tuple[float, float]:
+        return self.x, self.y
+
+
+def find_buttons(frame: np.ndarray) -> list[Button]:
+    """Every gold control on the screen, ordered top-to-bottom then left-to-right."""
+    h, w = frame.shape[:2]
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, BUTTON_HSV_LOW, BUTTON_HSV_HIGH)
+    # Close the dark glyphs printed on top of a button so it reads as one blob.
+    mask = cv2.morphologyEx(
+        mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (25, 15))
+    )
+    count, _lab, stats, cent = cv2.connectedComponentsWithStats(mask, 8)
+    limit = BUTTON_MAX_AREA_FRACTION * h * w
+    out: list[Button] = []
+    for i in range(1, count):
+        area = int(stats[i, 4])
+        bw, bh = int(stats[i, 2]), int(stats[i, 3])
+        if area < BUTTON_MIN_AREA or area > limit or bh == 0:
+            continue
+        if not (BUTTON_ASPECT[0] <= bw / bh <= BUTTON_ASPECT[1]):
+            continue
+        out.append(Button(
+            x=float(cent[i][0]) / w, y=float(cent[i][1]) / h,
+            w=bw / w, h=bh / h, area=area,
+        ))
+    out.sort(key=lambda b: (round(b.y, 2), b.x))
+    return out

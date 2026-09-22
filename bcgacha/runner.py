@@ -53,6 +53,7 @@ class Mode(str, Enum):
     MAX_TICKETS = "max-tickets"        # stop after a ticket budget
     UNTIL_STORAGE_FULL = "until-storage-full"
     ALL = "all"                        # run dry, emptying storage as needed
+    GOAL = "goal"                      # until every wanted unit is unlocked
 
 
 @dataclass
@@ -75,6 +76,7 @@ class Runner:
         capture_dir: Path | None = None,
         picker: BannerPicker | None = None,
         pin_banner: bool = False,
+        goal=None,
     ):
         self.tapper = tapper
         self.dataset = dataset
@@ -88,6 +90,7 @@ class Runner:
         # Storage counts as owned here: it cannot be rolled usefully again
         # even though the roster has not picked it up yet.
         self.owned_index = OwnedIndex.load()
+        self.goal = goal
         # When the carousel cannot be driven, stay put and roll where we are
         # rather than silently rolling on the wrong banner.
         self.pin_banner = pin_banner
@@ -324,6 +327,11 @@ class Runner:
                 report.stopped_because = f"ticket budget of {max_tickets} reached"
                 break
 
+            if mode is Mode.GOAL and self.goal is not None:
+                if self.goal.complete(self.planner.scorer.owned):
+                    report.stopped_because = "every wanted unit is unlocked"
+                    break
+
             frame = self.to_capsule()
 
             tickets = vision.read_counter(frame, "tickets", vision.DigitAtlas())
@@ -344,7 +352,7 @@ class Runner:
                     self.account.storage_used, self.account.storage_capacity = used, cap
                     predicted = used
             if predicted >= self.account.storage_capacity - 1:
-                if mode is Mode.ALL:
+                if mode in (Mode.ALL, Mode.GOAL):
                     log(f"storage {predicted}/{self.account.storage_capacity}, emptying")
                     if self.empty_storage():
                         report.storage_emptied += 1
@@ -423,6 +431,10 @@ class Runner:
                 if mode is Mode.UNTIL_TARGET and step.rarity in (UBER, LEGEND):
                     report.stopped_because = f"got {got}"
                     break
+                if mode is Mode.GOAL and self.goal is not None:
+                    left = len(self.goal.remaining(self.planner.scorer.owned))
+                    if step.cat_id in self.goal.wanted:
+                        log(f"       goal unit unlocked; {left} still wanted")
             else:
                 log(f"  #{report.rolled:>3} {step.position:>6}     {got}")
 

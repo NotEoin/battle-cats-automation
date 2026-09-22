@@ -90,6 +90,16 @@
    "note": "Reached from Equip on the Cat Base"
   },
   {
+   "name": "purchase_offer",
+   "title": null,
+   "anchors": [
+    "offer_banner"
+   ],
+   "absent": [],
+   "forbidden": false,
+   "note": "REAL MONEY offer popup with a Buy button. Never crawled; only ever left by the back arrow in the bottom-left."
+  },
+  {
    "name": "rare_capsules",
    "title": "Rare Capsules",
    "anchors": [],
@@ -333,6 +343,22 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.2
+  },
+  {
+   "src": "purchase_offer",
+   "dst": "cat_base",
+   "x": 0.085,
+   "y": 0.933,
+   "label": "Back",
+   "settle": 2.2
+  },
+  {
+   "src": "cat_base",
+   "dst": "storage",
+   "x": 0.3999,
+   "y": 0.7137,
+   "label": "button 6",
+   "settle": 1.8
   }
  ]
 }

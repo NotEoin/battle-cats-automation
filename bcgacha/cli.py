@@ -262,6 +262,76 @@ def cmd_resync(args) -> int:
     return 0
 
 
+def _goal_setup(ds, args):
+    """Planner and goal for a goal-driven run."""
+    from . import goals
+    from .catindex import OwnedIndex
+    from .planner import Planner
+    from .scoring import Scorer
+    from .tiers import TierList
+
+    owned = OwnedIndex.load().owned
+    try:
+        tier_list = TierList.load()
+    except FileNotFoundError:
+        tier_list = None
+    normal, platinum = _live_banners(ds)
+    goal = goals.build(
+        ds, tier_list, owned, normal, platinum,
+        platinum_tickets=args.platinum, preferred_banner=args.prefer,
+    )
+    scorer = Scorer(owned=set(owned), tiers=tier_list, priority=goal.priority)
+    planner = Planner(
+        ds, normal, scorer, platinum_banner=platinum,
+        platinum_tickets=args.platinum, platinum_wanted=goal.platinum,
+    )
+    return planner, goal, tier_list, owned
+
+
+def cmd_goal(args) -> int:
+    """Roll towards a set of wanted units until they are all unlocked."""
+    from pathlib import Path
+
+    from .bannerpick import BannerPicker
+    from .runner import Mode, Runner
+    from .safety import SafeTapper
+    from .session import DeviceSession
+    from .state import Account
+    from .timing import Humaniser
+
+    ds = load(args.lang)
+    account = Account.load()
+    planner, goal, tier_list, owned = _goal_setup(ds, args)
+    print(goal.describe(ds, tier_list, owned))
+    print(f"
+seed {account.seed} at {account.position}
+")
+    if args.dry_run:
+        plan = planner.plan(
+            account.seed, rolls=args.count, index=account.index,
+            track=account.track, previous_cat=account.last_cat_id,
+        )
+        print(plan.summary(ds))
+        return 0
+
+    human = Humaniser(scale=args.speed, enabled=not args.no_humanise)
+    with DeviceSession() as session:
+        tapper = SafeTapper(session, capture_dir=Path(args.captures), humaniser=human)
+        runner = Runner(
+            tapper, ds, account, planner, capture_dir=Path(args.captures),
+            picker=BannerPicker(session, ds), goal=goal,
+        )
+        report = runner.run(mode=Mode.GOAL, max_tickets=args.max_tickets)
+    account.save()
+    print(f"
+rolled {report.rolled}, tickets spent {report.tickets_spent}, "
+          f"storage emptied {report.storage_emptied}x")
+    if report.new_units:
+        print("new units:", ", ".join(report.new_units))
+    print("stopped:", report.stopped_because)
+    return 0
+
+
 def cmd_run(args) -> int:
     from pathlib import Path
 
@@ -350,6 +420,17 @@ def main(argv=None) -> int:
     p.add_argument("--pin-banner", action="store_true",
                    help="never switch banners; roll on whatever is selected")
     p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser("goal", help="roll until a set of wanted units is unlocked")
+    p.add_argument("--platinum", type=int, default=0, help="platinum tickets held")
+    p.add_argument("--prefer", help="banner key whose legendary to chase first")
+    p.add_argument("--speed", type=float, default=1.0)
+    p.add_argument("--no-humanise", action="store_true")
+    p.add_argument("--captures", default="captures")
+    p.add_argument("--max-tickets", type=int, default=10_000)
+    p.add_argument("--dry-run", action="store_true", help="show the plan, roll nothing")
+    p.add_argument("--count", type=int, default=25, help="rolls to show with --dry-run")
+    p.set_defaults(func=cmd_goal)
 
     p = sub.add_parser("resync", help="fix the position after untracked rolls")
     p.add_argument("--cat", required=True, help="the last cat actually rolled")

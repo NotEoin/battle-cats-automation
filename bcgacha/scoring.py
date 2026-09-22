@@ -48,6 +48,10 @@ class Scorer:
     tiers: TierList | None = None
     targets: set[int] | None = None
     target_bonus: float = 5000.0
+    # Per-unit bonuses from a goal, applied only while the unit is still
+    # missing. These dwarf the ordinary rarity and tier values on purpose:
+    # a goal is a statement about what the run is for, not a mild preference.
+    priority: dict[int, float] | None = None
 
     def is_new(self, cat_id: int) -> bool:
         return cat_id not in self.owned
@@ -62,6 +66,8 @@ class Scorer:
             base *= DUPLICATE_FRACTION.get(rarity, 0.02)
         if self.targets and cat_id in self.targets and self.is_new(cat_id):
             base += self.target_bonus
+        if self.priority and self.is_new(cat_id):
+            base += self.priority.get(cat_id, 0.0)
         return base
 
     def describe(self, cat_id: int, rarity: int, dataset) -> str:
