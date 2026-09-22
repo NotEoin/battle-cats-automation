@@ -249,34 +249,43 @@ class CatIndexer:
             self.tap(point, settle=0.9)
         return False
 
-    def open_guide(self, timeout: float = 45.0, log=print) -> bool:
-        """Get to a freshly opened Cat Guide, from wherever the game is.
+    def open_guide(self, timeout: float = 60.0, log=print) -> bool:
+        """Leave the Cat Guide entirely, then come back into a fresh one.
 
-        The Guide's own back and arrow buttons ignore synthetic taps, so the
-        only dependable way to rewind it is to leave entirely and come back:
-        out to the Cat Base, then Menu, then Cat Guide. That also guarantees
-        the grid starts on page one.
+        Being *in* the Guide is not the same as being at its start, and the
+        Guide has no working rewind: its arrows and back button ignore
+        synthetic taps, and it does not wrap around at the end. Exiting to the
+        Cat Base and re-entering through Menu is the only way to guarantee the
+        grid begins on page one, so this always does the round trip rather
+        than returning early when the Guide is already open.
         """
         from . import vision
 
+        left = False           # have we got out of the Guide yet?
         deadline = time.time() + timeout
         while time.time() < deadline:
             frame = self.session.screenshot()
             screen = vision.classify(frame)
-            if screen is vision.Screen.CAT_GUIDE:
-                return True
-            if screen is vision.Screen.MENU:
-                self.tap(MENU_DIALOG["cat_guide"], settle=2.4)
-                continue
-            if screen is vision.Screen.CAT_BASE:
-                self.tap(CAT_BASE["menu"], settle=2.0)
-                continue
+
             if self.find_ok_button(frame) is not None:
                 self.dismiss_popup()
                 continue
-            # Anywhere else: back out one level and look again.
+            if screen is vision.Screen.CAT_BASE:
+                left = True
+                self.tap(CAT_BASE["menu"], settle=2.0)
+                continue
+            if screen is vision.Screen.MENU:
+                left = True
+                self.tap(MENU_DIALOG["cat_guide"], settle=2.4)
+                continue
+            if screen is vision.Screen.CAT_GUIDE:
+                if left:
+                    return True
+                self.tap(GUIDE["back"], settle=1.6)
+                continue
+            # Detail view or anything else: back out one level.
             self.tap(GUIDE["back"], settle=1.6)
-        log("could not reach the Cat Guide")
+        log("could not reopen the Cat Guide")
         return False
 
     def clear_filter(self) -> None:
