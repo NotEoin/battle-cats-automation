@@ -86,11 +86,28 @@ def test_the_post_draw_overlay_can_exit_to_either_machine():
 
 
 def test_no_duplicate_transitions():
+    """Two edges may share a destination, but not a destination AND a tap.
+
+    Convergence is normal and expected -- every chapter enters a Cat Base, and
+    every saga opens the same chapter carousel. What is not normal is the same
+    button recorded twice, which is what a crawler leaves behind.
+    """
     graph = _graph()
     seen = set()
     for t in graph.transitions:
-        if t.src == "base_select":
-            continue          # three chapters legitimately land in the same place
-        key = (t.src, t.dst, t.action)
+        key = (t.src, t.dst, t.action, round(t.x, 2), round(t.y, 2))
         assert key not in seen, f"duplicate edge {key}"
         seen.add(key)
+
+
+def test_convergent_routes_are_distinct_buttons():
+    """Where several edges share a destination, each must be its own control."""
+    graph = _graph()
+    grouped: dict[tuple[str, str], list] = {}
+    for t in graph.transitions:
+        grouped.setdefault((t.src, t.dst), []).append(t)
+    for (src, dst), edges in grouped.items():
+        if len(edges) < 2:
+            continue
+        points = {(round(t.x, 2), round(t.y, 2)) for t in edges}
+        assert len(points) == len(edges), f"{src} -> {dst} repeats a tap point"

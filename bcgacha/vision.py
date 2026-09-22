@@ -64,6 +64,8 @@ ANCHORS = {
     "storage_useall": Anchor("storage_useall", (0.405, 0.860, 0.545, 0.940)),
     # The Ok button pulses a pink outline, so it is a poor anchor. The
     # Use now / Exchange pair beside the name plate is static.
+    "settings_banner": Anchor("settings_banner", (0.400, 0.105, 0.600, 0.200)),
+    "settings_close": Anchor("settings_close", (0.648, 0.045, 0.722, 0.135)),
     "plat_try_once": Anchor("plat_try_once", (0.775, 0.700, 0.935, 0.855)),
     "offer_banner": Anchor("offer_banner", (0.240, 0.120, 0.760, 0.220)),
     "gamatoto_banner": Anchor("gamatoto_banner", (0.055, 0.020, 0.270, 0.100)),

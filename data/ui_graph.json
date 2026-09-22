@@ -10,7 +10,7 @@
    "absent": [],
    "forbidden": false,
    "reactive": false,
-   "note": "Chapter carousel over the title screen; any chapter enters a Cat Base"
+   "note": "Chapter carousel within a saga; every chapter enters a Cat Base"
   },
   {
    "name": "cat_base",
@@ -150,6 +150,19 @@
    "note": "Reveal screen after a draw: Use now / Exchange / name plate / Ok"
   },
   {
+   "name": "saga_select",
+   "title": null,
+   "anchors": [
+    "select_close"
+   ],
+   "absent": [
+    "select_back"
+   ],
+   "forbidden": false,
+   "reactive": false,
+   "note": "Saga carousel: Empire of Cats, Into The Future, Cats of the Cosmos, Legend Stages, Catclaw Dojo. One level above the chapter carousel, which is told apart by its Back card."
+  },
+  {
    "name": "sent_to_storage",
    "title": null,
    "anchors": [
@@ -163,11 +176,14 @@
   {
    "name": "settings",
    "title": null,
-   "anchors": [],
+   "anchors": [
+    "settings_banner",
+    "settings_close"
+   ],
    "absent": [],
    "forbidden": true,
    "reactive": false,
-   "note": "OFF LIMITS -- never routed through"
+   "note": "OFF LIMITS. Carries Change Account/Device, which can move the save. Never routed into and never crawled; recognised only so it can be left."
   },
   {
    "name": "storage",
@@ -496,6 +512,78 @@
    "y": 0.6265,
    "label": "Ok",
    "settle": 1.8,
+   "action": null
+  },
+  {
+   "src": "settings",
+   "dst": "title",
+   "x": 0.683,
+   "y": 0.087,
+   "label": "Close",
+   "settle": 2.0,
+   "action": null
+  },
+  {
+   "src": "title",
+   "dst": "saga_select",
+   "x": 0.5,
+   "y": 0.578,
+   "label": "Play",
+   "settle": 3.0,
+   "action": null
+  },
+  {
+   "src": "saga_select",
+   "dst": "base_select",
+   "x": 0.124,
+   "y": 0.609,
+   "label": "Empire of Cats",
+   "settle": 3.0,
+   "action": null
+  },
+  {
+   "src": "saga_select",
+   "dst": "base_select",
+   "x": 0.296,
+   "y": 0.609,
+   "label": "Into The Future",
+   "settle": 3.0,
+   "action": null
+  },
+  {
+   "src": "saga_select",
+   "dst": "base_select",
+   "x": 0.5,
+   "y": 0.609,
+   "label": "Cats of the Cosmos",
+   "settle": 3.0,
+   "action": null
+  },
+  {
+   "src": "saga_select",
+   "dst": "base_select",
+   "x": 0.701,
+   "y": 0.609,
+   "label": "Legend Stages",
+   "settle": 3.0,
+   "action": null
+  },
+  {
+   "src": "saga_select",
+   "dst": "base_select",
+   "x": 0.875,
+   "y": 0.609,
+   "label": "Catclaw Dojo",
+   "settle": 3.0,
+   "action": null
+  },
+  {
+   "src": "saga_select",
+   "dst": "title",
+   "x": 0.908,
+   "y": 0.349,
+   "label": "Close",
+   "settle": 2.0,
    "action": null
   }
  ]

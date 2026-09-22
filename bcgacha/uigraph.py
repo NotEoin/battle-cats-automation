@@ -169,8 +169,10 @@ class UIGraph:
         title = self.read_title(frame)
         candidates: list[tuple[float, str]] = []
         for screen in self.screens.values():
-            if screen.forbidden:
-                continue
+            # Forbidden screens are still identified. Refusing to recognise one
+            # would leave the bot blind exactly where it most needs to know
+            # where it is, so that it can leave deliberately rather than tap
+            # about. Forbidding governs routing INTO a screen, nothing else.
             score = 0.0
 
             if screen.anchors:
