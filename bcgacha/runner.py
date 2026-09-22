@@ -18,8 +18,15 @@ import cv2
 from . import vision
 from .data import LEGEND, UBER, Dataset
 from .gacha import next_position
-from .layout import CAPSULE_SCREEN, RESULT_SCREEN, SENT_TO_STORAGE_SCREEN, STORAGE_SCREEN
+from .layout import (
+    CAPSULE_SCREEN,
+    RESULT_SCREEN,
+    SENT_TO_STORAGE_SCREEN,
+    STORAGE_SCREEN,
+    landscape_to_hid,
+)
 from .bannerpick import BannerPicker
+from .catindex import CAT_BASE, MENU_DIALOG
 from .planner import PLATINUM_TICKET, Plan, Planner
 from .roller import RollAborted
 from .safety import SafeTapper, UnsafeTap
@@ -100,6 +107,27 @@ class Runner:
                     expect=vision.Screen.STORAGE,
                     require_anchor="storage_title",
                 )
+                continue
+            # An unattended run can end up anywhere: a stray tap, a popup that
+            # navigated, or the game restarting on the base. Walk back rather
+            # than spinning until the timeout.
+            if screen is vision.Screen.CAT_BASE:
+                self.tapper.session.tap(
+                    *self.tapper.human.jitter_point(*landscape_to_hid(*CAT_BASE["rare_capsule"]))
+                )
+                self.tapper.human.sleep(1.6)
+                continue
+            if screen is vision.Screen.MENU:
+                self.tapper.session.tap(
+                    *self.tapper.human.jitter_point(*landscape_to_hid(*MENU_DIALOG["close"]))
+                )
+                self.tapper.human.sleep(1.2)
+                continue
+            if screen is vision.Screen.CAT_GUIDE:
+                self.tapper.session.tap(
+                    *self.tapper.human.jitter_point(*landscape_to_hid(0.089, 0.872))
+                )
+                self.tapper.human.sleep(1.4)
                 continue
             if self.tapper.dismiss_dialog(frame):
                 continue
