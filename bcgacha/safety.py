@@ -20,8 +20,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from . import device, vision
+from . import vision
 from .layout import Target, landscape_to_hid
+from .session import DeviceSession
+from .timing import Humaniser
 
 # Buttons on the game's confirmation dialogs, measured at full resolution.
 DIALOG_YES = (0.4003, 0.6173)
@@ -72,20 +74,48 @@ def inspect_dialog(frame: np.ndarray) -> Dialog:
 class SafeTapper:
     """Taps only after confirming what is on screen."""
 
-    def __init__(self, capture_dir: Path | None = None, settle: float = 1.2):
+    def __init__(
+        self,
+        session: DeviceSession,
+        capture_dir: Path | None = None,
+        settle: float = 0.45,
+        humaniser: Humaniser | None = None,
+    ):
+        self.session = session
         self.capture_dir = Path(capture_dir) if capture_dir else None
         self.settle = settle
+        self.human = humaniser or Humaniser()
         self._shot = 0
 
-    def capture(self) -> np.ndarray:
+    def capture(self, keep: bool = False) -> np.ndarray:
+        """Grab a frame. Frames are kept only when asked, to save disk."""
+        frame = self.session.screenshot()
         self._shot += 1
-        if self.capture_dir:
+        if keep and self.capture_dir:
             self.capture_dir.mkdir(parents=True, exist_ok=True)
-            path = self.capture_dir / f"frame_{self._shot:05d}.png"
-        else:
-            path = Path("/tmp") / f"bcgacha_frame_{self._shot:05d}.png"
-        device.screenshot(path)
-        return vision.load(path)
+            cv2.imwrite(str(self.capture_dir / f"frame_{self._shot:05d}.png"), frame)
+        return frame
+
+    def wait_for(
+        self,
+        wanted: "vision.Screen | set",
+        timeout: float = 25.0,
+        poll: float = 0.35,
+    ) -> np.ndarray | None:
+        """Poll until one of `wanted` is on screen. None on timeout.
+
+        Polling beats sleeping a fixed time: Uber and Legend reveals animate for
+        noticeably longer than Rare ones, so any constant is either too slow for
+        the common case or too short for the interesting one.
+        """
+        targets = wanted if isinstance(wanted, set) else {wanted}
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            frame = self.capture()
+            if vision.classify(frame) in targets:
+                return frame
+            time.sleep(poll)
+        return None
 
     def tap(
         self,
@@ -115,8 +145,8 @@ class SafeTapper:
                 f"refusing to tap {target.name}: a dialog is already open "
                 f"(cat food={dialog.spends_cat_food})"
             )
-        device.tap(*target.hid())
-        time.sleep(self.settle)
+        self.session.tap(*self.human.jitter_point(*target.hid()))
+        self.human.sleep(self.settle)
         return self.capture()
 
     def dismiss_dialog(self, frame: np.ndarray | None = None) -> bool:
@@ -125,6 +155,6 @@ class SafeTapper:
         dialog = inspect_dialog(frame)
         if not dialog.present:
             return False
-        device.tap(*landscape_to_hid(*DIALOG_NO))
-        time.sleep(self.settle)
+        self.session.tap(*self.human.jitter_point(*landscape_to_hid(*DIALOG_NO)))
+        self.human.sleep(self.settle)
         return True

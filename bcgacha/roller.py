@@ -21,7 +21,7 @@ from .layout import CAPSULE_SCREEN, RESULT_SCREEN, SENT_TO_STORAGE_SCREEN
 from .safety import SafeTapper, UnsafeTap
 
 REVEAL_TIMEOUT = 30.0
-POLL_INTERVAL = 1.0
+POLL_INTERVAL = 0.35
 
 
 class RollAborted(RuntimeError):
@@ -75,22 +75,15 @@ class Roller:
                 continue
             if self.tapper.dismiss_dialog(frame):
                 continue
-            time.sleep(POLL_INTERVAL)
+            time.sleep(POLL_INTERVAL)  # unknown screen: give the UI a moment
         raise RollAborted("could not get back to the capsule screen")
 
     def _wait_for_reveal(self) -> np.ndarray:
-        """Poll until the result action row appears.
-
-        Uber and Legend reveals play a longer animation than Rare ones, so a
-        fixed sleep desynchronises. Poll for the Ok button instead.
-        """
-        deadline = time.time() + REVEAL_TIMEOUT
-        while time.time() < deadline:
-            frame = self.tapper.capture()
-            if vision.classify(frame) is vision.Screen.RESULT:
-                return frame
-            time.sleep(POLL_INTERVAL)
-        raise RollAborted("reveal did not finish within the timeout")
+        """Poll until the result action row appears."""
+        frame = self.tapper.wait_for(vision.Screen.RESULT, timeout=REVEAL_TIMEOUT)
+        if frame is None:
+            raise RollAborted("reveal did not finish within the timeout")
+        return frame
 
     def roll_once(self, index: int) -> RollResult:
         before = self.settle_to_capsule()
