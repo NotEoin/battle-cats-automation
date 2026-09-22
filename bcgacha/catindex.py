@@ -81,6 +81,20 @@ RARITY_FILTER_NAME = {
 NAME_BOX = (0.245, 0.595, 0.760, 0.680)
 # OCR renders the locked placeholder as ???, ?7?, 277 and similar.
 LOCKED_RE = re.compile(r"[?72]{2,}")
+
+# Consecutive identical description panels that mean the list will not move.
+# The cat artwork animates, so only the static text panel can be compared, and
+# the run has to be long enough that a stretch of identical locked entries does
+# not look like the end.
+END_OF_LIST_FRAMES = 8
+# Frames differing by less than this on average are treated as the same.
+FRAME_SAME_TOLERANCE = 0.8
+
+
+def _frames_match(a: np.ndarray, b: np.ndarray) -> bool:
+    if a.shape != b.shape:
+        return False
+    return float(np.mean(cv2.absdiff(a, b))) < FRAME_SAME_TOLERANCE
 # The panel itself, used to tell "detail view" from "a popup is covering it".
 PANEL_BOX = (0.245, 0.590, 0.760, 0.800)
 
@@ -263,7 +277,13 @@ class CatIndexer:
                 self.tap(FILTER_DIALOG[name], settle=0.6)
         self.tap(FILTER_DIALOG["ok"], settle=2.2)
 
-    def walk(self, rarities: set[int], limit: int = 1000, log=print) -> OwnedIndex:
+    def walk(
+        self,
+        rarities: set[int],
+        limit: int | None = None,
+        log=print,
+        checkpoint: bool = True,
+    ) -> OwnedIndex:
         """Step through every Guide entry, recording the ones that are unlocked.
 
         The Guide wraps, so this can start anywhere: it walks until the opening
@@ -273,12 +293,31 @@ class CatIndexer:
         """
         table = self.name_table(rarities)
         choices = list(table)
+        # The Guide holds roughly one entry per known cat; a margin covers
+        # entries the dataset has not caught up with yet.
+        if limit is None:
+            limit = len(self.dataset.cats) + 80
         index = OwnedIndex(scanned_rarities=sorted(rarities))
         seen: list[str] = []
         misses = 0
+        stuck = 0
+        previous: np.ndarray | None = None
 
         for step in range(limit):
             frame = self.session.screenshot()
+
+            # The Guide does NOT wrap: it dead-ends on the last entry and
+            # further flicks do nothing at all. An unchanging frame is the
+            # only reliable end signal, so stop once the screen stops moving.
+            panel = _crop(frame, PANEL_BOX)
+            if previous is not None and _frames_match(previous, panel):
+                stuck += 1
+                if stuck >= END_OF_LIST_FRAMES:
+                    log(f"  screen stopped changing at step {step}: end of the guide")
+                    break
+            else:
+                stuck = 0
+            previous = panel
             if not self.on_detail(frame):
                 self.dismiss_popup()
                 frame = self.session.screenshot()
@@ -310,10 +349,10 @@ class CatIndexer:
                     label = f"?{raw}"
 
             seen.append(label)
-            # A genuine wrap repeats the opening run after a long walk.
-            if len(seen) > 120 and seen[-8:] == seen[:8]:
-                log(f"  wrapped after {step} entries")
-                break
+            # Checkpoint as we go: a walk of this length is too expensive to
+            # lose to an interrupted run.
+            if checkpoint and step % 25 == 0:
+                index.save()
             if step % 25 == 0:
                 log(f"  {step:>4} {label[:34]:<34} owned={len(index.owned)} "
                     f"locked={index.locked_seen}", flush=True)
