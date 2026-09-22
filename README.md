@@ -13,24 +13,33 @@ it is on the screen it expects.
 
 | Capability | State |
 |---|---|
-| Roll prediction from a seed | working, 995 cells checked against bc.godfat.org |
+| Roll prediction from a seed | working, 1194 cells checked against bc.godfat.org |
 | Guaranteed-uber prediction | working, 179/179 against bc.godfat.org |
-| Seed recovery from observed rolls | working, unique hit in ~228s |
-| Device screen capture | working on iOS 18.7.8 |
-| Synthetic taps | **blocked — needs iOS 27** |
-| Roll loop, banner targeting | not started, blocked on taps |
+| Seed recovery from observed rolls | working, unique hit in ~220s |
+| Device screen capture | working, ~1.9s per frame |
+| Synthetic taps | working, absolute coordinates |
+| Screen classification | capsule / result / sent-to-storage / storage / dialog |
+| Counter and capacity reading | tickets, Cat Food, XP, storage N/M |
+| Single-draw roll loop | working, ten consecutive draws verified |
+| Banner targeting | planner written, not yet wired to the roll loop |
 
-### The iOS 27 blocker
+### Requirements
 
-Taps come from Apple's CoreDevice remote-control feature, which refuses below
-iOS 27 with error 9021. The attached iPhone 16e runs iOS 18.7.8, so it cannot
-currently be tapped over USB. iOS 26 does not help; the requirement is 27.0.
+Synthetic touch comes from Apple's CoreDevice remote-control feature, which
+refuses below **iOS 27** with error 9021 — iOS 26 is not enough. Screen capture
+works from iOS 17. Both need Developer Mode on and the Developer Disk Image
+mounted, neither needs root, and no Apple developer account or jailbreak is
+involved.
 
-Alternatives if the device stays on iOS 18: WebDriverAgent via go-ios (needs an
-Apple certificate that a free account expires weekly), or an external USB-HID
-board driving AssistiveTouch (cheap, but a documented iOS bug locks the
-AssistiveTouch pointer to portrait mapping in landscape, and this game is
-landscape-only).
+### Two things that will waste a day if nobody says them
+
+HID coordinates are normalised against the device's **native portrait** frame,
+not the orientation the app draws in. This game is landscape only, so every
+coordinate must be rotated — see `layout.landscape_to_hid`. Sending landscape
+fractions straight through puts taps somewhere else entirely.
+
+The result screen's Ok button **pulses a pink outline**, so template matching
+against it is unstable. Anchor on the static Use now / Exchange pair instead.
 
 ## What banner switching can and cannot do
 

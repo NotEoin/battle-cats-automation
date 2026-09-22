@@ -74,6 +74,9 @@ ANCHORS = {
 COUNTERS = {
     "tickets": (0.640, 0.870, 0.720, 0.955),
     "cat_food": (0.815, 0.860, 0.945, 0.950),
+    # XP uses the same font and is always on screen, which makes it a handy
+    # source of glyphs the currency counters may not have shown yet.
+    "xp": (0.818, 0.000, 0.962, 0.070),
 }
 
 
@@ -126,7 +129,7 @@ def classify(frame: np.ndarray) -> Screen:
 
 # -- digit reading -----------------------------------------------------------
 
-DIGIT_HEIGHT_RATIO = (0.35, 0.75)   # glyph height as a fraction of the crop
+DIGIT_HEIGHT_RATIO = (0.25, 0.92)   # glyph height as a fraction of the crop
 YELLOW_LOW = (15, 120, 150)
 YELLOW_HIGH = (40, 255, 255)
 
@@ -193,7 +196,9 @@ class DigitAtlas:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(self.path, **self.glyphs)
 
-    MIN_CONFIDENCE = 0.6
+    # A wrong digit is worse than no reading: the ticket count is a safety
+    # check, and silently misreading 249 as 248 defeats it.
+    MIN_CONFIDENCE = 0.85
 
     def read(self, crop: np.ndarray) -> int | None:
         """Read a counter, or None if a digit is unrecognised.
