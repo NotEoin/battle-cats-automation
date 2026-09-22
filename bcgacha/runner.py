@@ -252,6 +252,29 @@ class Runner:
             return True, best[1]
         return False, raw
 
+    def recover_position(self, observed: str) -> bool:
+        """Work out where we actually are from the cat that was just seen."""
+        from .catindex import match_name
+        from .state import resync
+
+        names = [
+            n for e in self.dataset.cats.values()
+            for n in (e.get("name") or []) if n
+        ]
+        hit = match_name(observed, names)
+        if not hit:
+            return False
+        cat_id = next(
+            (cid for cid, e in self.dataset.cats.items()
+             if any(n == hit for n in (e.get("name") or []) if n)),
+            None,
+        )
+        if cat_id is None:
+            return False
+        return resync(
+            self.account, cat_id, self.planner.banners, self.dataset, window=12
+        ) is not None
+
     def advance_state(self, step) -> None:
         """Keep the account's seed position in step with what was rolled.
 
@@ -362,12 +385,25 @@ class Runner:
             if verify:
                 matched, seen = self.verify_result(result.frame_path, step.cat_id)
                 if not matched:
-                    report.stopped_because = (
-                        f"prediction desync: expected "
-                        f"{self.dataset.cat_name(step.cat_id)!r}, screen read {seen!r}. "
-                        "The saved seed position no longer matches the game -- "
-                        "re-run find-seed before continuing."
-                    )
+                    # The ticket is already spent whatever we decide here, so
+                    # the position MUST move. Leaving it put was itself a bug:
+                    # every failed check pushed the saved position one further
+                    # behind the game, so the next run desynced even harder.
+                    expected = self.dataset.cat_name(step.cat_id)
+                    if self.recover_position(seen):
+                        report.stopped_because = (
+                            f"desync at {step.position}: expected {expected!r}, "
+                            f"saw {seen!r}. Position recovered as "
+                            f"{self.account.position} -- rerun to continue."
+                        )
+                    else:
+                        self.advance_state(step)
+                        report.stopped_because = (
+                            f"desync at {step.position}: expected {expected!r}, "
+                            f"saw {seen!r}, and {seen!r} was not unique enough to "
+                            "place. Run 'resync --cat' with the cat on screen."
+                        )
+                    self.account.save()
                     break
 
             report.rolled += 1
