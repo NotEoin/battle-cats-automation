@@ -279,13 +279,6 @@ class Runner:
                 break
             step = plan.steps[0]
 
-            if step.currency == PLATINUM_TICKET:
-                report.stopped_because = (
-                    f"next best roll wants a Platinum Ticket on {step.banner_name[:40]} "
-                    f"for {self.dataset.cat_name(step.cat_id)} -- switch by hand"
-                )
-                break
-
             if mode is Mode.MAX_TICKETS and report.tickets_spent >= max_tickets:
                 report.stopped_because = f"ticket budget of {max_tickets} reached"
                 break
@@ -333,14 +326,18 @@ class Runner:
             # The storage check navigates away to the storage screen and back,
             # and coming back resets the capsule screen to its default banner,
             # so a selection made before it is silently thrown away.
+            use_platinum = step.currency == PLATINUM_TICKET
             if self.picker is not None and not self.pin_banner:
+                candidates = list(self.planner.banners)
+                if self.planner.platinum_banner is not None:
+                    candidates.append(self.planner.platinum_banner)
                 wanted = next(
-                    (b for b in self.planner.banners if b.key == step.banner_key), None
+                    (b for b in candidates if b.key == step.banner_key), None
                 )
                 if wanted is not None:
-                    current = self.picker.identify(frame, self.planner.banners)
+                    current = self.picker.identify(frame, candidates)
                     if current is None or current.key != wanted.key:
-                        if not self.picker.select(wanted, self.planner.banners):
+                        if not self.picker.select(wanted, candidates):
                             report.stopped_because = (
                                 f"could not switch to {wanted.name[:45]}"
                             )
@@ -348,7 +345,7 @@ class Runner:
                         frame = self.to_capsule()
 
             try:
-                result = roller.roll_once(report.rolled + 1)
+                result = roller.roll_once(report.rolled + 1, platinum=use_platinum)
             except (RollAborted, UnsafeTap) as exc:
                 report.stopped_because = f"aborted: {exc}"
                 break
@@ -378,7 +375,8 @@ class Runner:
                     break
 
             report.rolled += 1
-            report.tickets_spent += 1
+            if not use_platinum:
+                report.tickets_spent += 1
             self.account.storage_used += 1
             report.frames.append(result.frame_path)
             self.advance_state(step)

@@ -85,3 +85,13 @@ RESULT_SCREEN = {
 SENT_TO_STORAGE_SCREEN = {
     "ok": Target("ok", 0.6501, 0.6265),
 }
+
+
+# The Platinum Capsules screen. Its draw button sits well right of the Rare
+# Capsule one and carries a Platinum Ticket icon, so it needs its own target
+# and its own template -- the rare-capsule safety check correctly refuses it.
+PLATINUM_SCREEN = {
+    "try_once": Target("try_once", 0.855, 0.776),
+    "storage": Target("storage", 0.172, 0.800),
+    "back": Target("back", 0.091, 0.872),
+}

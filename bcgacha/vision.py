@@ -30,6 +30,7 @@ Box = tuple[float, float, float, float]
 class Screen(Enum):
     UNKNOWN = "unknown"
     CAPSULE = "capsule"
+    PLATINUM = "platinum"
     RESULT = "result"
     STORAGE = "storage"
     SENT_TO_STORAGE = "sent_to_storage"
@@ -63,6 +64,7 @@ ANCHORS = {
     "storage_useall": Anchor("storage_useall", (0.405, 0.860, 0.545, 0.940)),
     # The Ok button pulses a pink outline, so it is a poor anchor. The
     # Use now / Exchange pair beside the name plate is static.
+    "plat_try_once": Anchor("plat_try_once", (0.775, 0.700, 0.935, 0.855)),
     "offer_banner": Anchor("offer_banner", (0.240, 0.120, 0.760, 0.220)),
     "gamatoto_banner": Anchor("gamatoto_banner", (0.055, 0.020, 0.270, 0.100)),
     "gamatoto_rewards": Anchor("gamatoto_rewards", (0.680, 0.085, 0.815, 0.165)),
@@ -87,6 +89,8 @@ ANCHORS = {
 
 COUNTERS = {
     "tickets": (0.640, 0.870, 0.720, 0.955),
+    # The Platinum screen shows its own ticket count further left.
+    "platinum": (0.655, 0.875, 0.755, 0.950),
     "cat_food": (0.815, 0.860, 0.945, 0.950),
     # XP uses the same font and is always on screen, which makes it a handy
     # source of glyphs the currency counters may not have shown yet.
@@ -142,6 +146,8 @@ def classify(frame: np.ndarray) -> Screen:
         return Screen.SENT_TO_STORAGE
     if hit("result_actions"):
         return Screen.RESULT
+    if hit("plat_try_once"):
+        return Screen.PLATINUM
     if hit("storage_button") and hit("try_once_button"):
         return Screen.CAPSULE
     return Screen.UNKNOWN
@@ -209,7 +215,7 @@ class DigitAtlas:
         if len(boxes) < len(value):
             raise ValueError(f"found {len(boxes)} glyphs but was told {value!r}")
         for box, ch in zip(boxes[-len(value):], value):
-            self.glyphs.setdefault(ch, normalise_glyph(crop, box))
+            self._store(ch, normalise_glyph(crop, box))
         return len(value)
 
     def save(self) -> None:
@@ -237,12 +243,27 @@ class DigitAtlas:
             out.append(best)
         return int("".join(out)) if out else None
 
+    def _store(self, ch: str, glyph: np.ndarray) -> None:
+        """Keep a glyph, as a new variant when it differs from what we have.
+
+        The same digit is not drawn identically everywhere -- the Platinum
+        ticket counter's 7 does not match the XP counter's 7 well enough to
+        recognise. Variants are kept under "7#1", "7#2" and so on, and the
+        suffix is stripped when reading, so one digit can have several shapes.
+        """
+        existing = [k for k in self.glyphs if k.split("#")[0] == ch]
+        for key in existing:
+            ref = self.glyphs[key]
+            if float(cv2.matchTemplate(glyph, ref, cv2.TM_CCOEFF_NORMED).max()) > 0.9:
+                return                      # close enough to one we have
+        self.glyphs[ch if not existing else f"{ch}#{len(existing)}"] = glyph
+
     def _best(self, glyph: np.ndarray) -> tuple[str | None, float]:
         best, score = None, 0.0
         for ch, ref in self.glyphs.items():
             value = float(cv2.matchTemplate(glyph, ref, cv2.TM_CCOEFF_NORMED).max())
             if value > score:
-                best, score = ch, value
+                best, score = ch.split("#")[0], value
         return best, score
 
 

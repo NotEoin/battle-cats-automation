@@ -17,7 +17,12 @@ import cv2
 import numpy as np
 
 from . import vision
-from .layout import CAPSULE_SCREEN, RESULT_SCREEN, SENT_TO_STORAGE_SCREEN
+from .layout import (
+    CAPSULE_SCREEN,
+    PLATINUM_SCREEN,
+    RESULT_SCREEN,
+    SENT_TO_STORAGE_SCREEN,
+)
 from .safety import SafeTapper, UnsafeTap
 
 REVEAL_TIMEOUT = 30.0
@@ -85,28 +90,38 @@ class Roller:
             raise RollAborted("reveal did not finish within the timeout")
         return frame
 
-    def roll_once(self, index: int) -> RollResult:
-        before = self.settle_to_capsule()
-        if vision.classify(before) is not vision.Screen.CAPSULE:
-            raise RollAborted(f"not on the capsule screen: {vision.classify(before).value}")
+    def roll_once(self, index: int, platinum: bool = False) -> RollResult:
+        """Draw once. `platinum` spends a Platinum Ticket instead of a Rare one.
 
-        # The draw button must still be the ticket-bearing one.
-        score = vision.match(before, vision.ANCHORS["try_once_button"])
+        The two machines are separate screens with separate buttons in separate
+        places, and each button is checked against its own template before it
+        is pressed -- that check is what stops a draw button quietly becoming a
+        Cat Food spend, so it must not be loosened to cover both.
+        """
+        screen = vision.Screen.PLATINUM if platinum else vision.Screen.CAPSULE
+        anchor = "plat_try_once" if platinum else "try_once_button"
+        target = PLATINUM_SCREEN["try_once"] if platinum else CAPSULE_SCREEN["try_once"]
+        counter = "platinum" if platinum else "tickets"
+
+        before = self.settle_to_capsule() if not platinum else self.tapper.capture()
+        if vision.classify(before) is not screen:
+            raise RollAborted(
+                f"expected the {screen.value} screen, saw "
+                f"{vision.classify(before).value}"
+            )
+
+        score = vision.match(before, vision.ANCHORS[anchor])
         if score < 0.75:
             raise RollAborted(
-                f"draw button no longer matches the ticket template ({score:.2f}); "
-                "it may now be spending Cat Food"
+                f"draw button does not match the {counter} template ({score:.2f}); "
+                "it may be spending something else"
             )
-        tickets_before = self._tickets(before)
+        tickets_before = vision.read_counter(before, counter, self.atlas)
         if tickets_before is not None and tickets_before < 1:
-            raise RollAborted("no rare tickets left")
+            raise RollAborted(f"no {counter} left")
 
         try:
-            self.tapper.tap(
-                CAPSULE_SCREEN["try_once"],
-                expect=vision.Screen.CAPSULE,
-                require_anchor="try_once_button",
-            )
+            self.tapper.tap(target, expect=screen, require_anchor=anchor, frame=before)
         except UnsafeTap as exc:
             raise RollAborted(str(exc)) from exc
 
@@ -117,7 +132,7 @@ class Roller:
         after = self.tapper.tap(
             RESULT_SCREEN["ok"], expect=vision.Screen.RESULT, require_anchor="result_actions"
         )
-        tickets_after = self._tickets(after)
+        tickets_after = vision.read_counter(after, counter, self.atlas)
         if (
             tickets_before is not None
             and tickets_after is not None

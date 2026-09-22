@@ -90,6 +90,19 @@
    "note": "Reached from Equip on the Cat Base"
   },
   {
+   "name": "platinum_capsules",
+   "title": "Platinum Capsules",
+   "anchors": [
+    "plat_try_once"
+   ],
+   "absent": [
+    "result_actions",
+    "sent_to_storage"
+   ],
+   "forbidden": false,
+   "note": "100% uber machine, spends a Platinum Ticket; draw button is on the right"
+  },
+  {
    "name": "purchase_offer",
    "title": null,
    "anchors": [
@@ -401,6 +414,22 @@
    "y": 0.6265,
    "label": "Ok",
    "settle": 1.8
+  },
+  {
+   "src": "platinum_capsules",
+   "dst": "storage",
+   "x": 0.172,
+   "y": 0.8,
+   "label": "Storage",
+   "settle": 2.2
+  },
+  {
+   "src": "platinum_capsules",
+   "dst": "cat_base",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.2
   }
  ]
 }
