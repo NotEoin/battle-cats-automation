@@ -126,3 +126,29 @@ def test_platinum_only_goes_on_well_ranked_cats():
     for step in plan.steps:
         if step.currency == PLATINUM_TICKET:
             assert tier_list.rank_of(step.cat_id) <= 4
+
+
+def test_plan_steps_carry_their_reroll_cost():
+    """A dupe reroll must be visible to whatever advances the saved position."""
+    from bcgacha.gacha import next_position
+
+    ds = load()
+    banner = ds.find_banner("2026-09-21_979")
+    planner = Planner(ds, [banner], Scorer(owned=set(), tiers=T.TierList.load()))
+    plan = planner.plan(3728687165, rolls=60)
+
+    # Replaying the plan's own positions must land where the plan says.
+    index, track = 1, 0
+    for step in plan.steps:
+        assert (step.index, step.track) == (index, track)
+        delta, track = next_position(track, step.reroll_steps)
+        index += delta
+
+
+def test_a_reroll_actually_occurs_somewhere_in_a_long_plan():
+    """Guards the test above from passing trivially on a reroll-free seed."""
+    ds = load()
+    banner = ds.find_banner("2026-09-21_979")
+    planner = Planner(ds, [banner], Scorer(owned=set(), tiers=T.TierList.load()))
+    plan = planner.plan(3728687165, rolls=200)
+    assert any(s.reroll_steps for s in plan.steps), "no reroll in 200 rolls"

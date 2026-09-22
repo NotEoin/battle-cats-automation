@@ -37,6 +37,9 @@ class PlanStep:
     score: float = 0.0
     is_new: bool = False
     rerolled_from: int | None = None
+    # Extra seed advances a dupe reroll consumed. Odd values flip the track,
+    # so the run loop must apply this rather than assuming a clean step.
+    reroll_steps: int = 0
 
     @property
     def track_name(self) -> str:
@@ -169,6 +172,7 @@ class Planner:
                 currency=currency, score=value,
                 is_new=self.scorer.is_new(roll.cat_id),
                 rerolled_from=roll.duped_from,
+                reroll_steps=roll.reroll_steps,
             )
             plan.steps.append(step)
             if currency == PLATINUM_TICKET:

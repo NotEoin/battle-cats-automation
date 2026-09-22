@@ -142,8 +142,14 @@ class Runner:
     # -- the loop -----------------------------------------------------------
 
     def advance_state(self, step) -> None:
-        """Keep the account's seed position in step with what was rolled."""
-        delta, track = next_position(self.account.track, 0)
+        """Keep the account's seed position in step with what was rolled.
+
+        A dupe reroll costs extra seed advances and an odd number of them flips
+        the track, so the step's own reroll cost has to be applied. Assuming a
+        clean one-row step would desync the position from the game and quietly
+        invalidate every later prediction.
+        """
+        delta, track = next_position(self.account.track, step.reroll_steps)
         self.account.index += delta
         self.account.track = track
         self.account.rolls_made += 1
