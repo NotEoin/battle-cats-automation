@@ -31,6 +31,37 @@
    "note": ""
   },
   {
+   "name": "catnip_challenges",
+   "title": "Catnip Challenges",
+   "anchors": [],
+   "absent": [],
+   "forbidden": false,
+   "note": "Reached from Missions"
+  },
+  {
+   "name": "gamatoto",
+   "title": null,
+   "anchors": [
+    "gamatoto_banner"
+   ],
+   "absent": [
+    "gamatoto_rewards"
+   ],
+   "forbidden": false,
+   "note": "GAMATOTO Expedition, playback finished; back works normally"
+  },
+  {
+   "name": "gamatoto_report",
+   "title": null,
+   "anchors": [
+    "gamatoto_banner",
+    "gamatoto_rewards"
+   ],
+   "absent": [],
+   "forbidden": false,
+   "note": "Expedition log replaying. The back arrow is dimmed and inert while it plays; pressing Rewards skips the playback and is the only way out."
+  },
+  {
    "name": "menu",
    "title": null,
    "anchors": [
@@ -49,6 +80,14 @@
    "absent": [],
    "forbidden": false,
    "note": "Intro text on first launch; Skip bottom right"
+  },
+  {
+   "name": "organize_cats",
+   "title": "Organize Cats",
+   "anchors": [],
+   "absent": [],
+   "forbidden": false,
+   "note": "Reached from Equip on the Cat Base"
   },
   {
    "name": "rare_capsules",
@@ -84,6 +123,14 @@
    "absent": [],
    "forbidden": false,
    "note": "Play / Settings / Mailbox"
+  },
+  {
+   "name": "upgrade",
+   "title": "Upgrade",
+   "anchors": [],
+   "absent": [],
+   "forbidden": false,
+   "note": ""
   }
  ],
  "transitions": [
@@ -214,6 +261,78 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.0
+  },
+  {
+   "src": "gamatoto_report",
+   "dst": "gamatoto",
+   "x": 0.747,
+   "y": 0.124,
+   "label": "Rewards",
+   "settle": 2.5
+  },
+  {
+   "src": "gamatoto",
+   "dst": "cat_base",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.2
+  },
+  {
+   "src": "cat_base",
+   "dst": "gamatoto",
+   "x": 0.2,
+   "y": 0.719,
+   "label": "GAMATOTO",
+   "settle": 3.0
+  },
+  {
+   "src": "cat_base",
+   "dst": "upgrade",
+   "x": 0.2,
+   "y": 0.413,
+   "label": "Upgrade",
+   "settle": 2.6
+  },
+  {
+   "src": "upgrade",
+   "dst": "cat_base",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.2
+  },
+  {
+   "src": "cat_base",
+   "dst": "organize_cats",
+   "x": 0.2,
+   "y": 0.525,
+   "label": "Equip",
+   "settle": 2.6
+  },
+  {
+   "src": "organize_cats",
+   "dst": "cat_base",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.2
+  },
+  {
+   "src": "cat_base",
+   "dst": "catnip_challenges",
+   "x": 0.283,
+   "y": 0.719,
+   "label": "Missions",
+   "settle": 2.6
+  },
+  {
+   "src": "catnip_challenges",
+   "dst": "cat_base",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.2
   }
  ]
 }

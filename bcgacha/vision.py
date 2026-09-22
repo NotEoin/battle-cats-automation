@@ -63,6 +63,8 @@ ANCHORS = {
     "storage_useall": Anchor("storage_useall", (0.405, 0.860, 0.545, 0.940)),
     # The Ok button pulses a pink outline, so it is a poor anchor. The
     # Use now / Exchange pair beside the name plate is static.
+    "gamatoto_banner": Anchor("gamatoto_banner", (0.055, 0.020, 0.270, 0.100)),
+    "gamatoto_rewards": Anchor("gamatoto_rewards", (0.680, 0.085, 0.815, 0.165)),
     "opening_skip": Anchor("opening_skip", (0.845, 0.855, 0.935, 0.935)),
     "select_back": Anchor("select_back", (0.225, 0.560, 0.360, 0.680)),
     "select_close": Anchor("select_close", (0.870, 0.310, 0.945, 0.400)),

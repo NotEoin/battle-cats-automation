@@ -213,9 +213,37 @@ class UIGraph:
         raise NoRoute(f"no route from {src!r} to {dst!r}")
 
 
-# Almost every screen puts a back arrow here. It is the recovery move when the
-# bot finds itself somewhere the map does not know about.
+# Almost every screen puts a round yellow back arrow in the bottom-left. Its
+# exact position drifts a little between screens, so it is found by colour
+# rather than assumed -- a fixed point misses on enough screens to matter.
 GENERIC_BACK = (0.089, 0.872)
+BACK_SEARCH_REGION = (0.02, 0.74, 0.22, 0.99)
+
+
+
+def find_back_arrow(frame: np.ndarray) -> tuple[float, float] | None:
+    """Locate the round yellow back arrow, as screen fractions."""
+    h, w = frame.shape[:2]
+    x0, y0, x1, y1 = BACK_SEARCH_REGION
+    region = frame[int(y0 * h): int(y1 * h), int(x0 * w): int(x1 * w)]
+    if region.size == 0:
+        return None
+    hsv = cv2.cvtColor(region, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, (18, 140, 170), (34, 255, 255))
+    count, _lab, stats, cent = cv2.connectedComponentsWithStats(mask, 8)
+    best = None
+    for i in range(1, count):
+        area = stats[i, 4]
+        ratio = stats[i, 2] / max(stats[i, 3], 1)
+        if area > 4000 and 0.6 < ratio < 1.7:     # roughly circular
+            if best is None or area > best[0]:
+                best = (area, cent[i][0], cent[i][1])
+    if best is None:
+        return None
+    return (
+        x0 + (best[1] / region.shape[1]) * (x1 - x0),
+        y0 + (best[2] / region.shape[0]) * (y1 - y0),
+    )
 
 
 class Navigator:
@@ -275,11 +303,12 @@ class Navigator:
                 # every screen has a back arrow in the same corner, and the
                 # places it leads to are ones the map does know.
                 lost += 1
-                if lost > 8:
+                if lost > 10:
                     if log:
-                        log("lost: backing out is not reaching a known screen")
+                        log("  lost: backing out is not reaching a known screen")
                     return False
-                self._tap(*GENERIC_BACK, 1.6)
+                back = find_back_arrow(frame) or GENERIC_BACK
+                self._tap(*back, 1.6)
                 continue
 
             lost = 0
