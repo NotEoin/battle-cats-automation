@@ -122,12 +122,18 @@ class SafeTapper:
         target: Target,
         expect: vision.Screen,
         require_anchor: str | None = None,
+        frame: np.ndarray | None = None,
     ) -> np.ndarray:
         """Tap `target`, but only if the screen is `expect` first.
 
+        Pass `frame` when the caller has already looked: re-capturing would
+        both cost a round trip and open a race, because the screen can move
+        between the caller's decision and this check, which then refuses a tap
+        that was perfectly valid when it was chosen.
+
         Returns the frame captured *after* the tap.
         """
-        before = self.capture()
+        before = frame if frame is not None else self.capture()
         actual = vision.classify(before)
         if actual is not expect:
             raise UnsafeTap(

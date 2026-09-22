@@ -86,60 +86,70 @@ class Runner:
 
     # -- screen helpers -----------------------------------------------------
 
-    def to_capsule(self, timeout: float = 30.0):
-        """Return to the capsule screen from wherever the game has ended up."""
+    def to_capsule(self, timeout: float = 40.0):
+        """Return to the capsule screen from wherever the game has ended up.
+
+        Every branch hands its own frame to the tap, because re-capturing
+        inside the tap opens a race: the screen cross-fades, and a tap chosen
+        against one frame gets refused when checked against a later one.
+        A refusal here means the game moved mid-decision, so it retries.
+        """
         deadline = time.time() + timeout
         while time.time() < deadline:
-            frame = self.tapper.capture()
-            screen = vision.classify(frame)
-            if screen is vision.Screen.CAPSULE:
-                return frame
-            if screen is vision.Screen.SENT_TO_STORAGE:
-                self.tapper.tap(
-                    SENT_TO_STORAGE_SCREEN["ok"],
-                    expect=vision.Screen.SENT_TO_STORAGE,
-                    require_anchor="sent_to_storage",
-                )
-                continue
-            if screen is vision.Screen.RESULT:
-                self.tapper.tap(
-                    RESULT_SCREEN["ok"],
-                    expect=vision.Screen.RESULT,
-                    require_anchor="result_actions",
-                )
-                continue
-            if screen is vision.Screen.STORAGE:
-                self.tapper.tap(
-                    STORAGE_SCREEN["back"],
-                    expect=vision.Screen.STORAGE,
-                    require_anchor="storage_title",
-                )
-                continue
-            # An unattended run can end up anywhere: a stray tap, a popup that
-            # navigated, or the game restarting on the base. Walk back rather
-            # than spinning until the timeout.
-            if screen is vision.Screen.CAT_BASE:
-                self.tapper.session.tap(
-                    *self.tapper.human.jitter_point(*landscape_to_hid(*CAT_BASE["rare_capsule"]))
-                )
-                self.tapper.human.sleep(1.6)
-                continue
-            if screen is vision.Screen.MENU:
-                self.tapper.session.tap(
-                    *self.tapper.human.jitter_point(*landscape_to_hid(*MENU_DIALOG["close"]))
-                )
-                self.tapper.human.sleep(1.2)
-                continue
-            if screen is vision.Screen.CAT_GUIDE:
-                self.tapper.session.tap(
-                    *self.tapper.human.jitter_point(*landscape_to_hid(0.089, 0.872))
-                )
-                self.tapper.human.sleep(1.4)
-                continue
-            if self.tapper.dismiss_dialog(frame):
-                continue
+            try:
+                frame = self.tapper.capture()
+                screen = vision.classify(frame)
+
+                if screen is vision.Screen.CAPSULE:
+                    return frame
+                if screen is vision.Screen.SENT_TO_STORAGE:
+                    self.tapper.tap(
+                        SENT_TO_STORAGE_SCREEN["ok"],
+                        expect=vision.Screen.SENT_TO_STORAGE,
+                        require_anchor="sent_to_storage",
+                        frame=frame,
+                    )
+                    continue
+                if screen is vision.Screen.RESULT:
+                    self.tapper.tap(
+                        RESULT_SCREEN["ok"],
+                        expect=vision.Screen.RESULT,
+                        require_anchor="result_actions",
+                        frame=frame,
+                    )
+                    continue
+                if screen is vision.Screen.STORAGE:
+                    self.tapper.tap(
+                        STORAGE_SCREEN["back"],
+                        expect=vision.Screen.STORAGE,
+                        require_anchor="storage_title",
+                        frame=frame,
+                    )
+                    continue
+                # An unattended run can end up anywhere: a stray tap, a popup
+                # that navigated, or the game restarting on the base.
+                if screen is vision.Screen.CAT_BASE:
+                    self._blind_tap(CAT_BASE["rare_capsule"], 1.6)
+                    continue
+                if screen is vision.Screen.MENU:
+                    self._blind_tap(MENU_DIALOG["close"], 1.2)
+                    continue
+                if screen is vision.Screen.CAT_GUIDE:
+                    self._blind_tap((0.089, 0.872), 1.4)
+                    continue
+                if self.tapper.dismiss_dialog(frame):
+                    continue
+            except UnsafeTap:
+                pass          # the screen moved mid-decision; look again
             self.tapper.human.sleep(0.4)
         raise RollAborted("could not get back to the capsule screen")
+
+    def _blind_tap(self, point, settle: float) -> None:
+        """Tap a fixed point without a screen check, for recovery steps."""
+        self.tapper.session.tap(
+            *self.tapper.human.jitter_point(*landscape_to_hid(*point))
+        )
+        self.tapper.human.sleep(settle)
 
     def storage_state(self) -> tuple[int, int] | None:
         """Open storage, read N/M, come back."""

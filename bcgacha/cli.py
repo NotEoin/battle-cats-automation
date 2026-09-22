@@ -228,6 +228,33 @@ def cmd_plan(args) -> int:
     return 0
 
 
+def cmd_resync(args) -> int:
+    """Recover the saved position after rolls were made outside the bot."""
+    from .catindex import match_name
+    from .state import Account, resync
+
+    ds = load(args.lang)
+    account = Account.load()
+    normal, _platinum = _live_banners(ds)
+    names = [n for e in ds.cats.values() for n in (e.get("name") or []) if n]
+    hit = match_name(args.cat, names)
+    if not hit:
+        print(f"no cat matching {args.cat!r}", file=sys.stderr)
+        return 1
+    cat_id = next(
+        cid for cid, e in ds.cats.items()
+        if any(n == hit for n in (e.get("name") or []) if n)
+    )
+    was = account.position
+    if resync(account, cat_id, normal, ds, window=args.window) is None:
+        print(f"{hit!r} appears at more than one position within "
+              f"{args.window} rolls -- roll once more and try again", file=sys.stderr)
+        return 1
+    account.save()
+    print(f"{hit}: {was} -> {account.position}")
+    return 0
+
+
 def cmd_run(args) -> int:
     from pathlib import Path
 
@@ -316,6 +343,11 @@ def main(argv=None) -> int:
     p.add_argument("--pin-banner", action="store_true",
                    help="never switch banners; roll on whatever is selected")
     p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser("resync", help="fix the position after untracked rolls")
+    p.add_argument("--cat", required=True, help="the last cat actually rolled")
+    p.add_argument("--window", type=int, default=40)
+    p.set_defaults(func=cmd_resync)
 
     p = sub.add_parser("ubers", help="which upcoming positions yield an uber")
     p.add_argument("--seed", type=int, required=True)

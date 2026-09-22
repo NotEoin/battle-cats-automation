@@ -57,3 +57,50 @@ class Account:
         if not path.exists():
             raise FileNotFoundError(f"{path} missing -- run find-seed first")
         return cls(**json.loads(path.read_text()))
+
+
+def resync(
+    account: "Account",
+    observed_cat: int,
+    banners: list,
+    dataset,
+    window: int = 40,
+) -> tuple[int, int] | None:
+    """Find the position that would have produced `observed_cat`, and move there.
+
+    Rolls made outside the bot -- by hand, or by a test that forgot to record
+    them -- leave the saved position behind the game. Rather than spending ten
+    more tickets rediscovering a seed that has not changed, search forward from
+    where we think we are for the position that matches what was actually seen.
+
+    Returns the corrected (index, track) *after* consuming that roll, or None
+    when the match is not unique.
+    """
+    from .gacha import Gacha, next_position
+
+    matches = []
+    for banner in banners:
+        gacha = Gacha(banner, account.seed, dataset)
+        index, track = account.index, account.track
+        previous = account.last_cat_id
+        for _ in range(window):
+            roll = gacha.cell(index, track)
+            if (
+                roll.rarity == 2
+                and previous is not None
+                and roll.cat_id == previous
+            ):
+                gacha._reroll(roll)
+            if roll.cat_id == observed_cat:
+                delta, nxt = next_position(track, roll.reroll_steps)
+                matches.append((index, track, index + delta, nxt, banner.key))
+            previous = roll.cat_id
+            delta, track = next_position(track, roll.reroll_steps)
+            index += delta
+
+    positions = {(m[2], m[3]) for m in matches}
+    if len(positions) != 1:
+        return None
+    account.index, account.track = matches[0][2], matches[0][3]
+    account.last_cat_id = observed_cat
+    return account.index, account.track
