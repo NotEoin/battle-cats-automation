@@ -139,6 +139,16 @@ def tap_points(x: float, y: float, width: int, height: int) -> None:
     tap(round(x / width * HID_MAX), round(y / height * HID_MAX))
 
 
+def _version_tuple(version: str) -> tuple[int, ...]:
+    out = []
+    for part in version.split("."):
+        try:
+            out.append(int(part))
+        except ValueError:
+            break
+    return tuple(out)
+
+
 def capabilities() -> Capabilities:
     """Probe what this device actually supports, without changing anything."""
     info = lockdown_info()
@@ -153,17 +163,14 @@ def capabilities() -> Capabilities:
             size = native_size()
         except Exception as exc:  # display info is best-effort
             reason = f"display info unavailable: {exc}"
-        result = _run(
-            ["developer", "core-device", "universal-hid-service", "tap", "1", "1"],
-            timeout=120,
-        )
-        probe = _strip_ansi(result.stdout + result.stderr)
-        if "iOS 27.0 or later" in probe or f"code {REMOTE_CONTROL_UNSUPPORTED}" in probe:
-            reason = "CoreDevice remote control requires iOS 27.0 or later (error 9021)"
-        elif "ERROR" in probe:
-            reason = probe.strip().splitlines()[-1][:160]
-        else:
+        # Decide by OS version rather than firing a probe tap: a real tap on a
+        # live screen is not something a capability check should be doing.
+        if _version_tuple(info.get("ProductVersion", "0")) >= (27,):
             can_tap = True
+        else:
+            reason = (
+                "CoreDevice remote control requires iOS 27.0 or later (error 9021)"
+            )
     else:
         reason = "Developer Mode off or Developer Disk Image not mounted"
 
