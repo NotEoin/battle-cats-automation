@@ -43,7 +43,7 @@ VBW, VBH = 1190, 970
 # Centre-left anchor (x of the left edge, y of the centre) of every placed screen.
 LAYOUT = {
     "opening": (C1, 100), "title": (C1, 252), "settings": (C1, 392),
-    "saga_select": (C2, 252), "base_select": (C2, 392),
+    "saga_select": (C2, 252), "base_select": (C2, 392), "stage_select": (C2, 100),
     "menu": (C4, 100), "cat_guide": (C5, 100),
     "upgrade": (C4, 176), "organize_cats": (C4, 252), "catnip_challenges": (C4, 328),
     "gamatoto": (C4, 440), "gamatoto_report": (C5, 440), "gamatoto_ongoing": (C4, 516),
@@ -64,7 +64,7 @@ STUBS = [
 ]
 
 # Order of the screen pickers: roughly left to right, top to bottom.
-ORDER = ["opening", "title", "settings", "saga_select", "base_select", "cat_base",
+ORDER = ["opening", "title", "settings", "saga_select", "base_select", "cat_base", "stage_select",
          "menu", "cat_guide", "upgrade", "organize_cats", "catnip_challenges",
          "gamatoto", "gamatoto_ongoing", "gamatoto_report", "storage", "rare_capsules",
          "platinum_capsules", "roll_result", "sent_to_storage", "purchase_offer"]
@@ -122,6 +122,8 @@ def _layout_edges(find) -> list[Edge]:
     add(find("base_select", "cat_base"), [(400, 384), (548, 384)],
         label="enter selected chapter", at=(474, 372))
     add(find("cat_base", "base_select"), [(548, 400), (400, 400)])
+    add(find("cat_base", "stage_select"), [(548, 92), (400, 92)], label="Start!!", at=(474, 82))
+    add(find("stage_select", "cat_base"), [(400, 108), (548, 108)])
 
     # Cat Base spokes: the forward control above, the way back below
     for dst, lab in (("upgrade", "Upgrade"), ("organize_cats", "Equip"),
@@ -522,9 +524,9 @@ def render_svg(graph: UIGraph, svg_id: str = "map") -> Drawing:
                          f'd="{_rounded(pts, trim_end=HEAD_L * 0.7)}"/>' + _arrowhead(pts[1], pts[0])
                          + _text("slabel", *at, text, anchor) + "</g>")
     if "opening" in pos:
-        parts.append('<g class="stub" data-for="opening"><circle class="entry-dot" cx="222" cy="100" r="5"/>'
-                     f'<path class="line solid" d="{_rounded([(216, 100), (172, 100)], trim_end=HEAD_L * 0.7)}"/>'
-                     + _arrowhead((172, 100), (216, 100)) + _text("slabel", 232, 104, "first launch", "start") + "</g>")
+        parts.append('<g class="stub" data-for="opening"><circle class="entry-dot" cx="212" cy="100" r="5"/>'
+                     f'<path class="line solid" d="{_rounded([(206, 100), (172, 100)], trim_end=HEAD_L * 0.7)}"/>'
+                     + _arrowhead((172, 100), (206, 100)) + _text("slabel", 212, 86, "first launch", "middle") + "</g>")
     parts.append('</g><g class="edges">')
     parts += [edge_svg(k, e) for k, e in enumerate(edges)]
     order = [n for n in ORDER if n in screens]

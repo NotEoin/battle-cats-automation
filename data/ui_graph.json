@@ -231,6 +231,15 @@
    ]
   },
   {
+   "name": "stage_select",
+   "title": "Stage Select",
+   "anchors": [],
+   "absent": [],
+   "forbidden": false,
+   "reactive": false,
+   "note": "Stage map of the chapter the Cat Base belongs to, opened by Start!!. Attack! starts a battle and spends energy: never tapped. Left by the back arrow."
+  },
+  {
    "name": "storage",
    "title": "Storage",
    "anchors": [],
@@ -673,6 +682,24 @@
    "x": 0.5,
    "y": 0.552,
    "label": "Back card",
+   "settle": 2.2,
+   "action": null
+  },
+  {
+   "src": "cat_base",
+   "dst": "stage_select",
+   "x": 0.2,
+   "y": 0.275,
+   "label": "Start!!",
+   "settle": 2.5,
+   "action": null
+  },
+  {
+   "src": "stage_select",
+   "dst": "cat_base",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
    "settle": 2.2,
    "action": null
   }

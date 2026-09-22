@@ -161,3 +161,10 @@ def test_a_notice_is_read_with_the_extra_words_on_its_line():
     graph._ocr = NoticeReads()
     names = [n for _, n in graph.candidates(np.zeros((1170, 2532, 3), np.uint8), title="")]
     assert "stage_reward_notice" in names
+
+
+def test_stage_select_is_entered_by_start_and_left_by_back(graph):
+    """Attack! on the stage map spends energy, so the map knows no other way out."""
+    assert [t.label for t in graph.route("cat_base", "stage_select")] == ["Start!!"]
+    exits = [t for t in graph.transitions if t.src == "stage_select"]
+    assert [(t.label, t.dst) for t in exits] == [("Back", "cat_base")]
