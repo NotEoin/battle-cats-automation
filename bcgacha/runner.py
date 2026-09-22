@@ -342,7 +342,10 @@ class Runner:
                                 f"could not switch to {wanted.name[:45]}"
                             )
                             break
-                        frame = self.to_capsule()
+                        # Just look; do NOT call to_capsule here. It routes to
+                        # the rare capsule screen, which would undo the switch
+                        # that was just made -- fatal for a platinum draw.
+                        frame = self.tapper.capture()
 
             try:
                 result = roller.roll_once(report.rolled + 1, platinum=use_platinum)
