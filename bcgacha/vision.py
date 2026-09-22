@@ -56,6 +56,8 @@ class Anchor:
 
 # Anchors measured off a 2532x1170 capture of the Rare Capsule screen.
 ANCHORS = {
+    "storage_title": Anchor("storage_title", (0.020, 0.005, 0.110, 0.055)),
+    "storage_useall": Anchor("storage_useall", (0.405, 0.860, 0.545, 0.940)),
     "storage_button": Anchor("storage_button", (0.135, 0.700, 0.215, 0.900)),
     "try_once_button": Anchor("try_once_button", (0.600, 0.690, 0.790, 0.880)),
     "back_arrow": Anchor("back_arrow", (0.055, 0.835, 0.115, 0.945)),
@@ -97,10 +99,15 @@ def visible(frame: np.ndarray) -> dict[str, float]:
 def classify(frame: np.ndarray) -> Screen:
     """Best guess at which screen this frame shows."""
     scores = visible(frame)
-    if (
-        scores.get("storage_button", 0) > ANCHORS["storage_button"].threshold
-        and scores.get("try_once_button", 0) > ANCHORS["try_once_button"].threshold
-    ):
+
+    def hit(name: str) -> bool:
+        return scores.get(name, 0) > ANCHORS[name].threshold
+
+    # Check storage first: its title sits where the capsule title does, and
+    # the capsule screen's own anchors are absent there.
+    if hit("storage_title") and hit("storage_useall"):
+        return Screen.STORAGE
+    if hit("storage_button") and hit("try_once_button"):
         return Screen.CAPSULE
     return Screen.UNKNOWN
 
@@ -206,3 +213,70 @@ def read_counter(frame: np.ndarray, which: str, atlas: DigitAtlas) -> int | None
     h, w = frame.shape[:2]
     x0, y0, x1, y1 = COUNTERS[which]
     return atlas.read(frame[int(y0 * h): int(y1 * h), int(x0 * w): int(x1 * w)])
+
+
+# -- storage capacity --------------------------------------------------------
+#
+# The Cat Storage fraction is drawn in a plain white sans-serif on a dark
+# panel, nothing like the yellow counter font, so it needs its own glyphs.
+
+STORAGE_CAPACITY_BOX: Box = (0.868, 0.790, 0.968, 0.862)
+WHITE_MIN = 185
+
+
+def white_glyph_boxes(crop: np.ndarray) -> list[tuple[int, int, int, int]]:
+    grey = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    mask = (grey >= WHITE_MIN).astype(np.uint8) * 255
+    count, _lab, stats, _c = cv2.connectedComponentsWithStats(mask, 8)
+    h = crop.shape[0]
+    out = [
+        (stats[i, 0], stats[i, 1], stats[i, 2], stats[i, 3])
+        for i in range(1, count)
+        if stats[i, 4] > 40 and stats[i, 3] > 0.22 * h
+    ]
+    return sorted(out)
+
+
+def normalise_white(crop: np.ndarray, box: tuple[int, int, int, int]) -> np.ndarray:
+    x, y, w, h = box
+    grey = cv2.cvtColor(crop[y: y + h, x: x + w], cv2.COLOR_BGR2GRAY)
+    mask = (grey >= WHITE_MIN).astype(np.uint8) * 255
+    return cv2.resize(mask, (20, 32), interpolation=cv2.INTER_AREA)
+
+
+class StorageAtlas(DigitAtlas):
+    """Glyphs for the storage fraction, including the '/' separator."""
+
+    def __init__(self, path: Path | None = None):
+        super().__init__(path or (TEMPLATE_DIR / "storage_digits.npz"))
+
+    def learn(self, crop: np.ndarray, value: str) -> int:
+        boxes = white_glyph_boxes(crop)
+        if len(boxes) != len(value):
+            raise ValueError(f"found {len(boxes)} glyphs but was told {value!r}")
+        for box, ch in zip(boxes, value):
+            self.glyphs.setdefault(ch, normalise_white(crop, box))
+        return len(boxes)
+
+    def read_text(self, crop: np.ndarray) -> str | None:
+        out: list[str] = []
+        for box in white_glyph_boxes(crop):
+            best, score = self._best(normalise_white(crop, box))
+            if best is None or score < self.MIN_CONFIDENCE:
+                return None
+            out.append(best)
+        return "".join(out) if out else None
+
+
+def read_storage(frame: np.ndarray, atlas: StorageAtlas) -> tuple[int, int] | None:
+    """Return (used, capacity) off the Cat Storage screen, or None."""
+    h, w = frame.shape[:2]
+    x0, y0, x1, y1 = STORAGE_CAPACITY_BOX
+    text = atlas.read_text(frame[int(y0 * h): int(y1 * h), int(x0 * w): int(x1 * w)])
+    if not text or "/" not in text:
+        return None
+    used, _, total = text.partition("/")
+    try:
+        return int(used), int(total)
+    except ValueError:
+        return None
