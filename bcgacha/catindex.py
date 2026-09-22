@@ -84,11 +84,16 @@ NAME_BOX = (0.245, 0.595, 0.760, 0.680)
 # contains the same characters and would otherwise read as locked.
 LOCKED_RE = re.compile(r"^[\s\[\]()?72]+$")
 
-# Consecutive identical description panels that mean the list will not move.
-# The cat artwork animates, so only the static text panel can be compared, and
-# the run has to be long enough that a stretch of identical locked entries does
-# not look like the end.
-END_OF_LIST_FRAMES = 8
+# Consecutive static frames that mean the list will not move any further.
+# The cat artwork animates, so the comparison uses two regions that do not:
+# the description panel and the evolution-form strip. Agreeing on both is
+# strong enough evidence to call the end after a short run, which keeps the
+# walk from flicking into the void for ten swipes once it reaches the last
+# entry.
+END_OF_LIST_FRAMES = 4
+
+# The evolution-form thumbnails, top left of the detail view.
+FORMS_BOX = (0.015, 0.120, 0.230, 0.250)
 # Frames differing by less than this on average are treated as the same.
 FRAME_SAME_TOLERANCE = 0.8
 
@@ -336,7 +341,7 @@ class CatIndexer:
         seen: list[str] = []
         misses = 0
         stuck = 0
-        previous: np.ndarray | None = None
+        previous: tuple[np.ndarray, np.ndarray] | None = None
 
         for step in range(limit):
             frame = self.session.screenshot()
@@ -344,15 +349,17 @@ class CatIndexer:
             # The Guide does NOT wrap: it dead-ends on the last entry and
             # further flicks do nothing at all. An unchanging frame is the
             # only reliable end signal, so stop once the screen stops moving.
-            panel = _crop(frame, PANEL_BOX)
-            if previous is not None and _frames_match(previous, panel):
+            signature = (_crop(frame, PANEL_BOX), _crop(frame, FORMS_BOX))
+            if previous is not None and all(
+                _frames_match(a, b) for a, b in zip(previous, signature)
+            ):
                 stuck += 1
                 if stuck >= END_OF_LIST_FRAMES:
                     log(f"  screen stopped changing at step {step}: end of the guide")
                     break
             else:
                 stuck = 0
-            previous = panel
+            previous = signature
             if not self.on_detail(frame):
                 self.dismiss_popup()
                 frame = self.session.screenshot()
