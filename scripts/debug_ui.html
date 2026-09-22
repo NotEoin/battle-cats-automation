@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bcgacha Live View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+{{CSS}}
+/* Overlay colours sit on the game's own pixels, so they do not follow the theme.
+   They are the first three slots of the validated categorical palette. */
+:root { --ov-exit: #3987e5; --ov-button: #eb6834; --ov-anchor: #1baf7a; }
+[hidden] { display: none !important; }
+
+.page { max-width: 1480px; margin: 0 auto; padding-inline: 18px; padding-block: 16px 48px; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding-block: 4px 14px; }
+.bar h1 { margin: 0 8px 0 0; font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--hair-2); background: var(--surface); font-size: 12.5px; color: var(--ink-2);
+}
+.pill b { color: var(--ink); font-weight: 650; }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--edge-back); }
+.pill.live .dot { background: #0ca30c; }
+.pill.bad { border-color: var(--critical); }
+.pill.bad .dot { background: var(--critical); }
+.spacer { flex: 1; }
+button {
+  font: 600 13px var(--font); color: var(--ink); background: var(--raise);
+  border: 1px solid var(--hair-2); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+}
+button:disabled { opacity: 0.45; cursor: default; }
+button.stop { border-color: var(--critical); }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; }
+.screen { padding: 10px; }
+.stage { position: relative; background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 2532 / 1170; }
+.stage img, .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.stage img { object-fit: fill; }
+.stage .empty { position: absolute; inset: 0; display: grid; place-items: center; color: #c3c2b7; font-size: 14px; }
+.layers { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 10px 4px 2px; font-size: 12.5px; color: var(--ink-2); }
+.layers label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.key { display: inline-block; width: 16px; height: 10px; border: 2px solid; border-radius: 2px; }
+
+.ov-label { font: 600 13px var(--font); fill: #fff; paint-order: stroke; stroke: rgba(0, 0, 0, 0.85); stroke-width: 3.5px; stroke-linejoin: round; }
+.ov-box { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.ov-under { fill: none; stroke: rgba(0, 0, 0, 0.7); stroke-width: 4; vector-effect: non-scaling-stroke; }
+
+.side { display: grid; gap: 12px; }
+.side section { padding: 12px 14px 14px; }
+.side h2 { margin: 0 0 8px; font-size: 11px; font-weight: 650; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.here-name { font: 600 20px var(--mono); }
+.here-name.unknown { color: var(--critical); font-family: var(--font); font-size: 17px; }
+.side .kv { font-size: 12.5px; margin-top: 8px; }
+.cands { margin: 8px 0 0; padding: 0; list-style: none; font-size: 12.5px; }
+.cands li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-top: 1px solid var(--hair); }
+.cands li:first-child { border-top: 0; }
+.cands .num { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.exits { margin: 0; padding: 0; list-style: none; font-size: 12.5px; display: grid; gap: 5px; }
+.exits li { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.exits .sw { width: 10px; height: 10px; border-radius: 50%; background: var(--ov-exit); }
+.exits .sw.off { background: transparent; border: 2px solid var(--ov-exit); }
+.exits .sw.routine { border-radius: 2px; background: var(--edge-back); }
+.exits .meta { color: var(--muted); }
+.warn { margin: 8px 0 0; padding: 6px 10px; border-left: 3px solid var(--critical); font-size: 12.5px; color: var(--ink); background: var(--critical-tint); border-radius: 4px; }
+.log {
+  margin: 0; max-height: 220px; overflow: auto; font: 11.5px/1.5 var(--mono);
+  font-variant-ligatures: none; white-space: pre-wrap; color: var(--ink-2);
+}
+.message { font-size: 13px; color: var(--ink-2); }
+
+.mapcard { margin-top: 16px; }
+.maphead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding: 12px 16px; border-bottom: 1px solid var(--hair); }
+.maphead h2 { margin: 0; font-size: 11px; font-weight: 650; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.maphead p { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+.map-scroll { overflow-x: auto; }
+.node.here .box { stroke: var(--route); stroke-width: 3.2; fill: var(--route-tint); }
+.node.target .box { stroke: var(--route); stroke-width: 2.4; stroke-dasharray: 7 4; }
+.ui-map.busy .node { cursor: progress; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="bar">
+    <h1>bcgacha live view</h1>
+    <span class="pill" id="conn"><span class="dot"></span><span id="conn-text">connecting</span></span>
+    <span class="pill">frame <b id="frame-age">–</b></span>
+    <span class="pill">analysis <b id="analysis-ms">–</b></span>
+    <span class="spacer"></span>
+    <span class="message" id="message" aria-live="polite"></span>
+    <button id="scan" type="button" title="Read this save's sagas and chapters again">Scan carousels</button>
+    <button class="stop" id="stop" type="button" disabled>Stop</button>
+  </div>
+
+  <div class="main">
+    <div class="card screen">
+      <div class="stage" id="stage">
+        <img id="frame" alt="Latest frame from the iPhone">
+        <svg id="overlay" viewBox="0 0 1000 462" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="empty" id="empty">Waiting for the first frame…</div>
+      </div>
+      <div class="layers" role="group" aria-label="Overlay layers">
+        <label><input type="checkbox" id="l-exits" checked><span class="key" style="border-color: var(--ov-exit)"></span>Exits: transition taps from this screen</label>
+        <label><input type="checkbox" id="l-buttons" checked><span class="key" style="border-color: var(--ov-button)"></span>Gold buttons (find_buttons)</label>
+        <label><input type="checkbox" id="l-anchors" checked><span class="key" style="border-color: var(--ov-anchor)"></span>Anchors that match</label>
+        <label><input type="checkbox" id="l-misses"><span class="key" style="border-color: #c3c2b7; border-style: dashed"></span>Anchors that don't</label>
+        <label><input type="checkbox" id="l-title" checked><span class="key" style="border-color: #fff; border-style: dashed"></span>OCR title box</label>
+      </div>
+    </div>
+
+    <div class="side">
+      <section class="card">
+        <h2>Identified as</h2>
+        <div class="here-name" id="here">–</div>
+        <dl class="kv" id="here-kv"></dl>
+        <div id="dialog"></div>
+        <h2 style="margin-top: 12px">Candidates</h2>
+        <ul class="cands" id="cands"></ul>
+      </section>
+      <section class="card">
+        <h2>Exits from here</h2>
+        <ul class="exits" id="exits"></ul>
+      </section>
+      <section class="card">
+        <h2>Navigator log</h2>
+        <pre class="log" id="log"></pre>
+      </section>
+    </div>
+  </div>
+
+  <div class="card mapcard">
+    <div class="maphead">
+      <h2>Map</h2>
+      <p>Solid blue: where the bot is. Dashed: where it is going, with the route it plans. Click a screen to navigate there.</p>
+    </div>
+    <div class="map-scroll">{{SVG}}</div>
+  </div>
+</div>
+
+<script type="application/json" id="map-data">{{DATA}}</script>
+<script>
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const $ = id => document.getElementById(id);
+  const overlay = $('overlay');
+  const img = $('frame');
+  const layers = ['exits', 'buttons', 'anchors', 'misses', 'title'];
+  // The map is replaced whenever the server draws a new one -- during a
+  // carousel scan, after every saga and chapter it reads.
+  let D = JSON.parse($('map-data').textContent);
+  let map, nodes, edges;
+  let state = null, shownVersion = 0, mapVersion = D.version, fetchingMap = false;
+
+  function bindMap() {
+    map = $('map');
+    nodes = new Map([...map.querySelectorAll('.node')].map(g => [g.dataset.id, g]));
+    edges = [...map.querySelectorAll('.edge')].map(g => ({ g, t: g.dataset.t.split(',').map(Number) }));
+    for (const [id, g] of nodes) {
+      const go = () => post('/api/goto', { dst: id });
+      g.addEventListener('click', go);
+      g.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } });
+    }
+    fit();
+  }
+
+  async function refreshMap() {
+    if (fetchingMap) return;
+    fetchingMap = true;
+    try {
+      const m = await (await fetch('/api/map', { cache: 'no-store' })).json();
+      const scroll = map.closest('.map-scroll'), left = scroll.scrollLeft;
+      scroll.innerHTML = m.svg;
+      scroll.scrollLeft = left;
+      D = m.data;
+      mapVersion = m.version;
+      bindMap();
+      if (state) drawMap(state);
+    } finally {
+      fetchingMap = false;
+    }
+  }
+
+  function h(tag, cls, ...kids) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    for (const k of kids) if (k !== null && k !== undefined) e.append(k);
+    return e;
+  }
+  function s(tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  const on = name => $('l-' + name).checked;
+
+  // -- overlay: coordinates are frame fractions, drawn into a 1000-wide box ----
+  function drawOverlay(v) {
+    const W = 1000, H = Math.round(1000 * v.height / v.width);
+    overlay.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    overlay.replaceChildren();
+    const rect = (x, y, w, hgt, colour, dash) => {
+      const a = { x: x * W, y: y * H, width: w * W, height: hgt * H };
+      overlay.append(s('rect', { ...a, class: 'ov-under' }));
+      overlay.append(s('rect', { ...a, class: 'ov-box', style: `stroke: ${colour}`, 'stroke-dasharray': dash || '' }));
+    };
+    const label = (x, y, text, anchor = 'start') =>
+      overlay.append(s('text', { x: x * W, y: y * H, class: 'ov-label', 'text-anchor': anchor }, text));
+
+    if (on('title')) {
+      const [x0, y0, x1, y1] = v.title_box;
+      rect(x0, y0, x1 - x0, y1 - y0, '#ffffff', '6 4');
+      label(x0 + 0.004, y1 + 0.045, v.title ? `OCR: “${v.title}”` : 'OCR: nothing read');
+    }
+    for (const a of v.anchors) {
+      if (a.hit ? !on('anchors') : !on('misses')) continue;
+      const [x0, y0, x1, y1] = a.box;
+      rect(x0, y0, x1 - x0, y1 - y0, a.hit ? 'var(--ov-anchor)' : '#c3c2b7', a.hit ? '' : '4 4');
+      label(x0 + 0.003, y0 - 0.008, `${a.name} ${a.score.toFixed(2)}`);
+    }
+    if (on('buttons')) for (const b of v.buttons) {
+      rect(b.x, b.y, b.w, b.h, 'var(--ov-button)');
+      label(b.x + 0.003, b.y + b.h - 0.012, `fill ${Math.round(b.fill * 100)}%`);
+    }
+    if (on('exits')) {
+      for (const e of v.exits) {
+        if (e.action) continue;
+        const cx = e.x * W, cy = e.y * H;
+        overlay.append(s('circle', { cx, cy, r: 11, fill: 'none', stroke: 'rgba(0,0,0,.7)', 'stroke-width': 5 }));
+        overlay.append(s('circle', { cx, cy, r: 11, style: `stroke: var(--ov-exit); fill: ${e.on_button ? 'var(--ov-exit)' : 'none'}`, 'fill-opacity': 0.35, 'stroke-width': 3 }));
+        const text = `${e.label} → ${e.dst}${e.forbidden ? ' (off limits)' : ''}`;
+        const right = e.x > 0.7;
+        overlay.append(s('text', { x: cx + (right ? -16 : 16), y: cy + 5, class: 'ov-label', 'text-anchor': right ? 'end' : 'start' }, text));
+      }
+      if (v.back) {
+        const [bx, by] = v.back;
+        overlay.append(s('circle', { cx: bx * W, cy: by * H, r: 16, fill: 'none', style: 'stroke: var(--ov-exit)', 'stroke-width': 2, 'stroke-dasharray': '4 3' }));
+        label(bx + 0.02, by - 0.035, 'back arrow');
+      }
+    }
+  }
+
+  // -- side panel -------------------------------------------------------------
+  function drawPanel(v) {
+    const here = $('here');
+    here.textContent = v.here || 'Not on the map';
+    here.className = 'here-name' + (v.here ? '' : ' unknown');
+    const sc = v.here ? D.screens[v.here] : null;
+    const rows = [['OCR read', v.title ? `“${v.title}”` : 'nothing']];
+    if (sc) {
+      rows.push(['Expects title', sc.title ? `“${sc.title}”` : 'none (anchors only)']);
+      rows.push(['Anchors', sc.anchors.join(', ') || '—']);
+      if (sc.absent.length) rows.push(['Must be absent', sc.absent.join(', ')]);
+      if (sc.note) rows.push(['Note', sc.note]);
+    } else {
+      rows.push(['Navigator', 'would tap the back arrow and look again']);
+    }
+    const kv = $('here-kv');
+    kv.replaceChildren();
+    for (const [k, val] of rows) kv.append(h('dt', null, k), h('dd', null, val));
+    $('dialog').replaceChildren(v.dialog.present
+      ? h('p', 'warn', `Dialog up${v.dialog.spends_cat_food ? ': it would spend Cat Food' : ''}. The navigator answers No.`)
+      : '');
+    const cands = $('cands');
+    cands.replaceChildren(...(v.candidates.length
+      ? v.candidates.map(c => h('li', null, h('span', 'mono', c.name), h('span', 'num', c.score.toFixed(1))))
+      : [h('li', null, 'No screen fits this frame')]));
+    const exits = $('exits');
+    exits.replaceChildren(...(v.exits.length ? v.exits.map(e => {
+      const sw = h('span', 'sw' + (e.action ? ' routine' : e.on_button ? '' : ' off'));
+      const where = e.action ? `routine ${e.action}` : `tap (${e.x.toFixed(3)}, ${e.y.toFixed(3)})${e.on_button ? ' on a detected button' : ', no button detected there'}`;
+      return h('li', null, sw, h('div', null, h('b', null, e.label), ' → ', h('span', 'mono', e.dst), e.forbidden ? ' (off limits)' : '', h('div', 'meta', where)));
+    }) : [h('li', null, v.here ? 'No transitions recorded from this screen.' : 'Unknown screen: no recorded exits.')]));
+  }
+
+  // -- map ----------------------------------------------------------------------
+  function drawMap(st) {
+    map.querySelectorAll('.here, .target, .on-route').forEach(e => e.classList.remove('here', 'target', 'on-route'));
+    const here = st.view && st.view.here;
+    if (here && nodes.has(here)) nodes.get(here).classList.add('here');
+    if (st.nav.running && nodes.has(st.nav.target)) nodes.get(st.nav.target).classList.add('target');
+    for (const i of st.route || []) {
+      for (const e of edges) if (e.t.includes(i)) e.g.classList.add('on-route');
+    }
+    map.classList.toggle('busy', st.nav.running);
+  }
+
+  function render() {
+    if (!state) return;
+    if (state.map_version !== mapVersion) refreshMap();
+    $('scan').disabled = state.nav.running || state.mode === 'replay';
+    const conn = $('conn');
+    conn.className = 'pill ' + (state.error ? 'bad' : 'live');
+    $('conn-text').textContent = state.error ? state.error : state.mode === 'replay' ? 'replaying saved frames' : 'device connected';
+    const v = state.view;
+    $('stop').disabled = !state.nav.running;
+    const scanning = state.nav.target === 'carousel scan';
+    if (state.nav.running) $('message').textContent = scanning ? 'Scanning the saga and chapter carousels…' : `Navigating to ${state.nav.target}…`;
+    else if (state.nav.result) $('message').textContent = scanning ? `Carousel scan: ${state.nav.result}` : `Last walk to ${state.nav.target}: ${state.nav.result}`;
+    $('log').textContent = state.log.join('\n');
+    drawMap(state);
+    if (!v) return;
+    $('frame-age').textContent = `${Math.max(0, state.now - v.taken_at).toFixed(1)} s old`;
+    $('analysis-ms').textContent = `${v.analysis_ms} ms`;
+    if (v.version !== shownVersion) {
+      // Swap image and overlay together so the boxes never sit on another frame.
+      const next = new Image();
+      next.onload = () => {
+        img.src = next.src;
+        $('empty').hidden = true;
+        shownVersion = v.version;
+        drawOverlay(v);
+        drawPanel(v);
+      };
+      next.src = `/frame.jpg?v=${v.version}`;
+    }
+  }
+
+  async function poll() {
+    try {
+      const r = await fetch('/api/state', { cache: 'no-store' });
+      state = await r.json();
+      render();
+    } catch (err) {
+      $('conn').className = 'pill bad';
+      $('conn-text').textContent = 'debug server not responding';
+    }
+    setTimeout(poll, 350);
+  }
+
+  async function post(path, body) {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    const out = await r.json();
+    $('message').textContent = out.message;
+  }
+
+  $('stop').addEventListener('click', () => post('/api/stop'));
+  $('scan').addEventListener('click', () => post('/api/scan'));
+  for (const name of layers) $('l-' + name).addEventListener('change', () => state && state.view && drawOverlay(state.view));
+
+  // Evidence lines on the map shrink to fit their box once the fonts are in.
+  function fit() {
+    map.querySelectorAll('.node-ev, .node-ocr, .card-name, .card-sub, .ui-map .node-id[data-max]').forEach(t => {
+      t.style.fontSize = '';
+      if (t.dataset.full) t.textContent = t.dataset.full;
+      else t.dataset.full = t.textContent;
+      const max = Number(t.dataset.max);
+      let size = parseFloat(getComputedStyle(t).fontSize);
+      while (t.getComputedTextLength() > max && size > 8.5) { size -= 0.25; t.style.fontSize = `${size}px`; }
+      while (t.getComputedTextLength() > max && t.textContent.length > 4) t.textContent = t.textContent.slice(0, -2).trimEnd() + '…';
+    });
+    map.querySelectorAll('.chip').forEach(c => {
+      const t = c.querySelector('text'), r = c.querySelector('rect');
+      const w = t.getComputedTextLength() + 16, cx = Number(c.dataset.cx);
+      r.setAttribute('x', (cx - w / 2).toFixed(1));
+      r.setAttribute('width', w.toFixed(1));
+    });
+  }
+  bindMap();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  poll();
+})();
+</script>
+</body>
+</html>

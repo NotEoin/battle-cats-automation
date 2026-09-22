@@ -1,0 +1,438 @@
+<title>Battle Cats Screen Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+{{CSS}}
+.page { max-width: 1240px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 64px; }
+/* masthead */
+.eyebrow { margin: 0; font: 500 12px/1.4 var(--mono); color: var(--muted); }
+h1 {
+  margin: 8px 0 10px;
+  font: 650 clamp(28px, 3.6vw, 40px)/1.08 var(--font);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.lede { margin: 0; max-width: 70ch; color: var(--ink-2); font-size: 15.5px; }
+.facts {
+  display: flex; flex-wrap: wrap; gap: 6px 22px;
+  list-style: none; margin: 16px 0 0; padding: 0;
+  font-size: 13.5px; color: var(--ink-2);
+}
+.facts b { color: var(--ink); font-weight: 650; }
+
+/* route controls */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 26px; }
+.field { display: flex; align-items: center; gap: 8px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+select {
+  font: 500 13px var(--mono); color: var(--ink); background: var(--raise);
+  border: 1px solid var(--hair-2); border-radius: 8px; padding: 6px 8px;
+}
+.swap {
+  font: 600 15px/1 var(--font); color: var(--ink-2); background: var(--raise);
+  border: 1px solid var(--hair-2); border-radius: 8px; width: 36px; height: 32px; cursor: pointer;
+}
+.swap:hover { color: var(--ink); border-color: var(--edge-back); }
+.summary { font-size: 14px; color: var(--ink-2); }
+.summary b { color: var(--ink); font-weight: 650; }
+.hint { margin-left: auto; font-size: 13px; color: var(--muted); }
+
+/* legend */
+.legend {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px 24px;
+  list-style: none; margin: 18px 0 14px; padding: 0;
+  font-size: 12.5px; line-height: 1.35; color: var(--ink-2);
+}
+.legend li { display: flex; align-items: center; gap: 10px; }
+.legend svg { flex: none; width: 46px; height: 22px; overflow: visible; }
+.legend b { color: var(--ink); font-weight: 600; }
+
+/* the map */
+.map { margin: 0; background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; overflow: hidden; }
+.map-scroll { overflow-x: auto; }
+.map figcaption { padding: 12px 18px 14px; border-top: 1px solid var(--hair); font-size: 13px; color: var(--ink-2); }
+
+/* route + screen panels */
+.below { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+.card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: 16px 18px 18px; }
+.card h2 { margin: 0 0 12px; font-size: 12px; font-weight: 650; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.card h2 .mono { margin-left: 6px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.steps li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; }
+.steps li.none { display: block; color: var(--ink-2); }
+.steps .n {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--badge); color: var(--badge-ink); font-size: 11.5px; font-weight: 700;
+}
+.step-log { font: 500 13px/1.55 var(--mono); font-variant-ligatures: none; overflow-wrap: anywhere; }
+.step-log b { font-weight: 700; }
+.step-meta { font-size: 12.5px; color: var(--ink-2); margin-top: 1px; }
+.fork-note { margin: 6px 0 0; padding-left: 10px; border-left: 2px solid var(--hair-2); font-size: 12.5px; color: var(--ink-2); }
+.screen-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.screen-id { font: 600 15px var(--mono); }
+.screen .note { margin-top: 6px; font-size: 13.5px; }
+.screen .kv { margin-top: 12px; font-size: 13px; gap: 7px 14px; }
+.plain { margin: 0; padding: 0; list-style: none; }
+
+/* table view */
+details.tables { margin-top: 16px; background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; }
+details.tables > summary { cursor: pointer; padding: 14px 18px; font-size: 14px; font-weight: 600; }
+details.tables > summary span { font-weight: 500; color: var(--muted); }
+.table-wrap { overflow-x: auto; padding: 0 18px 18px; }
+.table-wrap h3 { margin: 14px 0 8px; font-size: 12px; font-weight: 650; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+table { border-collapse: collapse; width: 100%; min-width: 900px; font-size: 12.5px; }
+th { text-align: left; font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--hair-2); padding: 7px 10px; white-space: nowrap; }
+td { border-bottom: 1px solid var(--hair); padding: 7px 10px; vertical-align: top; }
+td.mono { white-space: nowrap; }
+td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.foot { margin: 22px 0 0; max-width: 90ch; font-size: 12.5px; color: var(--muted); }
+
+@media (max-width: 700px) {
+  .legend { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  .below { grid-template-columns: minmax(0, 1fr); }
+  .hint { margin-left: 0; flex-basis: 100%; }
+}
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow">bcgacha · data/ui_graph.json · {{COMMIT}} · {{DATE}}</p>
+    <h1>Battle Cats Screen Map</h1>
+    <p class="lede">The map the bot navigates by. It never trusts a remembered position. At every step it identifies the screen from the frame itself, using OCR on the top-left title and template anchors that must or must not match, then takes the first hop of the fewest-taps route to its goal. A screen it can't place gets the back arrow.</p>
+    <ul class="facts">
+      <li><b>{{N_SCREENS}}</b> screens</li>
+      <li><b>{{N_TRANS}}</b> transitions: {{N_TAP}} taps, {{N_ROUTINE}} routines</li>
+      <li><b>{{N_REACT}}</b> reactive</li>
+      <li><b>{{N_FORB}}</b> off limits</li>
+      <li><b>{{N_TITLED}}</b> with an OCR title</li>
+      <li>{{HOME_FACT}}</li>
+    </ul>
+  </header>
+
+  <div class="toolbar" role="group" aria-label="Plan a route">
+    <div class="field"><label for="from">From</label><select id="from">{{OPTIONS}}</select></div>
+    <button class="swap" id="swap" type="button" aria-label="Swap From and To" title="Swap From and To">&#8644;</button>
+    <div class="field"><label for="to">To</label><select id="to">{{OPTIONS}}</select></div>
+    <output class="summary" id="route-summary" for="from to" aria-live="polite"></output>
+    <span class="hint">Click a screen to route from it. Hover one to isolate its edges.</span>
+  </div>
+
+  <ul class="legend" aria-label="Legend">
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="node"><rect class="box" x="1" y="3" width="42" height="16" rx="5"/></g></svg><span><b>Screen</b>: id, the OCR title identify() reads top-left, then its anchors</span></li>
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="node reactive"><rect class="box" x="1" y="3" width="42" height="16" rx="5"/></g></svg><span><b>Reactive</b>: appears on its own; the map records only ways out</span></li>
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="node forbidden"><rect class="box" x="1" y="3" width="42" height="16" rx="5"/><g class="noentry"><circle cx="11" cy="11" r="4.6"/><line x1="8" y1="14" x2="14" y2="8"/></g></g></svg><span><b>Off limits</b>: recognised, but route() never plans into it</span></li>
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="edge"><path class="line" d="M2 11 H38"/><polygon class="head" points="44,11 36.5,7.2 36.5,14.8"/></g></svg><span><b>Tap</b>, labelled with the control pressed</span></li>
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="edge kind-back"><path class="line" d="M2 11 H38"/><polygon class="head" points="44,11 36.5,7.2 36.5,14.8"/></g></svg><span><b>Back</b>: the round yellow back arrow, bottom-left</span></li>
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="edge"><path class="line" d="M2 11 H38"/><polygon class="head" points="44,11 36.5,7.2 36.5,14.8"/><g class="chip"><rect x="10" y="5" width="20" height="12" rx="6"/></g></g></svg><span><b>Routine</b>: a swipe or the banner picker, not a fixed tap</span></li>
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="edge"><path class="line" d="M2 11 H14"/><polygon class="diamond" points="19,6 24,11 19,16 14,11"/><path class="line" d="M24 11 L37 4.5"/><path class="line" d="M24 11 L37 17.5"/><polygon class="head" points="43,2 35.4,2.3 38.3,7.6"/><polygon class="head" points="43,20 38.3,14.4 35.4,19.7"/></g></svg><span><b>One tap, several outcomes</b>: the game decides where it lands</span></li>
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="stub"><path class="line" d="M2 11 H38"/><polygon class="head" points="44,11 36.5,7.2 36.5,14.8"/></g></svg><span><b>How a reactive screen appears</b> (not a map edge)</span></li>
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="edge on-route"><path class="line" d="M2 11 H38"/><polygon class="head" points="44,11 36.5,7.2 36.5,14.8"/></g><g class="badge"><circle cx="12" cy="11" r="7.5"/><text x="12" y="11.5">1</text></g></svg><span><b>Planned route</b> for From → To, numbered by step</span></li>
+  </ul>
+
+  <figure class="map">
+    <div class="map-scroll">{{SVG}}</div>
+    <figcaption>All {{N_SCREENS}} screens and {{N_TRANS}} transitions in data/ui_graph.json. Each screen shows the title text identify() looks for in the top-left corner; screens without one are recognised by template anchors alone. Tap positions and settle times are in the tooltips and the table view.</figcaption>
+  </figure>
+
+  <div class="below">
+    <section class="card" aria-labelledby="route-h">
+      <h2 id="route-h">Route<span class="mono" id="route-name"></span></h2>
+      <ol class="steps" id="steps"></ol>
+    </section>
+    <section class="card screen" aria-labelledby="screen-h">
+      <h2 id="screen-h">Screen</h2>
+      <div id="screen"></div>
+    </section>
+  </div>
+
+  <details class="tables">
+    <summary>Table view <span>· {{N_SCREENS}} screens, {{N_TRANS}} transitions</span></summary>
+    <div class="table-wrap">
+      <h3>Screens</h3>
+      <table>
+        <thead><tr><th>Screen</th><th>Title (OCR)</th><th>Anchors (must match)</th><th>Absent (must not match)</th><th>Kind</th><th>Steps home</th><th>Note</th></tr></thead>
+        <tbody>{{SCREEN_ROWS}}</tbody>
+      </table>
+      <h3>Transitions</h3>
+      <table>
+        <thead><tr><th>#</th><th>From</th><th>Control</th><th>To</th><th>Type</th><th>Tap (x, y) or routine</th><th>Settle (s)</th></tr></thead>
+        <tbody>{{TRANS_ROWS}}</tbody>
+      </table>
+    </div>
+  </details>
+
+  <p class="foot">Built from data/ui_graph.json at {{COMMIT}} with the repo's own UIGraph.load(); regenerate with python scripts/draw_ui_graph.py. Every route shown is UIGraph.route() output, computed for every pair of screens by the repository code rather than re-implemented here. Tap positions are fractions of the landscape frame, as stored.</p>
+</div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script type="application/json" id="map-data">{{DATA}}</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('map-data').textContent);
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.getElementById('map');
+  const tip = document.getElementById('tip');
+  const fromSel = document.getElementById('from');
+  const toSel = document.getElementById('to');
+  const summary = document.getElementById('route-summary');
+  const stepsEl = document.getElementById('steps');
+  const routeName = document.getElementById('route-name');
+  const screenEl = document.getElementById('screen');
+  const badges = document.getElementById('map-badges');
+  const S = D.screens, T = D.transitions;
+
+  const edges = [...svg.querySelectorAll('.edge')].map(g => ({ g, t: g.dataset.t.split(',').map(Number) }));
+  const nodes = new Map([...svg.querySelectorAll('.node')].map(g => [g.dataset.id, g]));
+  const stubs = [...svg.querySelectorAll('.stub')];
+
+  function h(tag, cls, ...kids) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    for (const k of kids) if (k !== null && k !== undefined && k !== false) e.append(k);
+    return e;
+  }
+  const mono = s => h('span', 'mono', s);
+  const f3 = n => n.toFixed(3);
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const touches = (i, id) => T[i].src === id || T[i].dst === id;
+  const how = t => t.action ? `routine ${t.action}` : `tap at (${f3(t.x)}, ${f3(t.y)})`;
+
+  function flagsOf(id) {
+    const s = S[id], out = [];
+    if (id === 'opening') out.push(['entry', 'first launch']);
+    if (id === 'cat_base') out.push(['hub', 'home']);
+    if (s.reactive) out.push(['reactive', 'reactive']);
+    if (s.forbidden) out.push(['forbidden', '⊘ off limits']);
+    return out.map(([c, t]) => h('span', 'flag ' + c, t));
+  }
+  function recognitionRows(s) {
+    return [
+      ['Title (OCR)', s.title ? `“${s.title}”` : '—'],
+      ['Anchors, all must match', s.anchors.length ? s.anchors.join(', ') : '—'],
+      ['Absent, none may match', s.absent.length ? s.absent.join(', ') : '—'],
+    ];
+  }
+  function kv(rows) {
+    const dl = h('dl', 'kv');
+    for (const [k, v] of rows) dl.append(h('dt', null, k), h('dd', null, v));
+    return dl;
+  }
+  function list(items) {
+    const ul = h('ul', 'plain');
+    for (const it of items) ul.append(h('li', null, it));
+    return ul;
+  }
+  function homeText(id) {
+    const n = D.home[id];
+    return n === 0 ? 'this is home' : `${plural(n, 'step')} to cat_base`;
+  }
+
+  // -- tooltips --------------------------------------------------------------
+  function screenTip(id) {
+    const s = S[id];
+    const box = h('div', null, h('div', 'tip-head', h('span', 'mono strong', id), ...flagsOf(id)));
+    box.append(kv([...recognitionRows(s), ['Way home', homeText(id)]]));
+    if (s.note) box.append(h('p', 'note', s.note));
+    return box;
+  }
+  function edgeTip(tids) {
+    const box = h('div');
+    for (const i of tids) {
+      const t = T[i];
+      const item = h('div', 'tip-item',
+        h('div', 'tip-log', `${t.src} --${t.label}--> ${t.dst}`),
+        h('div', 'tip-sub', `${how(t)} · settle ${t.settle.toFixed(1)} s`));
+      if (S[t.dst].forbidden) item.append(h('p', 'note', 'Never planned: route() skips every edge into an off-limits screen.'));
+      box.append(item);
+    }
+    return box;
+  }
+  function placeTip(x, y) {
+    const r = tip.getBoundingClientRect(), pad = 14;
+    let left = x + pad, top = y + pad;
+    if (left + r.width > innerWidth - 8) left = x - r.width - pad;
+    if (top + r.height > innerHeight - 8) top = y - r.height - pad;
+    tip.style.left = `${Math.max(8, left)}px`;
+    tip.style.top = `${Math.max(8, top)}px`;
+  }
+  function showTip(content, x, y) {
+    tip.replaceChildren(content);
+    tip.hidden = false;
+    placeTip(x, y);
+  }
+  const hideTip = () => { tip.hidden = true; };
+
+  // -- isolating a screen or an edge -------------------------------------------
+  function clearFocus() {
+    svg.classList.remove('focusing');
+    svg.querySelectorAll('.hot').forEach(e => e.classList.remove('hot'));
+  }
+  function light(i) {
+    nodes.get(T[i].src).classList.add('hot');
+    nodes.get(T[i].dst).classList.add('hot');
+  }
+  function focusNode(id) {
+    clearFocus();
+    svg.classList.add('focusing');
+    nodes.get(id).classList.add('hot');
+    for (const e of edges) {
+      const mine = e.t.filter(i => touches(i, id));
+      if (!mine.length) continue;
+      e.g.classList.add('hot');
+      mine.forEach(light);
+    }
+    for (const s of stubs) s.classList.toggle('hot', s.dataset.for === id);
+  }
+  function focusEdge(e) {
+    clearFocus();
+    svg.classList.add('focusing');
+    for (const o of edges) if (o.t.some(i => e.t.includes(i))) o.g.classList.add('hot');
+    e.t.forEach(light);
+  }
+
+  // -- routes (precomputed by UIGraph.route) ------------------------------------
+  function reason(from, to) {
+    const s = S[to];
+    if (s.forbidden) return `${to} is off limits. route() drops every edge into it, so nothing is ever planned there; it is still recognised so the bot can leave it.`;
+    const srcs = [...new Set(T.filter(t => t.dst === to && t.src !== to).map(t => t.src))];
+    if (!srcs.length) {
+      return s.reactive
+        ? `Nothing in the map leads to ${to}. It is reactive: it appears on its own, and the map records only how to leave it.`
+        : `Nothing in the map leads to ${to}. The game shows it on first launch only.`;
+    }
+    return `Only ${srcs.join(', ')} ${srcs.length > 1 ? 'lead' : 'leads'} to ${to}, and the navigator cannot reach ${srcs.length > 1 ? 'them' : 'it'} from ${from}.`;
+  }
+  function placeBadge(g, n) {
+    const line = g.querySelector('.line');
+    if (!line) return;
+    const len = line.getTotalLength();
+    const p = line.getPointAtLength(Math.min(14, len / 2));
+    const b = document.createElementNS(NS, 'g');
+    b.setAttribute('class', 'badge');
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', p.x.toFixed(1));
+    c.setAttribute('cy', p.y.toFixed(1));
+    c.setAttribute('r', '8.5');
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', p.x.toFixed(1));
+    t.setAttribute('y', (p.y + 0.5).toFixed(1));
+    t.textContent = String(n);
+    b.append(c, t);
+    badges.append(b);
+  }
+  function stepItem(i, n) {
+    const t = T[i];
+    const body = h('div', null,
+      h('div', 'step-log', `${t.src} --`, h('b', null, t.label), `--> ${t.dst}`),
+      h('div', 'step-meta', `${how(t)} · settle ${t.settle.toFixed(1)} s`));
+    const sib = D.siblings[i];
+    if (sib && sib.length) {
+      body.append(h('p', 'fork-note', 'The same tap can land on ', mono(sib.map(j => T[j].dst).join(', ')),
+        ' instead. The navigator re-reads the screen after every step and replans from wherever it lands.'));
+    }
+    return h('li', null, h('span', 'n', String(n)), body);
+  }
+  function showScreen(id) {
+    const s = S[id];
+    const out = T.filter(t => t.src === id);
+    const inc = T.filter(t => t.dst === id && t.src !== id);
+    screenEl.replaceChildren(
+      h('div', 'screen-head', h('span', 'screen-id', id), ...flagsOf(id)),
+      s.note ? h('p', 'note', s.note) : '',
+      kv([
+        ...recognitionRows(s),
+        ['Way home', homeText(id)],
+        [`Leaves by (${out.length})`, out.length ? list(out.map(t => `${t.label} → ${t.dst}`)) : '—'],
+        [`Reached from (${inc.length})`, inc.length
+          ? list(inc.map(t => `${t.src} (${t.label})`))
+          : (s.reactive ? 'nothing: it appears on its own' : '—')],
+      ]),
+    );
+  }
+  function setRoute(from, to) {
+    fromSel.value = from;
+    toSel.value = to;
+    svg.querySelectorAll('.on-route').forEach(e => e.classList.remove('on-route'));
+    badges.replaceChildren();
+    stepsEl.replaceChildren();
+    routeName.textContent = `${from} → ${to}`;
+    showScreen(from);
+    if (from === to) {
+      nodes.get(from).classList.add('on-route');
+      summary.replaceChildren('Already on ', mono(to));
+      stepsEl.append(h('li', 'none', `Nothing to do: goto() returns as soon as it identifies ${to}.`));
+      return;
+    }
+    const path = D.routes[`${from}>${to}`];
+    if (!path) {
+      summary.replaceChildren(h('b', null, 'No route'));
+      stepsEl.append(h('li', 'none', reason(from, to)));
+      return;
+    }
+    nodes.get(from).classList.add('on-route');
+    path.forEach((i, k) => {
+      nodes.get(T[i].dst).classList.add('on-route');
+      const vis = edges.filter(e => e.t.includes(i));
+      vis.forEach(e => e.g.classList.add('on-route'));
+      const at = vis.find(e => e.g.classList.contains('trunk')) || vis.find(e => !e.g.classList.contains('chip-only'));
+      if (at) placeBadge(at.g, k + 1);
+      stepsEl.append(stepItem(i, k + 1));
+    });
+    const routines = path.filter(i => T[i].action).length;
+    summary.replaceChildren(h('b', null, plural(path.length, 'step')), routines ? ` · ${plural(routines, 'routine')}` : '');
+  }
+
+  // -- wiring ------------------------------------------------------------------------
+  for (const [id, g] of nodes) {
+    g.addEventListener('pointerenter', ev => { focusNode(id); showTip(screenTip(id), ev.clientX, ev.clientY); });
+    g.addEventListener('pointermove', ev => placeTip(ev.clientX, ev.clientY));
+    g.addEventListener('pointerleave', () => { clearFocus(); hideTip(); });
+    g.addEventListener('focus', () => {
+      focusNode(id);
+      const r = g.getBoundingClientRect();
+      showTip(screenTip(id), r.right, r.top);
+    });
+    g.addEventListener('blur', () => { clearFocus(); hideTip(); });
+    g.addEventListener('click', () => setRoute(id, toSel.value));
+    g.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setRoute(id, toSel.value); }
+    });
+  }
+  for (const e of edges) {
+    e.g.addEventListener('pointerenter', ev => { focusEdge(e); showTip(edgeTip(e.t), ev.clientX, ev.clientY); });
+    e.g.addEventListener('pointermove', ev => placeTip(ev.clientX, ev.clientY));
+    e.g.addEventListener('pointerleave', () => { clearFocus(); hideTip(); });
+  }
+  fromSel.addEventListener('change', () => setRoute(fromSel.value, toSel.value));
+  toSel.addEventListener('change', () => setRoute(fromSel.value, toSel.value));
+  document.getElementById('swap').addEventListener('click', () => setRoute(toSel.value, fromSel.value));
+
+  // Chips hug their text and long evidence lines shrink to fit once fonts are in.
+  function fit() {
+    svg.querySelectorAll('.chip').forEach(c => {
+      const t = c.querySelector('text'), r = c.querySelector('rect');
+      const w = t.getComputedTextLength() + 16, cx = Number(c.dataset.cx);
+      r.setAttribute('x', (cx - w / 2).toFixed(1));
+      r.setAttribute('width', w.toFixed(1));
+    });
+    svg.querySelectorAll('.node-ev, .node-ocr, .card-name, .card-sub, .ui-map .node-id[data-max]').forEach(t => {
+      t.style.fontSize = '';
+      if (t.dataset.full) t.textContent = t.dataset.full;
+      else t.dataset.full = t.textContent;
+      const max = Number(t.dataset.max);
+      let size = parseFloat(getComputedStyle(t).fontSize);
+      while (t.getComputedTextLength() > max && size > 8.5) {
+        size -= 0.25;
+        t.style.fontSize = `${size}px`;
+      }
+      while (t.getComputedTextLength() > max && t.textContent.length > 4) t.textContent = t.textContent.slice(0, -2).trimEnd() + '\u2026';
+    });
+  }
+  fit();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  setRoute(D.start[0], D.start[1]);
+})();
+</script>
