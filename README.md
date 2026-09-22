@@ -31,7 +31,7 @@ works from iOS 17. Both need Developer Mode on and the Developer Disk Image
 mounted, neither needs root, and no Apple developer account or jailbreak is
 involved.
 
-### Two things that will waste a day if nobody says them
+### Four things that will waste a day if nobody says them
 
 HID coordinates are normalised against the device's **native portrait** frame,
 not the orientation the app draws in. This game is landscape only, so every
@@ -40,6 +40,15 @@ fractions straight through puts taps somewhere else entirely.
 
 The result screen's Ok button **pulses a pink outline**, so template matching
 against it is unstable. Anchor on the static Use now / Exchange pair instead.
+
+The Cat Guide's arrow and back buttons **do not respond to synthetic taps at
+all** — not at 50ms, not at 350ms. Only a flick across the artwork moves it, and
+the only dependable way to rewind the Guide is to leave to the Cat Base and come
+back in through Menu.
+
+Opening a Cat Guide entry that still carries a NEW! badge raises a Cat Food
+reward popup **over** the description panel, so "is the panel visible" is not a
+sufficient test for being on the detail view. Look for the popup's own button.
 
 ## What banner switching can and cannot do
 
@@ -75,14 +84,42 @@ restart. Then mount the developer disk image:
 
 ## Use
 
-    python -m bcgacha.cli probe
-    python -m bcgacha.cli banners --recent 30
-    python -m bcgacha.cli predict --seed 123456789 --event 2026-08-21_1075 --count 12
-    python -m bcgacha.cli find-seed --event 2026-09-21_1081 \
-        --cats "Pogo Cat,Hip Hop Cat,Psychocat,Wushu Cat,Illya the Cat" --progress
+    python -m bcgacha.cli probe                 # what the device supports
+    python -m bcgacha.cli find-seed --event <banner> --cats "A,B,C,..." --progress
+    python -m bcgacha.cli tiers                 # refresh community rankings
+    python -m bcgacha.cli index                 # scan the Cat Guide
+    python -m bcgacha.cli owned                 # what the scan found
+    python -m bcgacha.cli plan --count 20       # what it would roll, and why
+    python -m bcgacha.cli run --mode until-target
 
 `find-seed` wants 7–10 rolls. Fewer than about 7 usually leaves several seeds
 fitting; the command says so and asks for one more roll.
+
+### Run modes
+
+| Mode | Stops when |
+|---|---|
+| `until-target` (default) | the next new Uber or Legend lands |
+| `max-tickets` | `--max-tickets N` tickets have been spent |
+| `until-storage-full` | Cat Storage reaches its cap |
+| `all` | tickets run out; empties storage with Use all as needed |
+
+`--speed 0.6` scales every delay down; `--no-humanise` removes the jitter
+entirely. Delays are drawn from a distribution by default, with the occasional
+longer pause, so the cadence is not machine-exact.
+
+## How rolls are chosen
+
+Scoring is ownership first, quality second. A first copy of a unit dominates
+everything; a duplicate is not worthless, because extra copies raise a unit's
+level cap through the +N system, but it scores at a small fraction. Uber and
+Legend values are then scaled by community tier ranking, so a strong unit
+outranks a weak one of the same rarity.
+
+Platinum Tickets are only ever spent on an unowned Uber ranked A- or better.
+They read the same seed as every other banner, so a Platinum draw can be slotted
+into the route at a chosen position -- but they are scarce, so the planner
+refuses to waste one on a duplicate or a weak unit.
 
 ## Things that will bite a naive bot
 
