@@ -303,9 +303,7 @@ def cmd_goal(args) -> int:
     account = Account.load()
     planner, goal, tier_list, owned = _goal_setup(ds, args)
     print(goal.describe(ds, tier_list, owned))
-    print(f"
-seed {account.seed} at {account.position}
-")
+    print(f"\nseed {account.seed} at {account.position}\n")
     if args.dry_run:
         plan = planner.plan(
             account.seed, rolls=args.count, index=account.index,
@@ -323,8 +321,7 @@ seed {account.seed} at {account.position}
         )
         report = runner.run(mode=Mode.GOAL, max_tickets=args.max_tickets)
     account.save()
-    print(f"
-rolled {report.rolled}, tickets spent {report.tickets_spent}, "
+    print(f"\nrolled {report.rolled}, tickets spent {report.tickets_spent}, "
           f"storage emptied {report.storage_emptied}x")
     if report.new_units:
         print("new units:", ", ".join(report.new_units))
