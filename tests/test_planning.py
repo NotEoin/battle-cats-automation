@@ -66,10 +66,26 @@ def test_tier_order_has_no_duplicates():
 
 
 def test_locked_entries_are_recognised():
-    for text in ("???", "[???]", "?7?", "277"):
-        assert LOCKED_RE.search(text)
+    for text in ("???", "[???]", "?7?", "277", " ?? "):
+        assert LOCKED_RE.search(text), text
     for text in ("Lesser Demon Cat", "Cat", "Bath Cat"):
-        assert not LOCKED_RE.search(text)
+        assert not LOCKED_RE.search(text), text
+
+
+def test_a_real_name_containing_question_marks_is_not_locked():
+    """"Rei Ayanami (???)" is a real unit, not an unlocked placeholder."""
+    assert not LOCKED_RE.search("Rei Ayanami (???)")
+    assert not LOCKED_RE.search("Rei Ayanami ???")
+
+
+def test_name_matching_rejects_ambiguous_readings():
+    from bcgacha.catindex import match_name
+
+    choices = ["Cat", "Bird Cat", "Tank Cat", "Cow Cat"]
+    assert match_name("cowCat", choices) == "Cow Cat"
+    assert match_name("Tank Cat", choices) == "Tank Cat"
+    # Nothing close enough to be worth guessing at.
+    assert match_name("zzzzzzzz", choices) is None
 
 
 def test_clean_name_strips_game_brackets():

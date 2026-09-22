@@ -79,8 +79,10 @@ RARITY_FILTER_NAME = {
 
 # The name sits on the first line of the description panel.
 NAME_BOX = (0.245, 0.595, 0.760, 0.680)
-# OCR renders the locked placeholder as ???, ?7?, 277 and similar.
-LOCKED_RE = re.compile(r"[?72]{2,}")
+# OCR renders the locked placeholder as ???, ?7?, 277 and similar. It must
+# match the WHOLE name, because "Rei Ayanami (???)" is a real unit whose name
+# contains the same characters and would otherwise read as locked.
+LOCKED_RE = re.compile(r"^[\s\[\]()?72]+$")
 
 # Consecutive identical description panels that mean the list will not move.
 # The cat artwork animates, so only the static text panel can be compared, and
@@ -138,6 +140,30 @@ def _crop(frame: np.ndarray, box) -> np.ndarray:
     h, w = frame.shape[:2]
     x0, y0, x1, y1 = box
     return frame[int(y0 * h): int(y1 * h), int(x0 * w): int(x1 * w)]
+
+
+# A confident match either scores very highly, or clearly beats the runner-up.
+# OCR of a stylised game font mangles enough letters that a flat high cutoff
+# throws away real matches, but a low one alone invites false positives.
+STRONG_SCORE = 88.0
+WEAK_SCORE = 70.0
+REQUIRED_MARGIN = 6.0
+
+
+def match_name(raw: str, choices: list[str]) -> str | None:
+    """Best dataset name for an OCR reading, or None if it is ambiguous."""
+    hits = process.extract(
+        raw, choices, scorer=fuzz.WRatio, processor=str.lower, limit=2
+    )
+    if not hits:
+        return None
+    best, best_score = hits[0][0], hits[0][1]
+    if best_score >= STRONG_SCORE:
+        return best
+    if best_score < WEAK_SCORE:
+        return None
+    runner_up = hits[1][1] if len(hits) > 1 else 0.0
+    return best if best_score - runner_up >= REQUIRED_MARGIN else None
 
 
 def clean_name(raw: str) -> str:
@@ -337,13 +363,10 @@ class CatIndexer:
                 index.locked_seen += 1
                 label = "[???]"
             else:
-                hit = process.extractOne(
-                    raw, choices, scorer=fuzz.WRatio,
-                    processor=str.lower, score_cutoff=82,
-                )
+                hit = match_name(raw, choices)
                 if hit:
-                    index.owned.add(table[hit[0]])
-                    label = hit[0]
+                    index.owned.add(table[hit])
+                    label = hit
                 else:
                     index.unresolved.append(raw)
                     label = f"?{raw}"
