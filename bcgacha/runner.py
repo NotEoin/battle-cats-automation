@@ -26,7 +26,7 @@ from .layout import (
     landscape_to_hid,
 )
 from .bannerpick import BannerPicker
-from .catindex import CAT_BASE, MENU_DIALOG
+from .catindex import CAT_BASE, MENU_DIALOG, OwnedIndex
 from .planner import PLATINUM_TICKET, Plan, Planner
 from .roller import RollAborted
 from .safety import SafeTapper, UnsafeTap
@@ -80,6 +80,11 @@ class Runner:
         self.capture_dir = Path(capture_dir) if capture_dir else None
         self.picker = picker
         self._ocr = None
+        # Kept in step as units are pulled, so a later run does not plan to
+        # chase something this one already unlocked. A unit sitting in Cat
+        # Storage counts as owned here: it cannot be rolled usefully again
+        # even though the roster has not picked it up yet.
+        self.owned_index = OwnedIndex.load()
         # When the carousel cannot be driven, stay put and roll where we are
         # rather than silently rolling on the wrong banner.
         self.pin_banner = pin_banner
@@ -356,6 +361,8 @@ class Runner:
             if step.is_new:
                 report.new_units.append(got)
                 self.planner.scorer.owned.add(step.cat_id)
+                self.owned_index.owned.add(step.cat_id)
+                self.owned_index.save()
                 log(f"  #{report.rolled:>3} {step.position:>6} NEW {got}")
                 if mode is Mode.UNTIL_TARGET and step.rarity in (UBER, LEGEND):
                     report.stopped_because = f"got {got}"

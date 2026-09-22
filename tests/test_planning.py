@@ -129,19 +129,21 @@ def test_platinum_is_refused_for_a_duplicate():
     assert plan.platinum_spent == 0
 
 
-def test_platinum_only_goes_on_well_ranked_cats():
+def test_platinum_is_only_spent_on_a_reserved_unit():
+    """Tickets are earmarked up front; nothing else may consume one."""
     ds = load()
     tier_list = T.TierList.load()
     platinum = next(b for b in ds.banners.values() if b.uber == 10000)
     normal = next(b for b in ds.banners.values() if b.uber == 500 and b.slots.get(UBER))
     planner = Planner(
         ds, [normal], Scorer(owned=set(), tiers=tier_list),
-        platinum_banner=platinum, platinum_tickets=10, min_platinum_rank=4,
+        platinum_banner=platinum, platinum_tickets=10,
     )
-    plan = planner.plan(3728687165, rolls=20)
+    plan = planner.plan(3728687165, rolls=40)
     for step in plan.steps:
         if step.currency == PLATINUM_TICKET:
-            assert tier_list.rank_of(step.cat_id) <= 4
+            assert step.cat_id in planner.platinum_wanted
+    assert plan.platinum_spent <= 10
 
 
 def test_plan_steps_carry_their_reroll_cost():
@@ -196,3 +198,66 @@ def test_result_verification_catches_a_desync():
     frame = pathlib.Path(__file__).parent / "fixtures" / "result_viking_cat.png"
     matched, _seen = runner.verify_result(frame, 800)  # 800 = Morta-Loncha
     assert not matched
+
+
+def test_platinum_reserves_the_best_unowned_units():
+    """N tickets reserve exactly the N best unowned units, in rank order."""
+    from bcgacha.planner import platinum_targets
+
+    ds = load()
+    tier_list = T.TierList.load()
+    platinum = next(b for b in ds.banners.values() if b.uber == 10000)
+    pool = {c for r in (UBER, LEGEND) for c in (platinum.slots.get(r) or [])}
+    ranked = sorted(pool, key=lambda c: tier_list.rank_of(c))
+    owned = set(ranked[:5])          # pretend the five best are already had
+
+    picked = platinum_targets(tier_list, owned, ds, platinum, 4)
+    assert len(picked) == 4
+    assert not (picked & owned), "must never reserve a unit already owned"
+    # Everything picked must outrank everything left behind.
+    rest = [c for c in pool if c not in owned and c not in picked]
+    assert max(tier_list.rank_of(c) for c in picked) <= min(
+        tier_list.rank_of(c) for c in rest
+    )
+
+
+def test_platinum_reserves_nothing_without_tickets():
+    from bcgacha.planner import platinum_targets
+
+    ds = load()
+    platinum = next(b for b in ds.banners.values() if b.uber == 10000)
+    assert platinum_targets(T.TierList.load(), set(), ds, platinum, 0) == set()
+
+
+def test_deeper_lookahead_keeps_the_uber_route():
+    """Shallow lookahead trades an Uber away for a new Rare; deep does not.
+
+    Switching banner can hand you a duplicate Rare, and the reroll that follows
+    flips the track and diverts the path off an Uber several rolls out.
+    """
+    from bcgacha.gacha import next_position
+    from bcgacha.planner import Planner as P
+
+    ds = load()
+    tier_list = T.TierList.load()
+    banners = [ds.find_banner(k) for k in
+               ("2026-09-21_1081", "2026-09-21_1021", "2026-09-21_979")]
+
+    def run(depth):
+        scorer = Scorer(owned=set(), tiers=tier_list)
+        planner = P(ds, banners, scorer)
+        index, track, previous = 38, 0, None
+        for _ in range(12):
+            step = planner.plan(
+                3728687165, rolls=12, index=index, track=track,
+                previous_cat=previous, lookahead=depth,
+            ).steps[0]
+            if step.rarity >= UBER:
+                return step.position
+            scorer.owned.add(step.cat_id)
+            delta, track = next_position(track, step.reroll_steps)
+            index += delta
+            previous = step.cat_id
+        return None
+
+    assert run(6) == "46A"

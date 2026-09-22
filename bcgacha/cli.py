@@ -152,11 +152,18 @@ def _build_planner(ds, args):
         print("no tier data -- run 'bcgacha tiers' to fetch it", file=sys.stderr)
     normal, platinum = _live_banners(ds)
     scorer = Scorer(owned=owned, tiers=tier_list)
-    return Planner(
+    tickets = getattr(args, "platinum", 0)
+    planner = Planner(
         ds, normal, scorer,
         platinum_banner=platinum,
-        platinum_tickets=getattr(args, "platinum", 0),
-    ), owned, tier_list
+        platinum_tickets=tickets,
+    )
+    if tickets:
+        print(f"{tickets} platinum ticket(s) reserved for:", file=sys.stderr)
+        for cat in sorted(planner.platinum_wanted, key=lambda c: (tier_list.rank_of(c) if tier_list else 0)):
+            tier = tier_list.tier_of(cat) if tier_list else "?"
+            print(f"    {tier:<4} {ds.cat_name(cat)}", file=sys.stderr)
+    return planner, owned, tier_list
 
 
 def cmd_tiers(args) -> int:

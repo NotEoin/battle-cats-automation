@@ -18,11 +18,48 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .data import LEGEND, RARE, SUPER_RARE, UBER, Banner, Dataset
+from .tiers import TierList
 from .gacha import TRACK_A, Gacha, next_position
 from .scoring import Scorer
 
 RARE_TICKET = "rare_ticket"
 PLATINUM_TICKET = "platinum_ticket"
+
+# How far the planner looks past the roll it is choosing. Two was far too
+# shallow: switching banner can hand you a consecutive duplicate Rare, and the
+# reroll that follows flips the track, which can divert the path away from an
+# Uber several rolls out. The planner has to see that far to avoid trading a
+# 12-point Rare for a 600-point Uber.
+# Six is where this stops mattering: it finds the same route as eight and does
+# it ten times faster, while two misses Ubers entirely.
+DEFAULT_LOOKAHEAD = 6
+
+
+def platinum_targets(
+    tier_list: TierList | None,
+    owned: set[int],
+    dataset: Dataset,
+    platinum_banner: Banner | None,
+    tickets: int,
+) -> set[int]:
+    """The best `tickets` unowned units the Platinum machine can produce.
+
+    Platinum Tickets are scarce, so they are earmarked in advance rather than
+    spent on whatever happens to come up: take every unit in the Platinum pool
+    the account does not own, order it by community rank, and reserve exactly
+    as many as there are tickets. Holding seven tickets with all of S and most
+    of A already owned therefore reserves the three missing A-tier units and
+    the four best B-tier ones.
+    """
+    if platinum_banner is None or tickets <= 0:
+        return set()
+    pool: set[int] = set()
+    for rarity in (UBER, LEGEND):
+        pool.update(platinum_banner.slots.get(rarity) or [])
+    missing = [c for c in pool if c not in owned]
+    rank = (lambda c: tier_list.rank_of(c)) if tier_list else (lambda c: 0)
+    missing.sort(key=lambda c: (rank(c), dataset.cat_name(c)))
+    return set(missing[:tickets])
 
 
 @dataclass
@@ -91,14 +128,21 @@ class Planner:
         scorer: Scorer,
         platinum_banner: Banner | None = None,
         platinum_tickets: int = 0,
-        min_platinum_rank: int = 8,   # roughly A- or better
+        platinum_wanted: set[int] | None = None,
     ):
         self.dataset = dataset
         self.banners = banners
         self.scorer = scorer
         self.platinum_banner = platinum_banner
         self.platinum_tickets = platinum_tickets
-        self.min_platinum_rank = min_platinum_rank
+        # Reserved in advance; a ticket is spent only on one of these.
+        self.platinum_wanted = (
+            platinum_wanted
+            if platinum_wanted is not None
+            else platinum_targets(
+                scorer.tiers, scorer.owned, dataset, platinum_banner, platinum_tickets
+            )
+        )
 
     def _gacha(self, seed: int, banner: Banner, cache: dict) -> Gacha:
         if banner.key not in cache:
@@ -117,12 +161,8 @@ class Planner:
         return roll
 
     def _platinum_worth_it(self, cat_id: int) -> bool:
-        """Only spend a scarce ticket on a strong unit we do not own."""
-        if not self.scorer.is_new(cat_id):
-            return False
-        if self.scorer.tiers is None:
-            return True
-        return self.scorer.tiers.rank_of(cat_id) <= self.min_platinum_rank
+        """A ticket is only ever spent on one of the reserved units."""
+        return self.scorer.is_new(cat_id) and cat_id in self.platinum_wanted
 
     def plan(
         self,
@@ -131,7 +171,7 @@ class Planner:
         index: int = 1,
         track: int = TRACK_A,
         previous_cat: int | None = None,
-        lookahead: int = 2,
+        lookahead: int = DEFAULT_LOOKAHEAD,
     ) -> Plan:
         cache: dict = {}
         plan = Plan()
