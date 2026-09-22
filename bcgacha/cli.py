@@ -114,13 +114,28 @@ def cmd_ubers(args) -> int:
 
 
 def _live_banners(ds, when=None):
+    """The banners actually selectable on the capsule screen right now.
+
+    The schedule re-lists the same pool under several dates as a run is
+    extended, so the raw list contains duplicates that share a name, a pool and
+    their rates. Those are indistinguishable on screen and switching between
+    them achieves nothing, so only the latest of each is kept.
+    """
     import datetime as dt
 
     when = when or dt.date.today()
     live = ds.live_banners(when)
-    normal = [b for b in live if b.uber < 10000 and b.start_on >= when - dt.timedelta(days=45)]
+    recent = [
+        b for b in live
+        if b.uber < 10000 and b.start_on >= when - dt.timedelta(days=45)
+    ]
+    unique: dict[tuple, object] = {}
+    for banner in sorted(recent, key=lambda b: b.start_on):
+        key = (banner.gacha_id, banner.rare, banner.supa, banner.uber,
+               banner.guaranteed, banner.step_up)
+        unique[key] = banner          # later run of the same pool wins
     platinum = next((b for b in live if b.uber == 10000), None)
-    return normal, platinum
+    return list(unique.values()), platinum
 
 
 def _build_planner(ds, args):
