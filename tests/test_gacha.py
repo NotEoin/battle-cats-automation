@@ -96,3 +96,30 @@ def test_guaranteed_uber_matches_reference():
         if ds.cat_name(gacha._guaranteed_for(*pos)) != expected
     ]
     assert not wrong, f"{len(wrong)}/{len(ref)} guaranteed ubers wrong: {wrong[:3]}"
+
+
+def test_banner_choice_cannot_change_rarity_when_rates_match():
+    """Rarity comes from the seed, not the pool -- same rates, same rarity."""
+    from bcgacha.gacha import TRACK_A
+
+    ds = load()
+    same_rates = [
+        ds.find_banner("2026-09-21_1081"),
+        ds.find_banner("2026-08-21_1075"),
+    ]
+    assert {(b.rare, b.supa, b.uber) for b in same_rates} == {(7000, 2500, 500)}
+    gachas = [Gacha(b, 123456789, ds) for b in same_rates]
+    for n in range(1, 40):
+        rarities = {g.cell(n, TRACK_A).rarity for g in gachas}
+        assert len(rarities) == 1, f"position {n} disagrees: {rarities}"
+
+
+def test_platinum_rates_make_every_position_uber():
+    from bcgacha.data import UBER
+    from bcgacha.gacha import TRACK_A
+
+    ds = load()
+    platinum = ds.find_banner("2026-07-24_1063")
+    assert platinum.uber == 10000
+    gacha = Gacha(platinum, 123456789, ds)
+    assert all(gacha.cell(n, TRACK_A).rarity == UBER for n in range(1, 30))

@@ -32,6 +32,27 @@ board driving AssistiveTouch (cheap, but a documented iOS bug locks the
 AssistiveTouch pointer to portrait mapping in landscape, and this game is
 landscape-only).
 
+## What banner switching can and cannot do
+
+Rarity is decided by the seed, not by the banner: the rarity draw is
+`rarity_seed % 10000` compared against the banner's weights. Every standard
+banner uses the same 7000/2500/500 split, so an Uber position is an Uber
+position on all of them.
+
+So switching banners chooses **which** uber lands, not **whether** one lands.
+Rarity only moves when the weights move:
+
+| Banner | Uber weight | Ubers in 400 rolls (seed 123456789) |
+|---|---|---|
+| standard | 500 | 19 |
+| Queen's/King fest | 700 | 27 |
+| Uberfest / Superfest | 900 | 36 |
+| Epicfest | 1000 | 39 |
+| Platinum | 10000 | 400 |
+
+`bcgacha ubers` lists the positions that pay out, so rolls can be spent getting
+to them and the right banner selected when they arrive.
+
 ## Setup
 
     sudo apt install -y python3-dev usbmuxd

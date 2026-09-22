@@ -100,6 +100,19 @@ def cmd_find_seed(args) -> int:
     return 0
 
 
+def cmd_ubers(args) -> int:
+    from .planner import uber_positions
+
+    ds = load(args.lang)
+    banner = ds.find_banner(args.event)
+    hits = uber_positions(args.seed, banner, args.count, ds)
+    print(f"{banner.key}  uber weight {banner.uber}/10000")
+    for pos, _cat_id, name in hits:
+        print(f"  {pos:>5}A  {name}")
+    print(f"\n{len(hits)} uber/legend in {args.count} rolls", file=sys.stderr)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="bcgacha", description=__doc__)
     ap.add_argument("--lang", default="en", choices=["en", "jp", "kr", "tw"])
@@ -125,6 +138,12 @@ def main(argv=None) -> int:
     p.add_argument("--start", type=int, default=1)
     p.add_argument("--track", default="A", choices=["A", "B", "a", "b"])
     p.set_defaults(func=cmd_predict)
+
+    p = sub.add_parser("ubers", help="which upcoming positions yield an uber")
+    p.add_argument("--seed", type=int, required=True)
+    p.add_argument("--event", required=True)
+    p.add_argument("--count", type=int, default=200)
+    p.set_defaults(func=cmd_ubers)
 
     p = sub.add_parser("find-seed", help="recover a seed from rolls you already made")
     p.add_argument("--event", required=True)
