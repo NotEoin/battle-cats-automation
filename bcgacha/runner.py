@@ -26,6 +26,12 @@ from .safety import SafeTapper, UnsafeTap
 from .state import Account
 
 
+# Re-read the real storage count every this many rolls, and always once within
+# this many slots of the cap.
+STORAGE_RECHECK = 15
+STORAGE_MARGIN = 4
+
+
 class Mode(str, Enum):
     UNTIL_TARGET = "until-target"      # stop once the next wanted unit lands
     MAX_TICKETS = "max-tickets"        # stop after a ticket budget
@@ -210,18 +216,32 @@ class Runner:
                 report.stopped_because = "out of rare tickets"
                 break
 
-            storage = self.storage_state()
-            if storage:
-                used, cap = storage
-                self.account.storage_used, self.account.storage_capacity = used, cap
-                if used >= cap - 1:
-                    if mode in (Mode.ALL,):
-                        log(f"storage {used}/{cap}, emptying")
-                        if self.empty_storage():
-                            report.storage_emptied += 1
+            # Storage only moves by one per roll, so it is tracked locally and
+            # only read off the device when it might actually matter. Opening
+            # the storage screen costs four taps, which is far too expensive to
+            # pay every roll just to learn a number we already know.
+            predicted = self.account.storage_used
+            near_cap = predicted >= self.account.storage_capacity - STORAGE_MARGIN
+            if near_cap or report.rolled % STORAGE_RECHECK == 0:
+                storage = self.storage_state()
+                if storage:
+                    used, cap = storage
+                    self.account.storage_used, self.account.storage_capacity = used, cap
+                    predicted = used
+            if predicted >= self.account.storage_capacity - 1:
+                if mode is Mode.ALL:
+                    log(f"storage {predicted}/{self.account.storage_capacity}, emptying")
+                    if self.empty_storage():
+                        report.storage_emptied += 1
+                        self.account.storage_used = 0
                     else:
-                        report.stopped_because = f"storage full at {used}/{cap}"
+                        report.stopped_because = "could not empty storage"
                         break
+                else:
+                    report.stopped_because = (
+                        f"storage full at {predicted}/{self.account.storage_capacity}"
+                    )
+                    break
 
             try:
                 result = roller.roll_once(report.rolled + 1)
@@ -231,6 +251,7 @@ class Runner:
 
             report.rolled += 1
             report.tickets_spent += 1
+            self.account.storage_used += 1
             report.frames.append(result.frame_path)
             self.advance_state(step)
             self.account.save()
