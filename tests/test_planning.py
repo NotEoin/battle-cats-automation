@@ -342,3 +342,24 @@ def test_goal_priority_never_applies_to_a_duplicate():
     dupe = Scorer(owned=set(owned) | {target}, tiers=tier_list, priority=goal.priority)
     assert fresh.value(target, ds.rarity_of(target)) > 10_000
     assert dupe.value(target, ds.rarity_of(target)) < 1_000
+
+
+def test_platinum_banner_is_the_newest_snapshot():
+    """The platinum pool grows over time and every snapshot looks live.
+
+    Picking an old one predicts the wrong unit entirely, because the cat is
+    slot_seed modulo the pool size.
+    """
+    import datetime as dt
+
+    from bcgacha.cli import _live_banners
+
+    ds = load()
+    _normal, platinum = _live_banners(ds, dt.date(2026, 9, 22))
+    assert platinum is not None
+    others = [b for b in ds.live_banners(dt.date(2026, 9, 22)) if b.uber == 10000]
+    assert len(others) > 1, "test is meaningless without several snapshots"
+    assert platinum.start_on == max(b.start_on for b in others)
+    assert len(platinum.slots.get(UBER) or []) == max(
+        len(b.slots.get(UBER) or []) for b in others
+    )

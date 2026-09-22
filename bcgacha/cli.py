@@ -134,7 +134,14 @@ def _live_banners(ds, when=None):
         key = (banner.gacha_id, banner.rare, banner.supa, banner.uber,
                banner.guaranteed, banner.step_up)
         unique[key] = banner          # later run of the same pool wins
-    platinum = next((b for b in live if b.uber == 10000), None)
+    # The Platinum pool GROWS as new ubers are released, and the schedule keeps
+    # every past snapshot of it -- 70 cats in 2018 against 134 now. They all
+    # look "live" by date, so taking the first match silently uses an eight
+    # year old pool, and since the unit is slot_seed % pool_size that predicts
+    # an entirely different cat. Always take the most recent snapshot.
+    platinum_runs = [b for b in live if b.uber == 10000]
+    platinum = max(platinum_runs, key=lambda b: (b.start_on, len(b.slots.get(4) or []))) \
+        if platinum_runs else None
     return list(unique.values()), platinum
 
 
