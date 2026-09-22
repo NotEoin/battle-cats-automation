@@ -250,7 +250,10 @@ def cmd_run(args) -> int:
             capture_dir=Path(args.captures),
             picker=picker, pin_banner=args.pin_banner,
         )
-        report = runner.run(mode=Mode(args.mode), max_tickets=args.max_tickets)
+        report = runner.run(
+            mode=Mode(args.mode), max_tickets=args.max_tickets,
+            verify=not args.no_verify,
+        )
     account.save()
     print(f"\nrolled {report.rolled}, tickets spent {report.tickets_spent}, "
           f"storage emptied {report.storage_emptied}x")
@@ -308,6 +311,8 @@ def main(argv=None) -> int:
     p.add_argument("--speed", type=float, default=1.0, help="delay multiplier")
     p.add_argument("--no-humanise", action="store_true")
     p.add_argument("--captures", default="captures")
+    p.add_argument("--no-verify", action="store_true",
+                   help="skip checking each result against the prediction")
     p.add_argument("--pin-banner", action="store_true",
                    help="never switch banners; roll on whatever is selected")
     p.set_defaults(func=cmd_run)

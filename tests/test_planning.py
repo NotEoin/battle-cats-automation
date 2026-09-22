@@ -168,3 +168,31 @@ def test_a_reroll_actually_occurs_somewhere_in_a_long_plan():
     planner = Planner(ds, [banner], Scorer(owned=set(), tiers=T.TierList.load()))
     plan = planner.plan(3728687165, rolls=200)
     assert any(s.reroll_steps for s in plan.steps), "no reroll in 200 rolls"
+
+
+def test_result_verification_accepts_the_predicted_cat():
+    """A real result frame must verify against the cat that was predicted."""
+    from bcgacha.runner import Runner
+
+    ds = load()
+    runner = Runner.__new__(Runner)
+    runner.dataset, runner._ocr = ds, None
+    frame = pathlib.Path(__file__).parent / "fixtures" / "result_viking_cat.png"
+    matched, seen = runner.verify_result(frame, 48)   # 48 = Viking Cat
+    assert matched, seen
+
+
+def test_result_verification_catches_a_desync():
+    """A wrong prediction must be rejected, not quietly accepted.
+
+    If the saved seed position drifts, every later prediction is wrong, so
+    this is the check that stops a bad run rather than letting it continue.
+    """
+    from bcgacha.runner import Runner
+
+    ds = load()
+    runner = Runner.__new__(Runner)
+    runner.dataset, runner._ocr = ds, None
+    frame = pathlib.Path(__file__).parent / "fixtures" / "result_viking_cat.png"
+    matched, _seen = runner.verify_result(frame, 800)  # 800 = Morta-Loncha
+    assert not matched

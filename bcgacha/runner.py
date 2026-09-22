@@ -38,6 +38,12 @@ from .state import Account
 STORAGE_RECHECK = 15
 STORAGE_MARGIN = 4
 
+# The cat name on the result screen, used to confirm the roll matched the plan.
+# Generous around the plate, and upscaled: the name is small white text on a
+# dark panel and the recogniser misses it entirely at native size.
+RESULT_NAME_BOX = (0.320, 0.772, 0.690, 0.858)
+RESULT_NAME_SCALE = 3
+
 
 class Mode(str, Enum):
     UNTIL_TARGET = "until-target"      # stop once the next wanted unit lands
@@ -73,6 +79,7 @@ class Runner:
         self.planner = planner
         self.capture_dir = Path(capture_dir) if capture_dir else None
         self.picker = picker
+        self._ocr = None
         # When the carousel cannot be driven, stay put and roll where we are
         # rather than silently rolling on the wrong banner.
         self.pin_banner = pin_banner
@@ -175,6 +182,45 @@ class Runner:
 
     # -- the loop -----------------------------------------------------------
 
+    def verify_result(self, frame_path: Path, expected_cat: int) -> tuple[bool, str]:
+        """Check the cat that actually came out against the one predicted.
+
+        The whole system rests on the saved seed position matching the game. If
+        a tap is swallowed or a roll is missed, the position drifts and every
+        later prediction is quietly wrong, so a mismatch has to stop the run
+        rather than be papered over.
+        """
+        import cv2
+
+        from .catindex import clean_name, match_name
+
+        frame = cv2.imread(str(frame_path))
+        if frame is None:
+            return True, "no frame to check"
+        h, w = frame.shape[:2]
+        x0, y0, x1, y1 = RESULT_NAME_BOX
+        crop = frame[int(y0 * h): int(y1 * h), int(x0 * w): int(x1 * w)]
+        crop = cv2.resize(
+            crop, None, fx=RESULT_NAME_SCALE, fy=RESULT_NAME_SCALE,
+            interpolation=cv2.INTER_CUBIC,
+        )
+        if self._ocr is None:
+            from rapidocr_onnxruntime import RapidOCR
+
+            self._ocr = RapidOCR()
+        result, _ = self._ocr(crop)
+        if not result:
+            return True, "could not read the name"
+        raw = clean_name(" ".join(r[1] for r in result))
+        forms = self.dataset.cats.get(expected_cat, {}).get("name") or []
+        forms = [f for f in forms if f]
+        if not forms:
+            return True, "no name on record"
+        hit = match_name(raw, forms)
+        if hit:
+            return True, hit
+        return False, raw
+
     def advance_state(self, step) -> None:
         """Keep the account's seed position in step with what was rolled.
 
@@ -194,6 +240,7 @@ class Runner:
         mode: Mode = Mode.UNTIL_TARGET,
         max_tickets: int = 50,
         horizon: int = 60,
+        verify: bool = True,
         log=print,
     ) -> RunReport:
         report = RunReport()
@@ -276,6 +323,17 @@ class Runner:
             except (RollAborted, UnsafeTap) as exc:
                 report.stopped_because = f"aborted: {exc}"
                 break
+
+            if verify:
+                matched, seen = self.verify_result(result.frame_path, step.cat_id)
+                if not matched:
+                    report.stopped_because = (
+                        f"prediction desync: expected "
+                        f"{self.dataset.cat_name(step.cat_id)!r}, screen read {seen!r}. "
+                        "The saved seed position no longer matches the game -- "
+                        "re-run find-seed before continuing."
+                    )
+                    break
 
             report.rolled += 1
             report.tickets_spent += 1
