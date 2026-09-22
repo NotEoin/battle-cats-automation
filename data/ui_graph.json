@@ -49,11 +49,23 @@
     "gamatoto_banner"
    ],
    "absent": [
-    "gamatoto_rewards"
+    "gamatoto_rewards",
+    "gamatoto_ongoing"
    ],
    "forbidden": false,
    "reactive": false,
-   "note": "GAMATOTO Expedition, playback finished; back works normally"
+   "note": "GAMATOTO idle or with its report already cleared; back works normally"
+  },
+  {
+   "name": "gamatoto_ongoing",
+   "title": null,
+   "anchors": [
+    "gamatoto_ongoing"
+   ],
+   "absent": [],
+   "forbidden": false,
+   "reactive": false,
+   "note": "GAMATOTO away on an expedition. Its banner reads 'Ongoing' rather than 'GAMATOTO Expedition', and the back arrow works normally here."
   },
   {
    "name": "gamatoto_report",
@@ -576,6 +588,33 @@
    "label": "previous chapter",
    "settle": 1.4,
    "action": "swipe:right"
+  },
+  {
+   "src": "gamatoto_ongoing",
+   "dst": "cat_base",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.2,
+   "action": null
+  },
+  {
+   "src": "cat_base",
+   "dst": "gamatoto_ongoing",
+   "x": 0.2,
+   "y": 0.719,
+   "label": "GAMATOTO",
+   "settle": 3.0,
+   "action": null
+  },
+  {
+   "src": "cat_base",
+   "dst": "base_select",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.4,
+   "action": null
   }
  ]
 }

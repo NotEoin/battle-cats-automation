@@ -68,6 +68,7 @@ ANCHORS = {
     "settings_close": Anchor("settings_close", (0.648, 0.045, 0.722, 0.135)),
     "plat_try_once": Anchor("plat_try_once", (0.775, 0.700, 0.935, 0.855)),
     "offer_banner": Anchor("offer_banner", (0.240, 0.120, 0.760, 0.220)),
+    "gamatoto_ongoing": Anchor("gamatoto_ongoing", (0.080, 0.020, 0.230, 0.110)),
     "gamatoto_banner": Anchor("gamatoto_banner", (0.055, 0.020, 0.270, 0.100)),
     "gamatoto_rewards": Anchor("gamatoto_rewards", (0.680, 0.085, 0.815, 0.165)),
     "opening_skip": Anchor("opening_skip", (0.845, 0.855, 0.935, 0.935)),
