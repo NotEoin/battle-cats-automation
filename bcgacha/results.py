@@ -81,8 +81,22 @@ def match(raw: str, dataset, candidates: Iterable[int]) -> tuple[int | None, flo
 
 def read_result(frame: np.ndarray, ocr, dataset, candidates: Iterable[int]) -> ResultRead:
     """The cat on a result screen, among `candidates`, or cat_id None if unsure."""
+    candidates = set(candidates)
     raw = _read(frame, NAME_BOX, ocr, NAME_SCALE)
     cat, score, margin = match(raw, dataset, candidates)
+    if cat is None:
+        # An Uber or Legend reveal sets the plate differently and the box can
+        # read nothing: read the whole frame, and take the one piece of text
+        # that names a candidate. Nothing else on a result screen does.
+        from .perception import read_texts
+
+        hits = []
+        for t in read_texts(frame, ocr):
+            c, sc, mg = match(t.text, dataset, candidates)
+            if c is not None:
+                hits.append((sc, mg, c, t.text))
+        if len({h[2] for h in hits}) == 1:
+            score, margin, cat, raw = max(hits)
     title = _read(frame, TITLE_BOX, ocr).lower().replace(" ", "")
     platinum = True if "platinum" in title else (False if "rare" in title else None)
     return ResultRead(raw, cat, score, margin, platinum)
