@@ -252,7 +252,8 @@ class Debugger:
         # recognition, whose fast path goes on exactly that reading: the page
         # then shows what identification saw, not a second OCR's guess.
         title_box = profile.title_box
-        title = graph.read_title(frame, title_box, largest=True) if title_box else None
+        title = ((profile.known_text(frame, title_box) or graph.read_title(frame, title_box, largest=True))
+                 if title_box else None)
         # The real recognition, learning included: the page shows the process.
         # While a job drives the device, only the quick look: a full look on
         # the page's thread would take the CPU the job needs.

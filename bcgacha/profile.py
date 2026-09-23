@@ -33,6 +33,13 @@ TEMPLATE_MATCH = 0.8
 MOVE_TOLERANCE = 0.01
 # How closely a perceived label must read as a name the map uses.
 LABEL_MATCH = 85
+# A remembered piece of text is on screen when its picture matches this well
+# where it was read, give or take TEXT_PAD, and at the same brightness: a
+# screen fading in or out matches in shape at any level, and is not yet the
+# screen. OCR of a title costs most of a second; this costs a millisecond.
+TEXT_MATCH = 0.90
+TEXT_PAD = 0.006
+TEXT_LEVEL = 18
 
 
 def _slug(text: str) -> str:
@@ -95,6 +102,7 @@ class Profile:
         self.data.setdefault("title_box", None)
         self.data.setdefault("screens", {})
         self.data.setdefault("bases", {})
+        self.data.setdefault("texts", {})
 
     @classmethod
     def for_frame(cls, frame: np.ndarray, root: Path | None = None) -> "Profile":
@@ -199,12 +207,13 @@ class Profile:
                        f"({', '.join(sorted(known)[:6])}{'...' if len(known) > 6 else ''})")
         return changed
 
-    def _template(self, entry) -> np.ndarray | None:
+    def _template(self, entry, grey: bool = False) -> np.ndarray | None:
         path = str(self.root / entry["template"])
+        key = path + (":grey" if grey else "")
         with self._lock:
-            if path not in self._templates:
-                self._templates[path] = cv2.imread(path)
-            return self._templates[path]
+            if key not in self._templates:
+                self._templates[key] = cv2.imread(path, cv2.IMREAD_GRAYSCALE if grey else cv2.IMREAD_COLOR)
+            return self._templates[key]
 
     def key_for(self, screen: str, target: str) -> str | None:
         """The learned control a transition's target names; OCR drops spaces."""
@@ -251,6 +260,71 @@ class Profile:
                     score=round(float(score), 3),
                     tap=(entry["tap"][0] + dx, entry["tap"][1] + dy),
                     box=(x0 + dx, y0 + dy, entry["box"][2] + dx, entry["box"][3] + dy))
+
+    # -- text, remembered as it looks ---------------------------------------------
+
+    @staticmethod
+    def _box_key(box) -> str:
+        return ",".join(f"{v:.4f}" for v in box)
+
+    def known_text(self, frame: np.ndarray, box) -> str | None:
+        """The text last read in `box`, if it is there again as it looked then.
+
+        Each reading that named a screen keeps a grey picture of the box. The
+        best of those that matches is the reading; none matching is None, and
+        the box is read with OCR as before.
+        """
+        with self._lock:
+            known = dict(self.data["texts"].get(self._box_key(box), {}))
+        if not known:
+            return None
+        h, w = frame.shape[:2]
+        x0, y0, x1, y1 = box
+        window = _crop(frame, (x0 - TEXT_PAD, y0 - TEXT_PAD, x1 + TEXT_PAD, y1 + TEXT_PAD))
+        if window.size == 0:
+            return None
+        grey = cv2.cvtColor(window, cv2.COLOR_BGR2GRAY)
+        best, best_score = None, TEXT_MATCH
+        for text, rel in known.items():
+            template = self._template(dict(template=rel), grey=True)
+            if template is None or grey.shape[0] < template.shape[0] or grey.shape[1] < template.shape[1]:
+                continue
+            if float(template.std()) < 4:
+                continue            # a flat picture correlates with anything
+            result = cv2.matchTemplate(grey, template, cv2.TM_CCOEFF_NORMED)
+            _, score, _, (lx, ly) = cv2.minMaxLoc(result)
+            if score < best_score:
+                continue
+            th, tw = template.shape[:2]
+            patch = grey[ly: ly + th, lx: lx + tw]
+            if abs(float(patch.mean()) - float(template.mean())) > TEXT_LEVEL:
+                continue
+            best, best_score = text, score
+        return best
+
+    def learn_text(self, frame: np.ndarray, box, text: str) -> bool:
+        """Keep a picture of `text` as it looks in `box`. True if one was written.
+
+        Only a reading that has just named its screen is kept. One already kept
+        that still matches is left alone, so going over the same screens again
+        rewrites nothing.
+        """
+        if self.known_text(frame, box) == text:
+            return False
+        crop = _crop(frame, box)
+        if crop.size == 0:
+            return False
+        key = self._box_key(box)
+        path = self.root / "texts" / _slug(key) / f"{_slug(text)}.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(path), cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY))
+        rel = str(path.relative_to(self.root))
+        with self._lock:
+            self._templates.pop(str(path) + ":grey", None)
+            self.data["texts"].setdefault(key, {})[text] = rel
+            self.save()
+        self._told(f"remembered {text!r} as it looks")
+        return True
 
     # -- Cat Base backgrounds ------------------------------------------------------
 

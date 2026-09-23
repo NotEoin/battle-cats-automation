@@ -13,6 +13,7 @@ import pytest
 
 from bcgacha import perception
 from bcgacha.perception import Control, Percept, Text
+from bcgacha.profile import Profile
 from bcgacha.uigraph import Screen, Transition, UIGraph
 
 SIZE = (640, 296)
@@ -191,3 +192,61 @@ def test_a_screen_without_a_title_places_no_title_box(tmp_path):
     assert rec.here == "title"
     assert rec.percept.title.text == "THE BATTLE CATS", "the logo sits where a title would"
     assert graph.profile_for(frame).title_box is None
+
+
+# -- titles remembered as they look ---------------------------------------------------
+
+class CountingOCR(StubOCR):
+    def __init__(self, *reads):
+        super().__init__(*reads)
+        self.calls = 0
+
+    def __call__(self, image):
+        self.calls += 1
+        return super().__call__(image)
+
+
+CAPSULE_MAP = [Screen("rare_capsules", title="Rare Capsules"),
+               Screen("cat_capsules", title="Cat Capsules")]
+
+
+def test_a_title_that_named_its_screen_is_read_next_time_without_ocr(tmp_path):
+    """Once OCR has named a screen by its title, the same title is known by its picture."""
+    ocr = CountingOCR(("Cat Guide", TITLE_READ))
+    graph = _graph(tmp_path, TITLES_MAP, ocr=ocr)
+    frame = _textured(1)
+
+    assert graph.recognise(frame).here == "cat_guide"          # a full look, then the title box
+    assert graph.recognise(frame).here == "cat_guide"          # the box, read by OCR, remembered
+    calls = ocr.calls
+    again = graph.recognise(frame)
+    assert again.here == "cat_guide" and again.percept is None
+    assert ocr.calls == calls, "no OCR once the title is remembered"
+
+
+def test_a_remembered_title_is_not_seen_on_a_screen_fading_out(tmp_path):
+    """A darkened frame matches the title's shape, but not its brightness: it is not there yet."""
+    profile = Profile(*SIZE, root=tmp_path)
+    frame = _textured(2)
+    box = (0.02, 0.01, 0.30, 0.08)
+    assert profile.learn_text(frame, box, "Rare Capsules")
+    assert profile.known_text(frame, box) == "Rare Capsules"
+    faded = (frame * 0.6).astype(np.uint8)
+    assert profile.known_text(faded, box) is None
+    assert profile.known_text(_textured(3), box) is None, "other text in the box"
+
+
+def test_remembering_a_title_seen_again_rewrites_nothing(tmp_path):
+    profile = Profile(*SIZE, root=tmp_path)
+    frame = _textured(4)
+    box = (0.02, 0.01, 0.30, 0.08)
+    assert profile.learn_text(frame, box, "Storage")
+    assert not profile.learn_text(frame, box, "Storage")
+
+
+def test_a_title_one_word_off_another_is_that_other_screen(tmp_path):
+    """"Cat Capsules" reads 80 against "Rare Capsules": it names the Cat Capsules screen alone."""
+    graph = _graph(tmp_path, CAPSULE_MAP, ocr=StubOCR(("Cat Capsules", TITLE_READ)))
+    frame = _textured(5)
+    found = [c.name for c in graph._evaluate(frame, None, "Cat Capsules")]
+    assert found == ["cat_capsules"]

@@ -316,7 +316,8 @@ class UIGraph:
         """
         from .perception import perceive
 
-        found = self._evaluate(frame, None, title)
+        reads: dict = {}
+        found = self._evaluate(frame, None, title, reads)
         sure = [c for c in found if c.verified]
         best_sure = max((c.score for c in sure), default=None)
         # Answer fast only if no unverified screen, with evidence already in
@@ -325,10 +326,13 @@ class UIGraph:
                  and (best_sure is None or c.score >= best_sure)]
         if (sure and not doubt) or not slow:
             best = max(sure or found, default=None, key=lambda c: c.score)
+            if best is not None and best.verified and sure and not doubt:
+                self._remember_titles(frame, best.name, reads)
             return self._with_chapter(frame, Recognition(best.name if best else None, found, None))
         percept = perceive(frame, self.ocr)
         profile = self.profile_for(frame)
-        found = self._evaluate(frame, percept, title)
+        reads = {}
+        found = self._evaluate(frame, percept, title, reads)
         # Only a screen whose text was read is named. One known by a shape
         # alone -- any panel with a gold X -- is left unknown, so the caller
         # backs out rather than tapping into an unmapped popup.
@@ -342,7 +346,25 @@ class UIGraph:
                     and title_match(screen.title, percept.title.text) >= TITLE_MATCH):
                 profile.learn_title(percept.title.box)
             profile.learn(best.name, frame, percept.controls, wanted=self.wanted(best.name))
+            if best.verified:
+                self._remember_titles(frame, best.name, reads)
         return self._with_chapter(frame, Recognition(best.name if best else None, found, percept))
+
+    def _remember_titles(self, frame: np.ndarray, name: str, reads: dict) -> None:
+        """Keep a picture of each title OCR has just read on a screen now named,
+        and on the screen it is a card or event of, so the next look is a
+        template match. Only a reading that matched its title is kept."""
+        profile = self.profile_for(frame)
+        while name:
+            screen = self.screens.get(name)
+            if screen is None:
+                break
+            box = screen.title_box or profile.title_box
+            read = reads.get(box)
+            if screen.title and box is not None and read is not None and read[1] \
+                    and title_match(screen.title, read[0], within=screen.parent is None) >= TITLE_MATCH:
+                profile.learn_text(frame, box, screen.title)
+            name = screen.parent
 
     def wanted(self, screen: str) -> set[str]:
         """What is worth learning on `screen`: the controls its exits press,
@@ -368,32 +390,39 @@ class UIGraph:
         """Every screen the frame could be, scored. `identify` takes the best."""
         return [(c.score, c.name) for c in self._evaluate(frame, percept, title)]
 
-    def _evaluate(self, frame: np.ndarray, percept, title: str | None):
+    def _evaluate(self, frame: np.ndarray, percept, title: str | None, reads: dict | None = None):
         """Weigh each screen's evidence: title, marks, and shapes.
 
         Evidence is True, False or unknown. False rules a screen out; unknown
         -- a mark never yet seen on this device, a title box not yet placed --
         leaves it possible but unverified, which is what sends identification
         down the slow path to find out.
+
+        `reads` collects each box's text as (text, read by OCR), so that a
+        title OCR had to read can be remembered once it has named its screen.
         """
         from .perception import CLOSE_SCORE, close_glyph_score, find_discs
 
         profile = self.profile_for(frame)
-        texts: dict[tuple, str] = {}
+        texts: dict[tuple, str] = {} if reads is None else reads
         title_box = profile.title_box
 
         def text_in(box) -> str | None:
             if box is None or box == title_box:
                 # A full look has just read the title itself; use that.
                 if percept is not None:
-                    return percept.title.text if percept.title else ""
+                    texts[box] = (percept.title.text if percept.title else "", True)
+                    return texts[box][0]
                 if title is not None:
+                    texts[box] = (title, True)
                     return title
             if box is None:
                 return None
             if box not in texts:
-                texts[box] = self.read_title(frame, box, largest=box == title_box)
-            return texts[box]
+                known = profile.known_text(frame, box)
+                texts[box] = ((known, False) if known is not None else
+                              (self.read_title(frame, box, largest=box == title_box), True))
+            return texts[box][0]
 
         shapes: dict[str, bool] = {}
 
@@ -468,6 +497,12 @@ class UIGraph:
                 else:
                     # A carousel card holds only its name, so it must match whole.
                     match = title_match(screen.title, read, within=screen.parent is None)
+                    # Titles differ by a word: "Cat Capsules" reads 80 as
+                    # "Rare Capsules". A reading that names another screen's
+                    # title better is that screen's.
+                    if match >= TITLE_MATCH and not screen.title_box and any(
+                            title_match(t, read) > match for t in top_titles if t != screen.title):
+                        continue
                     if match >= TITLE_MATCH:
                         score += match
                         read_any = True
