@@ -661,6 +661,8 @@ class Navigator:
         hit = profile.locate(frame, here, step.target)
         if hit is not None:
             return hit
+        if step.target in BLIND_TARGETS and (step.x or step.y) and here != "storage":
+            return step.x, step.y       # no reading it: go straight to its spot
         from .perception import perceive
 
         percept = perceive(frame, self.graph.ocr)

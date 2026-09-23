@@ -5,12 +5,15 @@ the source of truth -- but a check is only worth anything if it can say "I
 don't know". A name is matched only against the cats the draw could have
 produced, and only when it is clearly nearer one of them than any other; an
 unreadable name plate is None, never a pass.
+
+The boxes are fractions of the landscape frame, measured on a 2532x1170
+iPhone; other screen shapes are untested.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Any, Iterable
 
 import cv2
 import numpy as np
@@ -28,17 +31,24 @@ TITLE_BOX = (0.05, 0.0, 0.35, 0.07)
 # live pools hold near twins (Rin, Rider, Archer the Cat).
 MATCH = 70
 MARGIN = 8
+# A score this high is the name read whole, so any lead at all will do.
+EXACT = 99.5
+# OCR pieces whose tops lie within this many pixels are one line of text.
+LINE_PX = 20
 
 
 @dataclass
 class ResultRead:
+    """What a result screen named, and how sure the reading was."""
+
     raw: str
     cat_id: int | None
     score: float
     margin: float
     platinum: bool | None       # the Platinum Capsules title, when it read
 
-    def to_json(self, dataset=None) -> dict:
+    def to_json(self, dataset: Any = None) -> dict:
+        """The reading as plain JSON, with the cat's name when `dataset` is given."""
         return dict(raw=self.raw, cat_id=self.cat_id,
                     name=dataset.cat_name(self.cat_id) if dataset and self.cat_id is not None else None,
                     score=round(self.score, 1), margin=round(self.margin, 1), platinum=self.platinum)
@@ -53,11 +63,11 @@ def _read(frame: np.ndarray, box, ocr, scale: float = 1.0) -> str:
     if scale != 1.0:
         crop = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
     result, _ = ocr(crop)
-    pieces = sorted(result or [], key=lambda r: (round(min(p[1] for p in r[0]) / 20), r[0][0][0]))
+    pieces = sorted(result or [], key=lambda r: (round(min(p[1] for p in r[0]) / LINE_PX), r[0][0][0]))
     return " ".join(str(r[1]) for r in pieces).strip()
 
 
-def match(raw: str, dataset, candidates: Iterable[int]) -> tuple[int | None, float, float]:
+def match(raw: str, dataset: Any, candidates: Iterable[int]) -> tuple[int | None, float, float]:
     """(cat id, score, margin over the runner-up) of the candidate `raw` names."""
     raw = raw.strip().lower()
     if len(raw) < 3:
@@ -73,18 +83,19 @@ def match(raw: str, dataset, candidates: Iterable[int]) -> tuple[int | None, flo
     scored.sort(reverse=True)
     best, cat = scored[0]
     margin = best - (scored[1][0] if len(scored) > 1 else 0.0)
-    exact = best >= 99.5 and margin > 0
+    exact = best >= EXACT and margin > 0
     if not exact and (best < MATCH or margin < MARGIN):
         return None, best, margin
     return cat, best, margin
 
 
-def read_result(frame: np.ndarray, ocr, dataset, candidates: Iterable[int]) -> ResultRead:
+def read_result(frame: np.ndarray, ocr: Any, dataset: Any, candidates: Iterable[int],
+                whole: bool = True) -> ResultRead:
     """The cat on a result screen, among `candidates`, or cat_id None if unsure."""
     candidates = set(candidates)
     raw = _read(frame, NAME_BOX, ocr, NAME_SCALE)
     cat, score, margin = match(raw, dataset, candidates)
-    if cat is None:
+    if cat is None and whole:
         # An Uber or Legend reveal sets the plate differently and the box can
         # read nothing: read the whole frame, and take the one piece of text
         # that names a candidate. Nothing else on a result screen does.

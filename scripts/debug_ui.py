@@ -210,6 +210,9 @@ class Debugger:
             if frame is None or version == seen:
                 continue
             seen = version
+            if self.nav["running"] and time.monotonic() - getattr(self, "_last_busy", 0.0) < 2.5:
+                continue        # a job is driving: show a frame now and then, not every one
+            self._last_busy = time.monotonic()
             try:
                 snap = self.analyse(frame)
             except Exception as exc:
@@ -251,7 +254,9 @@ class Debugger:
         title_box = profile.title_box
         title = graph.read_title(frame, title_box, largest=True) if title_box else None
         # The real recognition, learning included: the page shows the process.
-        rec = graph.recognise(frame, title=title)
+        # While a job drives the device, only the quick look: a full look on
+        # the page's thread would take the CPU the job needs.
+        rec = graph.recognise(frame, title=title, slow=not self.nav["running"])
         here = rec.here
         percept = rec.percept
         full_look = percept is not None

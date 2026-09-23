@@ -368,12 +368,15 @@ class GoalRun:
 
         deadline = time.time() + REVEAL_TIMEOUT
         pool = {c for e in self.events for r in (2, 3, 4, 5) for c in e.banner.slots.get(r) or []}
-        moved, last = False, None
+        moved, last, started = False, None, time.time()
         while time.time() < deadline:
-            time.sleep(1.2)
+            time.sleep(1.0)
             frame = self.ctx.session.screenshot()
             moved = moved or frame_changed(before, frame)
-            read = read_result(frame, self.ctx.ocr, self.ctx.dataset, pool)
+            # The whole-frame fallback costs a second: only once the reveal
+            # has had time to finish, not through the animation.
+            read = read_result(frame, self.ctx.ocr, self.ctx.dataset, pool,
+                               whole=time.time() - started > 6.0)
             if read.cat_id is not None:
                 return frame, read, True
             last = (frame, read, moved)
@@ -434,7 +437,7 @@ class GoalRun:
             if gate.red and gate.red > draw.RED_LIMIT:
                 return "rare tickets depleted: the draw button now spends Cat Food"
             return f"draw refused: {gate.reason}"
-        food = read_number(frame, CAT_FOOD_BOX, ctx.ocr)
+        food = read_number(frame, CAT_FOOD_BOX, ctx.ocr) if s.rolled % 10 == 0 else None
         if food is not None:
             if s.cat_food is None:
                 # The first reading only counts once a second one agrees.
