@@ -41,6 +41,9 @@ LABEL_MATCH = 85
 # against "Lucky Capsules G", the one letter more.
 TEXT_MATCH = 0.97
 TEXT_PAD = 0.006
+# A match this close to the text last seen in a box settles it: no rival
+# can match better than a copy of the same pixels.
+TEXT_SURE = 0.995
 TEXT_LEVEL = 18
 
 
@@ -132,6 +135,12 @@ class Profile:
         # revision, since recognition asks the same questions every frame.
         self._rev = 0
         self._derived: dict = {}
+        # Lookups already made on the frame each thread is looking at: the
+        # debug page asks for the same controls recognition just found.
+        self._memo = threading.local()
+        # The text last known in each box, tried first: most frames show the
+        # screen the frame before did.
+        self._last_text: dict[str, str] = {}
 
     @classmethod
     def for_frame(cls, frame: np.ndarray, root: Path | None = None) -> "Profile":
@@ -295,9 +304,22 @@ class Profile:
         found = self.find(frame, screen, key)
         return found["tap"] if found else None
 
+    def _memo_for(self, frame: np.ndarray) -> dict:
+        memo = self._memo
+        if getattr(memo, "frame", None) is not frame or getattr(memo, "rev", None) != self._rev:
+            memo.frame, memo.rev, memo.found = frame, self._rev, {}
+        return memo.found
+
     def find(self, frame: np.ndarray, screen: str, key: str) -> dict | None:
         """A learned control's tap point and box as they are in this frame."""
         key = self.key_for(screen, key) or key
+        found = self._memo_for(frame)
+        if (screen, key) not in found:
+            found[(screen, key)] = self._find(frame, screen, key)
+        hit = found[(screen, key)]
+        return dict(hit) if hit else None
+
+    def _find(self, frame: np.ndarray, screen: str, key: str) -> dict | None:
         entry = self._controls(screen).get(key)
         if not entry or "template" not in entry:
             return None
@@ -357,7 +379,10 @@ class Profile:
             return None
         grey = cv2.cvtColor(window, cv2.COLOR_BGR2GRAY)
         best, best_score = None, TEXT_MATCH
-        for text, rel in known.items():
+        box_key = self._box_key(box)
+        last = self._last_text.get(box_key)
+        order = sorted(known.items(), key=lambda kv: kv[0] != last)
+        for text, rel in order:
             template = self._template(dict(template=rel), grey=True)
             if template is None or grey.shape[0] < template.shape[0] or grey.shape[1] < template.shape[1]:
                 continue
@@ -372,6 +397,10 @@ class Profile:
             if abs(float(patch.mean()) - float(template.mean())) > TEXT_LEVEL:
                 continue
             best, best_score = text, score
+            if text == last and score >= TEXT_SURE:
+                break               # the same screen as last time, beyond doubt
+        if best is not None:
+            self._last_text[box_key] = best
         return best
 
     def learn_text(self, frame: np.ndarray, box, text: str) -> bool:
