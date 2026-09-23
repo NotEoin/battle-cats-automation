@@ -21,6 +21,7 @@ planned through it.
 from __future__ import annotations
 
 import json
+import re
 import threading
 import time
 from collections import deque
@@ -58,8 +59,10 @@ def title_match(expected: str, read: str, within: bool = True) -> float:
     expected, read = expected.lower(), read.lower()
     whole = fuzz.ratio(expected, read)
     if not within:
-        # A card's two-line name can come back with its lines swapped.
-        return max(whole, fuzz.token_sort_ratio(expected, read))
+        # A card's two-line name can come back with its lines swapped, and an
+        # event's subtitle with its spaces gone.
+        squashed = fuzz.ratio(re.sub(r"[^a-z0-9]", "", expected), re.sub(r"[^a-z0-9]", "", read))
+        return max(whole, fuzz.token_sort_ratio(expected, read), squashed)
     if whole >= TITLE_MATCH:
         return whole
     words, n = read.split(), len(expected.split())
@@ -160,11 +163,14 @@ class UIGraph:
     # Where learned device profiles live; None is state/devices.
     profile_root: Path | None = field(default=None, repr=False)
     _profiles: dict = field(default_factory=dict, repr=False)
+    # The gacha events live today, each a screen of the map (see events.py).
+    events: list = field(default_factory=list, repr=False)
 
     # -- persistence --------------------------------------------------------
 
     @classmethod
-    def load(cls, path: Path | None = None, carousels: bool | Path = True) -> "UIGraph":
+    def load(cls, path: Path | None = None, carousels: bool | Path = True,
+             events: bool = True) -> "UIGraph":
         """The base map, plus this save's sagas and chapters when they are known.
 
         The base file describes screens every save has. Which sagas and
@@ -202,6 +208,14 @@ class UIGraph:
             catalogue = carousel.load_catalogue(None if carousels is True else carousels)
             if catalogue:
                 carousel.extend(graph, catalogue)
+        if events:
+            from . import events as live
+            from .data import load as load_dataset
+
+            try:
+                live.extend(graph, live.live_events(load_dataset()))
+            except FileNotFoundError:
+                pass                    # no dataset fetched yet: no event screens
         return graph
 
     def save(self, path: Path | None = None) -> Path:
@@ -427,7 +441,12 @@ class UIGraph:
             return any(title_match(t, read) >= TITLE_MATCH for t in top_titles)
 
         out = []
-        for screen in self.screens.values():
+        # Parents first: a card or event is only worth reading when the screen
+        # it belongs to is still possible, which spares an OCR on most frames.
+        ordered = sorted(self.screens.values(), key=lambda s: s.parent is not None)
+        for screen in ordered:
+            if screen.parent and not any(c.name == screen.parent for c, _ in out):
+                continue
             # Forbidden screens are still identified. Refusing to recognise one
             # would leave the bot blind exactly where it most needs to know
             # where it is, so that it can leave deliberately rather than tap
@@ -531,7 +550,10 @@ class UIGraph:
         queue: deque[tuple[str, list[Transition]]] = deque([(src, [])])
         while queue:
             node, path = queue.popleft()
-            for t in outgoing.get(node, []):
+            # A card or an event is still its parent screen, and leaves by
+            # the parent's exits as well as its own.
+            parent = self.screens[node].parent if node in self.screens else None
+            for t in outgoing.get(node, []) + outgoing.get(parent, []):
                 if t.dst in seen:
                     continue
                 if t.dst == dst:
@@ -614,21 +636,20 @@ class Navigator:
         self.session.tap(*self.human.jitter_point(*landscape_to_hid(x, y)))
         self.human.sleep(settle)
 
-    def _clear_obstruction(self, frame: np.ndarray) -> bool:
-        """Dismiss a dialog or reward popup standing in the way."""
-        from . import safety
+    def _answer_dialog(self, frame: np.ndarray, percept=None, log=None) -> bool:
+        """Say No to a question standing in the way -- above all "use Cat
+        Food?". Found by reading it, not by a captured picture of one."""
+        from .perception import perceive
 
-        if safety.inspect_dialog(frame).present:
-            self.session.tap(
-                *self.human.jitter_point(
-                    *__import__(
-                        "bcgacha.layout", fromlist=["landscape_to_hid"]
-                    ).landscape_to_hid(*safety.DIALOG_NO)
-                )
-            )
-            self.human.sleep(1.0)
-            return True
-        return False
+        percept = percept or perceive(frame, self.graph.ocr)
+        answer = percept.find("No") or percept.find("Cancel")
+        if answer is None or not any("?" in t.text for t in percept.readings()):
+            return False
+        if log:
+            asked = next(t.text for t in percept.readings() if "?" in t.text)
+            log(f"    answering No to {asked!r}")
+        self._tap(*answer.tap, 1.0)
+        return True
 
     def _resolve(self, here: str, step: Transition, frame: np.ndarray, log=None):
         """Where to press for this step on this device, or None if it is not there."""
@@ -669,6 +690,17 @@ class Navigator:
 
             carousel.seek_end(self.session, self.graph, argument)
             return True
+        if kind == "event":
+            from .bannerpick import BannerPicker
+            from .data import load
+
+            wanted = next((e for e in self.graph.events if e.key == argument), None)
+            if wanted is None:
+                if log:
+                    log(f"  {argument!r} is not a live event")
+                return False
+            picker = BannerPicker(self.session, load(), ocr=self.graph.ocr)
+            return picker.select(wanted.banner, [e.banner for e in self.graph.events])
         if kind == "banner":
             import datetime as dt
 
@@ -706,15 +738,15 @@ class Navigator:
         forgiven = False
         for _ in range(max_steps):
             frame = self.session.screenshot()
-            if self._clear_obstruction(frame):
-                continue
-
-            here = self.graph.identify(frame)
+            rec = self.graph.recognise(frame)
+            here = rec.here
             if here == destination or (
                 here and self.graph.screens[here].parent == destination
             ):
                 return True
             if here is None:
+                if self._answer_dialog(frame, rec.percept, log):
+                    continue
                 # Not on the map. Backing out is almost always right: nearly
                 # every screen has a back arrow in the same corner, and the
                 # places it leads to are ones the map does know.

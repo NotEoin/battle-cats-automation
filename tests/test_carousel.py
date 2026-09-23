@@ -110,8 +110,9 @@ def test_the_back_card_does_not_claim_a_chapter_with_back_in_its_name(monkeypatc
 
     class CardReads:
         def __call__(self, crop):
-            return [([[0, 0], [300, 0], [300, 30], [0, 30]],
-                     "The Ancients Arise: Take Back Earth!", 0.9)], None
+            # The narrow label box above the name says which chapter it is.
+            text = "Chapter 3" if crop.shape[1] < 800 else "The Ancients Arise: Take Back Earth!"
+            return [([[0, 0], [300, 0], [300, 30], [0, 30]], text, 0.9)], None
 
     graph._ocr = CardReads()
     names = [n for _, n in graph.candidates(np.zeros((1170, 2532, 3), np.uint8), title="")]

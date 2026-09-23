@@ -54,6 +54,9 @@ class Banner:
     uber: int
     guaranteed: bool = False
     step_up: bool = False
+    # The pool's series: stable across re-runs, and what the game's tab art
+    # names ("Iron Legion") where the event name only names the newest unit.
+    series_id: int | None = None
     # cat ids by rarity, in the order the banner lists them -- slot order matters
     slots: dict[int, list[int]] = field(default_factory=dict, compare=False)
 
@@ -132,6 +135,7 @@ def _build(raw: dict) -> Dataset:
             uber=ev.get("uber", 0),
             guaranteed=bool(ev.get("guaranteed")),
             step_up=bool(ev.get("step_up")),
+            series_id=pool.get("series_id"),
             slots=slots,
         )
     return Dataset(cats=cats, banners=banners)
@@ -143,6 +147,9 @@ def _as_date(value) -> dt.date:
     return dt.date.fromisoformat(str(value))
 
 
+CACHE_VERSION = "v2"
+
+
 @functools.lru_cache(maxsize=4)
 def load(lang: str = "en") -> Dataset:
     """Load the dataset, caching a pickle because parsing 2 MB of YAML is slow."""
@@ -151,7 +158,8 @@ def load(lang: str = "en") -> Dataset:
         raise FileNotFoundError(
             f"{source} missing -- run scripts/fetch_data.py --lang {lang}"
         )
-    cache = DATA_DIR / f"bc-{lang}.pickle"
+    # Versioned: a pickle of an older Banner would silently lack new fields.
+    cache = DATA_DIR / f"bc-{lang}.{CACHE_VERSION}.pickle"
     if cache.exists() and cache.stat().st_mtime >= source.stat().st_mtime:
         with open(cache, "rb") as fh:
             return pickle.load(fh)
