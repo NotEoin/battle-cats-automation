@@ -31,6 +31,20 @@
    "note": ""
   },
   {
+   "name": "cat_capsules",
+   "title": "Cat Capsules",
+   "marks": [
+    "Try once!"
+   ],
+   "absent_marks": [
+    "Sent to Cat Storage",
+    "Trade for Ticket"
+   ],
+   "forbidden": false,
+   "reactive": false,
+   "note": "The normal machine: Cat Tickets, Try once! and Try 10 times!"
+  },
+  {
    "name": "cat_guide",
    "title": "Cat Guide",
    "forbidden": false,
@@ -99,6 +113,34 @@
    "note": "Legend Stages: Start!! opens the event and legend stage list, still titled Cat Base. Its stages lead to Attack!, so nothing but Back is ever pressed here."
   },
   {
+   "name": "lucky_capsules",
+   "title": "Lucky Capsules",
+   "marks": [
+    "Try once!"
+   ],
+   "absent_marks": [
+    "Sent to Cat Storage",
+    "Trade for Ticket"
+   ],
+   "forbidden": false,
+   "reactive": false,
+   "note": "Lucky Tickets. Its red Draw for Free! plays a video advert: never pressed"
+  },
+  {
+   "name": "lucky_capsules_g",
+   "title": "Lucky Capsules G",
+   "marks": [
+    "Try once!"
+   ],
+   "absent_marks": [
+    "Sent to Cat Storage",
+    "Trade for Ticket"
+   ],
+   "forbidden": false,
+   "reactive": false,
+   "note": "Lucky Tickets G; its multi-draw is Try N times! for up to 10"
+  },
+  {
    "name": "menu",
    "title": "Cat Base",
    "marks": [
@@ -111,6 +153,17 @@
    "forbidden": false,
    "reactive": false,
    "note": "Cat Guide / Enemy Guide / Meow Medals / Officers' Club"
+  },
+  {
+   "name": "normal_result",
+   "title": null,
+   "marks": [
+    "Trade for Ticket",
+    "Change"
+   ],
+   "forbidden": false,
+   "reactive": true,
+   "note": "Result of a normal or Lucky draw: Trade for Ticket / Change to XP / name / Ok. Only Ok is ever pressed: the other two give the cat away"
   },
   {
    "name": "opening",
@@ -763,6 +816,170 @@
    "settle": 2.5,
    "action": null,
    "target": "Start!!"
+  },
+  {
+   "src": "cat_base",
+   "dst": "cat_capsules",
+   "x": 0.4515,
+   "y": 0.774,
+   "label": "Cat Capsule",
+   "settle": 2.5,
+   "action": null,
+   "target": "Cat Capsule"
+  },
+  {
+   "src": "cat_capsules",
+   "dst": "cat_base",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.0,
+   "action": null,
+   "target": "@back"
+  },
+  {
+   "src": "cat_capsules",
+   "dst": "storage",
+   "x": 0.172,
+   "y": 0.8,
+   "label": "Storage",
+   "settle": 2.2,
+   "action": null,
+   "target": "Storage"
+  },
+  {
+   "src": "sent_to_storage",
+   "dst": "cat_capsules",
+   "x": 0.6501,
+   "y": 0.6265,
+   "label": "Ok",
+   "settle": 1.8,
+   "action": null,
+   "target": "Ok"
+  },
+  {
+   "src": "lucky_capsules",
+   "dst": "cat_capsules",
+   "x": 0.175,
+   "y": 0.13,
+   "label": "Cat Capsules tab",
+   "settle": 1.2,
+   "action": null
+  },
+  {
+   "src": "lucky_capsules_g",
+   "dst": "cat_capsules",
+   "x": 0.175,
+   "y": 0.13,
+   "label": "Cat Capsules tab",
+   "settle": 1.2,
+   "action": null
+  },
+  {
+   "src": "lucky_capsules",
+   "dst": "cat_base",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.0,
+   "action": null,
+   "target": "@back"
+  },
+  {
+   "src": "lucky_capsules",
+   "dst": "storage",
+   "x": 0.172,
+   "y": 0.8,
+   "label": "Storage",
+   "settle": 2.2,
+   "action": null,
+   "target": "Storage"
+  },
+  {
+   "src": "sent_to_storage",
+   "dst": "lucky_capsules",
+   "x": 0.6501,
+   "y": 0.6265,
+   "label": "Ok",
+   "settle": 1.8,
+   "action": null,
+   "target": "Ok"
+  },
+  {
+   "src": "cat_capsules",
+   "dst": "lucky_capsules",
+   "x": 0.265,
+   "y": 0.13,
+   "label": "Lucky Capsules tab",
+   "settle": 1.2,
+   "action": null
+  },
+  {
+   "src": "lucky_capsules_g",
+   "dst": "lucky_capsules",
+   "x": 0.265,
+   "y": 0.13,
+   "label": "Lucky Capsules tab",
+   "settle": 1.2,
+   "action": null
+  },
+  {
+   "src": "lucky_capsules_g",
+   "dst": "cat_base",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.0,
+   "action": null,
+   "target": "@back"
+  },
+  {
+   "src": "lucky_capsules_g",
+   "dst": "storage",
+   "x": 0.172,
+   "y": 0.8,
+   "label": "Storage",
+   "settle": 2.2,
+   "action": null,
+   "target": "Storage"
+  },
+  {
+   "src": "sent_to_storage",
+   "dst": "lucky_capsules_g",
+   "x": 0.6501,
+   "y": 0.6265,
+   "label": "Ok",
+   "settle": 1.8,
+   "action": null,
+   "target": "Ok"
+  },
+  {
+   "src": "cat_capsules",
+   "dst": "lucky_capsules_g",
+   "x": 0.415,
+   "y": 0.13,
+   "label": "Lucky Capsules G tab",
+   "settle": 1.2,
+   "action": null
+  },
+  {
+   "src": "lucky_capsules",
+   "dst": "lucky_capsules_g",
+   "x": 0.415,
+   "y": 0.13,
+   "label": "Lucky Capsules G tab",
+   "settle": 1.2,
+   "action": null
+  },
+  {
+   "src": "normal_result",
+   "dst": "sent_to_storage",
+   "x": 0.733,
+   "y": 0.795,
+   "label": "Ok",
+   "settle": 1.0,
+   "action": null,
+   "target": "Ok"
   }
  ]
 }
