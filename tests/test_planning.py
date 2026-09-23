@@ -293,11 +293,12 @@ def test_verification_tolerates_an_ocr_slip_but_not_a_wrong_cat():
 
 def _goal_fixture():
     from bcgacha import goals
-    from bcgacha.catindex import OwnedIndex
 
     ds = load()
     tier_list = T.TierList.load()
-    owned = OwnedIndex.load().owned
+    # A fixed collection, not the account's live one: every cat below Uber
+    # owned, no Uber or Legend, so the goal has every target to rank.
+    owned = {c for c, e in ds.cats.items() if e.get("rarity", 0) < 4}
     normal = [ds.find_banner(k) for k in
               ("2026-09-21_1081", "2026-09-21_1021", "2026-09-21_979")]
     platinum = next(b for b in ds.banners.values() if b.uber == 10000)
