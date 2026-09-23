@@ -40,6 +40,9 @@ CAT_FOOD_PER_DRAW = 150
 # How long a reveal may take: Uber and Legend animations run long.
 REVEAL_TIMEOUT = 45.0
 PLAN_ROLLS = 40
+# A save younger than this, in seconds, is from a run just stopped: its
+# position keeps the confirmation the run's draws gave it.
+FRESH_SAVE = 600
 # A desync is placed at most this far past the saved position: draws made
 # by hand between runs.
 RECOVER_AHEAD = 40
@@ -360,8 +363,15 @@ class GoalRun:
         self.owned_index, self.events, self.tiers = owned_index, events, tiers
         self.state = RunState(rare_left=rare_tickets, platinum_left=platinum_tickets)
         # Draws made by hand since the last run move the position unseen: a
-        # run spends no Platinum Ticket until one of its own draws has matched.
-        self.account.confirmed = False
+        # run spends no Platinum Ticket until one of its own draws has matched
+        # -- unless the save is fresh from a run just stopped, when nobody has
+        # had the time to draw by hand. Doubting it then cost a Platinum pick
+        # whose position came first.
+        from .state import STATE_PATH
+
+        age = time.time() - STATE_PATH.stat().st_mtime if STATE_PATH.exists() else float("inf")
+        if age > FRESH_SAVE:
+            self.account.confirmed = False
         self.planner.platinum_tickets = platinum_tickets
         self.nav = ctx.navigator()
         ctx.captures.mkdir(parents=True, exist_ok=True)
