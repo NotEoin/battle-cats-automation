@@ -16,9 +16,11 @@ it is on the screen it expects.
 | Roll prediction from a seed | working, 1194 cells checked against bc.godfat.org |
 | Guaranteed-uber prediction | working, 179/179 against bc.godfat.org |
 | Seed recovery from observed rolls | working, unique hit in ~220s |
-| Device screen capture | working, ~1.9s per frame |
+| Device screen capture | working, ~0.35s per frame |
 | Synthetic taps | working, absolute coordinates |
-| Screen classification | capsule / result / sent-to-storage / storage / dialog |
+| Screen recognition | ~1ms from remembered titles; OCR only for a screen never seen |
+| Rare draw loop | ~13-14s a draw, humanised, reveals skipped |
+| Normal capsules | Cat and Lucky Capsules: 3.3s a capsule in tens, 14s singly |
 | Counter and capacity reading | tickets, Cat Food, XP, storage N/M |
 | Single-draw roll loop | working, ten consecutive draws verified |
 | Banner targeting | planner wired to the loop, switches by tapping tabs |
@@ -65,9 +67,18 @@ The first time a screen is met it is read in full: OCR of the whole frame, and
 the game's gold pills and X discs found by shape (`perception`). What that
 finds is kept per resolution under `state/devices/WxH/` (`profile`): the box
 screen names are printed in, and a small template of each control the map
-uses. After that the screen is recognised from those templates and one read
-of the title box. Only what the map names is learned, never timers or
-counters, so going over the same screens again leaves the profile untouched.
+uses. Once a title has named its screen, a grey picture of it is kept too,
+so after that a screen is recognised from templates alone, with no OCR: about
+a millisecond against most of a second. A title read cut short -- "Lucky
+Capsules" for "Lucky Capsules G", "Cat Base" for "Cat Base Select" -- is left
+to a full look rather than trusted. Only what the map names is learned, never
+timers or counters, so going over the same screens again leaves the profile
+untouched.
+
+The navigator does not sleep after a tap: it watches until two still frames
+name the next screen, with a jittered pause before each tap standing in for a
+person finding the button. Store, Attack!, Draw for Free!, Trade for Ticket
+and Change to XP are refused whatever a map says.
 
 Each chapter's Cat Base stands in front of its own door, and the door names
 the chapter (`bases`). Doors are learned per device as well: on a phone that
@@ -84,10 +95,11 @@ The debug page (http://127.0.0.1:8765) is the one process that drives the
 phone, and shows every stage live. On a fresh start it scans the save's sagas
 and chapters and learns the device; **Run setup** then reads the Cat Guide
 (owned cats), checks each live event on the device, finds the seed and
-position, and plans and simulates the run. **Start goal run** rolls: Legends of
-the live events (the event named under Prefer first), every unowned event Uber,
-and the best unowned Platinum Ubers by tier with the Platinum Tickets, until
-the goal is met or the rare tickets run out.
+position, and plans and simulates the run. **Start goal run** rolls: every
+unowned Uber of the events named under Goal events (all live ones if blank;
+their Legends too if ticked, the one named under Prefer first), and the best
+unowned Platinum Ubers by tier with the Platinum Tickets, slotted into the same
+route, until the goal is met or the rare tickets run out.
 
 - Each live event is a screen of the map: `goto("event:979")` selects Iron
   Legion from anywhere, in one call.
@@ -96,6 +108,15 @@ the goal is met or the rare tickets run out.
 - Every draw is refused unless the button shows a ticket and a cost of 1, and
   the position is saved the moment a draw is tapped.
 - Stop takes effect between draws; a run resumes from `state/account.json`.
+- A run spends no Platinum Ticket until one of its own draws has matched: a
+  draw made by hand since the last run moves the position unseen. A draw that
+  disagrees is placed on the banner it was drawn on, near the saved position.
+- Once a capsule has opened, a tap on the top bar skips its reveal.
+
+The normal machines are opened by `capsules.CapsuleRun(ctx, "cat" | "lucky" |
+"lucky_g")`: Try 10 times! while its face shows the 10, else Try once!, each
+face checked against how it looked when it first drew, and the run stopped if
+the Cat Food counter ever falls.
 
 The older `cli run` and `cli goal` loops still check screens against captured
 templates, which no longer ship; the debug page's pipeline replaces them.
@@ -225,6 +246,7 @@ bc.godfat.org output saved under `tests/fixtures`.
 | `results` | the cat on a result screen, or "unsure" |
 | `draw` | whether the draw button spends a ticket or Cat Food |
 | `pipeline` | the stages and the goal run, reported live |
+| `capsules` | the normal machines: Cat Capsules and both Lucky Capsules |
 
 ## When the position drifts
 
