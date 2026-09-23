@@ -358,20 +358,23 @@ class GoalRun:
                     return found
         return perceive(frame, self.ctx.ocr).find("Try once!")
 
-    def _await_result(self):
-        """The result screen, once its name plate reads, or None."""
+    def _await_result(self, before):
+        """(frame, read, moved): the result screen once its name plate reads --
+        or the last frame seen -- and whether the screen ever left `before`."""
         from .results import read_result
+        from .uigraph import frame_changed
 
         deadline = time.time() + REVEAL_TIMEOUT
         pool = {c for e in self.events for r in (2, 3, 4, 5) for c in e.banner.slots.get(r) or []}
-        last = None
+        moved, last = False, None
         while time.time() < deadline:
             time.sleep(1.2)
             frame = self.ctx.session.screenshot()
+            moved = moved or frame_changed(before, frame)
             read = read_result(frame, self.ctx.ocr, self.ctx.dataset, pool)
             if read.cat_id is not None:
-                return frame, read
-            last = (frame, read)
+                return frame, read, True
+            last = (frame, read, moved)
         return last
 
     def _advance(self, cat_id, steps) -> None:
@@ -452,22 +455,38 @@ class GoalRun:
             s.rare_left = None if s.rare_left is None else s.rare_left - 1
         verdict, seen = "unverified", None
         try:
-            got = self._await_result()
-            if got:
-                result_frame, read = got
+            got = self._await_result(frame)
+            if got and not got[2]:
+                # The screen never left the capsule screen: the tap was
+                # swallowed and no draw happened. Nothing is spent or moved.
+                verdict = "no draw"
+                s.rolled -= 1
+                if platinum:
+                    s.platinum_left += 1
+                    self.planner.platinum_tickets += 1
+                    self.planner.platinum_wanted.add(step.cat_id)
+                elif s.rare_left is not None:
+                    s.rare_left += 1
+            elif got:
+                result_frame, read, _ = got
                 stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
                 cv2.imwrite(str(ctx.captures / f"roll_{stamp}_{step.position}.png"), result_frame)
                 seen = read.cat_id
                 verdict = ("match" if seen == step.cat_id else
                            "unverified" if seen is None else "desync")
         finally:
-            if verdict == "desync" and self._recover(seen):
+            if verdict == "no draw":
+                pass
+            elif verdict == "desync" and self._recover(seen):
                 verdict = "recovered"
             else:
                 self._advance(step.cat_id if verdict != "desync" else seen, step.reroll_steps)
             if verdict == "match":
                 self.account.confirmed = True
-            self.account.save()
+            if verdict != "no draw":
+                self.account.save()
+        if verdict == "no draw":
+            return "the draw tap had no effect; nothing was spent or moved"
         new = step.cat_id not in self.owned_index.owned and verdict == "match"
         if new:
             self.owned_index.owned.add(step.cat_id)
