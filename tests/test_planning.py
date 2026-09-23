@@ -364,3 +364,18 @@ def test_platinum_banner_is_the_newest_snapshot():
     assert len(platinum.slots.get(UBER) or []) == max(
         len(b.slots.get(UBER) or []) for b in others
     )
+
+
+def test_goal_named_events_want_their_ubers_and_the_platinum_picks_alone():
+    """Galaxy Gals and Iron Legion only: no Fate unit is wanted, nor any Legend."""
+    from bcgacha import goals
+
+    ds, tier_list, owned, normal, platinum, _goal = _goal_fixture()
+    only = {"2026-09-21_1021", "2026-09-21_979"}
+    goal = goals.build(ds, tier_list, owned, normal, platinum, platinum_tickets=7,
+                       only=only, legends=False)
+    fate = set(ds.find_banner("2026-09-21_1081").slots.get(UBER) or [])
+    named = {c for b in normal if b.key in only for c in b.slots.get(UBER) or []}
+    assert goal.ubers == named - fate
+    assert not goal.legendaries
+    assert len(goal.platinum) == 7, "the Platinum picks are wanted whatever the events"
