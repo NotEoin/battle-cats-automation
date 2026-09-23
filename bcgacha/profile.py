@@ -79,6 +79,29 @@ def _choose(controls, wanted) -> list[tuple[str, object]]:
     return chosen
 
 
+def _copy(value):
+    """A copy deep enough that nothing handed out reaches the profile: its
+    data is only dicts, lists and plain values. Far cheaper than deepcopy."""
+    if isinstance(value, dict):
+        return {k: _copy(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_copy(v) for v in value]
+    return value
+
+
+# Templates are matched in grey at this share of the frame's size: sixteen
+# times fewer sums than full-size colour, and a control is still tens of
+# pixels across.
+MATCH_SCALE = 0.5
+
+
+def _small_grey(image: np.ndarray) -> np.ndarray:
+    # Halved first, then made grey: the colour conversion runs on a quarter
+    # of the pixels.
+    small = cv2.resize(image, None, fx=MATCH_SCALE, fy=MATCH_SCALE, interpolation=cv2.INTER_AREA)
+    return cv2.cvtColor(small, cv2.COLOR_BGR2GRAY) if small.ndim == 3 else small
+
+
 def _crop(frame, box):
     h, w = frame.shape[:2]
     x0, y0, x1, y1 = box
@@ -105,6 +128,10 @@ class Profile:
         self.data.setdefault("screens", {})
         self.data.setdefault("bases", {})
         self.data.setdefault("texts", {})
+        # Bumped on every change; what is worked out from `data` is kept per
+        # revision, since recognition asks the same questions every frame.
+        self._rev = 0
+        self._derived: dict = {}
 
     @classmethod
     def for_frame(cls, frame: np.ndarray, root: Path | None = None) -> "Profile":
@@ -115,7 +142,17 @@ class Profile:
         for listen in list(self.listeners):
             listen(f"[{self.key}] {message}")
 
+    def _cached(self, key, compute):
+        with self._lock:
+            hit = self._derived.get(key)
+            if hit is None or hit[0] != self._rev:
+                hit = (self._rev, compute())
+                self._derived[key] = hit
+            return hit[1]
+
     def save(self) -> None:
+        with self._lock:
+            self._rev += 1
         self.root.mkdir(parents=True, exist_ok=True)
         tmp = self.file.with_suffix(".tmp")
         tmp.write_text(json.dumps(self.data, indent=1, sort_keys=True))
@@ -157,8 +194,19 @@ class Profile:
 
     def controls(self, screen: str) -> dict:
         """A copy of what is learned on `screen`, safe to loop over while learning goes on."""
-        with self._lock:
-            return copy.deepcopy(self.data["screens"].get(screen, {}).get("controls", {}))
+        return _copy(self._controls(screen))
+
+    def _controls(self, screen: str) -> dict:
+        """What is learned on `screen`, for reading only: never handed out."""
+        return self._cached(("controls", screen), lambda: _copy(
+            self.data["screens"].get(screen, {}).get("controls", {})))
+
+    def learned_on(self, name: str) -> list[str]:
+        """The screens a control of this name was learned on."""
+        index = self._cached("learned_on", lambda: {
+            key: [n for n, sc in self.data["screens"].items() if key in sc.get("controls", {})]
+            for sc in self.data["screens"].values() for key in sc.get("controls", {})})
+        return list(index.get(name, ()))
 
     def screen_names(self) -> list[str]:
         with self._lock:
@@ -202,12 +250,23 @@ class Profile:
             entry["template"] = str(path.relative_to(self.root))
             known[key] = entry
             self._templates.pop(str(path), None)
+            self._templates.pop(str(path) + ":small", None)
             changed += 1
         if changed:
             self.save()
             self._told(f"{screen}: learned {changed} control{'s' if changed != 1 else ''} "
                        f"({', '.join(sorted(known)[:6])}{'...' if len(known) > 6 else ''})")
         return changed
+
+    def _small_template(self, entry) -> np.ndarray | None:
+        path = str(self.root / entry["template"]) + ":small"
+        with self._lock:
+            if path not in self._templates:
+                full = self._template(entry)
+                small = None if full is None else _small_grey(full)
+                # A flat picture correlates with anything: never matched.
+                self._templates[path] = small if small is not None and float(small.std()) >= 1 else None
+            return self._templates[path]
 
     def _template(self, entry, grey: bool = False) -> np.ndarray | None:
         path = str(self.root / entry["template"])
@@ -219,7 +278,7 @@ class Profile:
 
     def key_for(self, screen: str, target: str) -> str | None:
         """The learned control a transition's target names; OCR drops spaces."""
-        controls = self.controls(screen)
+        controls = self._controls(screen)
         if target in controls:
             return target
         if target.startswith("@"):
@@ -239,15 +298,27 @@ class Profile:
     def find(self, frame: np.ndarray, screen: str, key: str) -> dict | None:
         """A learned control's tap point and box as they are in this frame."""
         key = self.key_for(screen, key) or key
-        entry = self.controls(screen).get(key)
+        entry = self._controls(screen).get(key)
         if not entry or "template" not in entry:
             return None
-        template = self._template(entry)
+        template = self._small_template(entry)
         if template is None:
             return None
         x0, y0, x1, y1 = entry["box"]
-        window = (x0 - SEARCH_PAD, y0 - SEARCH_PAD, x1 + SEARCH_PAD, y1 + SEARCH_PAD)
-        region = _crop(frame, window)
+        h, w = frame.shape[:2]
+        # The window starts on the template's own pixel parity, so at the
+        # place it was cut from the halved grids line up exactly.
+        step = round(1 / MATCH_SCALE)
+
+        def span(a, b, size, pad):
+            lo, hi = int(a * size), int(b * size)
+            reach = int(pad * size) // step * step
+            start = lo - reach if lo - reach >= 0 else lo % step
+            return start, min(size, hi + reach)
+
+        sx, ex = span(x0, x1, w, SEARCH_PAD)
+        sy, ey = span(y0, y1, h, SEARCH_PAD)
+        region = _small_grey(frame[sy:ey, sx:ex])
         th, tw = template.shape[:2]
         if region.shape[0] < th or region.shape[1] < tw:
             return None
@@ -255,9 +326,8 @@ class Profile:
         _, score, _, loc = cv2.minMaxLoc(result)
         if score < TEMPLATE_MATCH:
             return None
-        h, w = frame.shape[:2]
-        dx = (max(0.0, window[0]) * w + loc[0]) / w - x0
-        dy = (max(0.0, window[1]) * h + loc[1]) / h - y0
+        dx = (sx + loc[0] * step) / w - x0
+        dy = (sy + loc[1] * step) / h - y0
         return dict(key=key, label=entry.get("label", key), kind=entry.get("kind"),
                     score=round(float(score), 3),
                     tap=(entry["tap"][0] + dx, entry["tap"][1] + dy),
@@ -369,7 +439,7 @@ class Profile:
 
     def bases(self) -> dict:
         with self._lock:
-            return copy.deepcopy(self.data["bases"])
+            return {k: list(v) for k, v in self.data["bases"].items()}
 
     def learn_base(self, chapter: str, signature: list[float]) -> bool:
         """Keep `chapter`'s door signature. Seeing the same door again, as it is

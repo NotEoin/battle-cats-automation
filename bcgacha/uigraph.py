@@ -453,23 +453,29 @@ class UIGraph:
                 return any(profile.find(frame, n, key) for n in homes)
             if kind not in shapes:
                 if kind == "close":
-                    shapes[kind] = any(close_glyph_score(frame, box) >= CLOSE_SCORE
-                                       for box, _ in find_discs(frame))
+                    # Found on a half-size frame: a quarter of the pixels, and
+                    # an X disc is still dozens across. Boxes are fractions.
+                    half = cv2.resize(frame, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
+                    shapes[kind] = any(close_glyph_score(half, box) >= CLOSE_SCORE
+                                       for box, _ in find_discs(half))
                 elif kind == "back":
                     shapes[kind] = find_back_arrow(frame) is not None
                 else:
                     shapes[kind] = False
             return shapes[kind]
 
+        found_marks: dict[str, bool] = {}
+
         def mark_seen(mark: str, screen: str, absent: bool = False) -> bool | None:
             # A control learned under this name, on any screen, is looked for
             # by its template first: that costs milliseconds, not an OCR pass.
-            learned_on = set()
-            for name in profile.screen_names():
-                if mark in profile.controls(name):
-                    learned_on.add(name)
-                    if profile.locate(frame, name, mark) is not None:
-                        return True
+            # Whether it is anywhere is the same for every screen asking.
+            learned_on = set(profile.learned_on(mark))
+            if mark not in found_marks:
+                found_marks[mark] = any(profile.locate(frame, name, mark) is not None
+                                        for name in sorted(learned_on))
+            if found_marks[mark]:
+                return True
             if percept is not None:
                 return any(title_match(mark, t.text, within=True) >= TITLE_MATCH
                            for t in percept.readings())

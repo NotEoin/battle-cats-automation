@@ -157,6 +157,8 @@ class Debugger:
         # The newest frame taken, by anyone, ready to send: the picture on the
         # page never waits for analysis.
         self._live: tuple[int, float, bytes] | None = None
+        self._recent: dict[int, bytes] = {}         # the last few frames sent, by version
+        self._to_learn: np.ndarray | None = None    # the newest frame analysis could not name
         self._quit = threading.Event()
         self.map_version = 0
         # What the pipeline has found so far, by section, for the page.
@@ -195,6 +197,21 @@ class Debugger:
         threading.Thread(target=self._grab, daemon=True).start()
         threading.Thread(target=self._analyse_loop, daemon=True).start()
         threading.Thread(target=self._encode_loop, daemon=True).start()
+        threading.Thread(target=self._learn_loop, daemon=True).start()
+
+    def _learn_loop(self) -> None:
+        """Give a frame analysis could not name a full look -- OCR and shapes
+        -- which learns the screen, so the next frames of it name fast."""
+        while not self._quit.is_set():
+            time.sleep(0.5)
+            with self._lock:
+                frame, self._to_learn = self._to_learn, None
+            if frame is None or self.nav["running"]:
+                continue
+            try:
+                self.graph.recognise(frame)
+            except Exception as exc:
+                self._analysis_failed(exc)
 
     def _encode_loop(self) -> None:
         seen = 0
@@ -210,6 +227,9 @@ class Debugger:
             if ok:
                 with self._lock:
                     self._live = (version, taken_at, jpeg.tobytes())
+                    self._recent[version] = self._live[2]
+                    for old in sorted(self._recent)[:-KEEP_SNAPSHOTS]:
+                        del self._recent[old]
 
     def _grab(self) -> None:
         while not self._quit.is_set():
@@ -270,20 +290,17 @@ class Debugger:
         if self.log not in profile.listeners:
             profile.listeners.append(self.log)
 
-        # The title is read once, through the learned box, and handed to
-        # recognition, whose fast path goes on exactly that reading: the page
-        # then shows what identification saw, not a second OCR's guess.
+        # Analysis reads nothing: a screen seen before is named from pictures
+        # remembered of it, in milliseconds. One that cannot be named that way
+        # is handed, when no job drives the phone, to a full look on its own
+        # thread (_learn_loop), which learns it; the frames after name fast.
         title_box = profile.title_box
-        # While a job drives, no OCR at all: the job needs the CPU, and a
-        # screen it knows is named from remembered pictures alone.
         busy = self.nav["running"]
         title = profile.known_text(frame, title_box) if title_box else None
-        if title is None and title_box and not busy:
-            title = graph.read_title(frame, title_box, largest=True)
-        # The real recognition, learning included: the page shows the process.
-        # While a job drives the device, only the quick look: a full look on
-        # the page's thread would take the CPU the job needs.
-        rec = graph.recognise(frame, title=title, slow=not busy, ocr=not busy)
+        rec = graph.recognise(frame, title=title, slow=False, ocr=False)
+        if not busy and not any(c.verified and c.name == rec.here for c in rec.candidates):
+            with self._lock:
+                self._to_learn = frame
         here = rec.here
         percept = rec.percept
         full_look = percept is not None
@@ -342,11 +359,9 @@ class Debugger:
                               how=how, x=point[0] if point else None, y=point[1] if point else None,
                               forbidden=graph.screens[t.dst].forbidden))
         dialog = safety.inspect_dialog(frame)
-        buttons = find_buttons(frame)
+        # Drawn on the page, not acted on: found on a half-size frame.
+        buttons = find_buttons(cv2.resize(frame, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA))
 
-        scale = VIEW_WIDTH / w if w > VIEW_WIDTH else 1.0
-        small = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-        ok, jpeg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 82])
         chapter = rec.chapter
         return dict(
             width=w, height=h, here=here, title=title, title_box=title_box,
@@ -364,13 +379,12 @@ class Debugger:
                          screens=profile.screen_names(), bases=sorted(known_bases)),
             dialog=dict(present=dialog.present, spends_cat_food=dialog.spends_cat_food),
             analysis_ms=round((time.monotonic() - started) * 1000),
-            jpeg=jpeg.tobytes() if ok else b"",
         )
 
     def state(self) -> dict:
         with self._lock:
             snap = self._snaps.get(self._latest)
-        view = {k: v for k, v in snap.items() if k != "jpeg"} if snap else None
+        view = dict(snap) if snap else None
         route = None
         if view and view["here"] and self.nav["target"] and view["here"] != self.nav["target"]:
             try:
@@ -389,10 +403,9 @@ class Debugger:
     def jpeg(self, version: int | None) -> bytes | None:
         with self._lock:
             live = self._live
-            if live and (version is None or version == live[0]):
+            if live and version is None:
                 return live[2]
-            snap = self._snaps.get(version if version is not None else self._latest)
-            return snap["jpeg"] if snap else None
+            return self._recent.get(version)
 
     # -- navigation --------------------------------------------------------------
 
