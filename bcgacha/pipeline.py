@@ -502,7 +502,10 @@ class GoalRun:
                 self.account.save()
         if verdict == "no draw":
             return "the draw tap had no effect; nothing was spent or moved"
-        new = step.cat_id not in self.owned_index.owned and verdict == "match"
+        # An unread draw moved the position as the planned cat, so it is owned
+        # as that cat too: otherwise a pick already pulled stays a target and
+        # a platinum ticket goes on it again.
+        new = step.cat_id not in self.owned_index.owned and verdict in ("match", "unverified")
         if new:
             self.owned_index.owned.add(step.cat_id)
             self.owned_index.save()
