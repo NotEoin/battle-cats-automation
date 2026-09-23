@@ -268,16 +268,39 @@ def perceive(frame: np.ndarray, ocr) -> Percept:
 
 
 def reward_ok(frame: np.ndarray, ocr) -> tuple[float, float] | None:
-    """Where to press OK on a "<cat> unlocked! You got N Cat Food!" popup,
-    only once its text says that is what it is; None otherwise.
+    """Where to press OK on a notice that only informs -- "<cat> unlocked! You
+    got N Cat Food!", or Storage's "All of the possible Cat Capsules have been
+    used." -- only once its text says so; None otherwise.
 
     The popup leaves the screen behind it readable, so the screen still reads
     as whatever it was -- it is found by its words. Its OK sits right above
     other text, so the OK is taken as its own piece, not as a joined line.
     """
     texts = read_texts(frame, ocr)
-    said = " ".join(t.text for t in texts).lower()
-    if "unlocked" not in said or "cat food" not in said:
+
+    def flat(t):
+        return t.text.lower().replace(" ", "")      # OCR drops the spaces: "havebeenused"
+
+    # Never on a capsule screen: its banner art can say "Unlocked!", and the
+    # gold beside its draw button is the Starter Special -- 750 Cat Food.
+    if any("tryonce" in flat(t) for t in texts):
+        return None
+    # The notice's words must sit in one line of text, not be gathered from
+    # around the screen.
+    message = [t for t in texts if ("unlocked" in flat(t) and "yougot" in flat(t))
+               or "havebeenused" in flat(t)]
+    if not message:
         return None
     ok = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("ok", "0k")), None)
-    return ok.centre if ok else None
+    if ok is not None:
+        return ok.centre
+    # Its Ok is not always legible: take the gold button right under the
+    # message and overlapping it -- never one on the screen's bottom row,
+    # where Storage keeps Use all and Exchange all.
+    x0 = min(t.box[0] for t in message)
+    x1 = max(t.box[2] for t in message)
+    below = max(t.box[3] for t in message)
+    pills = [b for b in find_buttons(frame)
+             if below < b.y < min(below + 0.25, 0.82) and x0 - 0.05 <= b.x <= x1 + 0.2]
+    best = min(pills, key=lambda b: b.y - below, default=None)
+    return (best.x, best.y) if best else None

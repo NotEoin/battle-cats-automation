@@ -166,3 +166,29 @@ def test_a_large_change_is_a_changed_screen():
     after = before.copy()
     after[:, :1266] = 255
     assert frame_changed(before, after)
+
+
+def test_a_capsule_screen_is_never_taken_for_an_unlock_notice(monkeypatch):
+    """Banner art saying "Unlocked!" and the Cat Food counter must not make the
+    capsule screen a notice: the gold beside its draw button is the 750 Cat
+    Food Starter Special."""
+    from bcgacha import perception
+
+    texts = [perception.Text("Uhin Talents Unlocked!", (0.55, 0.47, 0.70, 0.53), 0.9),
+             perception.Text("Try once!", (0.61, 0.71, 0.73, 0.77), 0.9),
+             perception.Text("Cat Food", (0.75, 0.92, 0.80, 0.95), 0.9)]
+    monkeypatch.setattr(perception, "read_texts", lambda frame, ocr: texts)
+    frame = np.zeros((1170, 2532, 3), np.uint8)
+    assert perception.reward_ok(frame, None) is None
+
+
+def test_an_unlock_notice_is_answered_at_its_own_ok(monkeypatch):
+    """The reward line and its OK, read as their own pieces."""
+    from bcgacha import perception
+
+    texts = [perception.Text("Sakura the Cat unlocked! You got 5 Cat Food!", (0.29, 0.42, 0.71, 0.47), 0.9),
+             perception.Text("OK", (0.59, 0.59, 0.64, 0.64), 0.9)]
+    monkeypatch.setattr(perception, "read_texts", lambda frame, ocr: texts)
+    frame = np.zeros((1170, 2532, 3), np.uint8)
+    x, y = perception.reward_ok(frame, None)
+    assert abs(x - 0.615) < 0.01 and abs(y - 0.615) < 0.01

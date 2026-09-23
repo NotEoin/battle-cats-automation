@@ -124,11 +124,18 @@ def drain_storage(ctx: Context) -> bool:
     nav._tap(*use_all.tap, 1.5)
     from .perception import read_texts
 
-    for _ in range(4):
+    quiet = 0
+    for _ in range(8):
         texts = read_texts(ctx.session.screenshot(), ctx.ocr)
         answer = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("yes", "ok")), None)
         if answer is None:
-            break
+            # Activating takes a moment before its closing notice appears.
+            quiet += 1
+            if quiet >= 3:
+                break
+            time.sleep(1.0)
+            continue
+        quiet = 0
         # Only the dialog's own words count: the Storage screen always shows
         # "Exchange all for NP/XP" along its bottom, beside Use all.
         question = [t for t in texts if 0.08 < t.centre[1] < answer.centre[1] - 0.02
@@ -590,6 +597,7 @@ class GoalRun:
                         s.reason = "could not empty Cat Storage"
                         break
                     self.account.storage_used = 0
+                    self.account.save()
                 reason = self.roll_once(step)
                 self._publish_state()
                 if reason:
