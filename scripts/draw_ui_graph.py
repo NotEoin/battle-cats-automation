@@ -324,13 +324,11 @@ def _clip(box, frm, to):
 
 # -- the drawing ----------------------------------------------------------------------
 
-def anchors_text(screen) -> str:
-    bits = []
-    if screen.anchors:
-        bits.append(f"{len(screen.anchors)} anchor" + ("s" if len(screen.anchors) > 1 else ""))
-    if screen.absent:
-        bits.append(f"{len(screen.absent)} absent")
-    text = " · ".join(bits) or "no anchors"
+def evidence_text(screen) -> str:
+    """What else, besides its title, the screen is recognised by: text and shapes."""
+    bits = list(screen.marks) + [f"not {m}" for m in screen.absent_marks]
+    bits += [f"{shape} shape" for shape in screen.shapes]
+    text = " · ".join(bits) or ("title only" if screen.title else "nothing")
     return f"off limits · {text}" if screen.forbidden else text
 
 
@@ -471,7 +469,7 @@ def render_svg(graph: UIGraph, svg_id: str = "map") -> Drawing:
         s = screens[name]
         cls = ["node"] + (["reactive"] if s.reactive else []) + \
               (["forbidden"] if s.forbidden else []) + (["hub"] if name == HUB else [])
-        aria = f"{name}: title {title_text(s)}, {anchors_text(s)}" + (f". {s.note}" if s.note else "")
+        aria = f"{name}: title {title_text(s)}, {evidence_text(s)}" + (f". {s.note}" if s.note else "")
         x, y, w, h = box(name)
         cx = x + w / 2
         out = [f'<g class="{" ".join(cls)}" data-id="{name}" tabindex="0" role="button" '
@@ -483,7 +481,7 @@ def render_svg(graph: UIGraph, svg_id: str = "map") -> Drawing:
             mid = (BUS_TOP + min(bus_bot, BUS_BOT)) / 2 + 30
             out += [_text("node-id", cx, y + 30, name),
                     _text(ocr_cls, cx, y + 47, title_text(s), extra=f' data-max="{w - 10}"'),
-                    _text("node-ev", cx, y + 61, anchors_text(s), extra=f' data-max="{w - 10}"'),
+                    _text("node-ev", cx, y + 61, evidence_text(s), extra=f' data-max="{w - 10}"'),
                     f'<text class="hub-note" x="{cx}" y="{mid}" text-anchor="middle" '
                     f'transform="rotate(-90 {cx} {mid})">home · every screen routes back here</text>']
         elif name in sizes:
@@ -502,7 +500,7 @@ def render_svg(graph: UIGraph, svg_id: str = "map") -> Drawing:
             cy = y + h / 2
             out += [_text("node-id", cx, cy - 9, name),
                     _text(ocr_cls, cx, cy + 6, title_text(s), extra=f' data-max="{w - 16}"'),
-                    _text("node-ev", cx, cy + 20, anchors_text(s), extra=f' data-max="{w - 16}"')]
+                    _text("node-ev", cx, cy + 20, evidence_text(s), extra=f' data-max="{w - 16}"')]
             if s.forbidden:
                 out.append(_noentry(x + 15, cy - 13))
         out.append("</g>")
@@ -555,7 +553,9 @@ def map_data(graph: UIGraph) -> dict:
                     routes[f"{a}>{b}"] = None
 
     def control(t):
-        return (t.src, round(t.x, 3), round(t.y, 3))
+        # What is pressed: the named target where there is one; the recorded
+        # point is only one device's hint.
+        return (t.src, t.target or (round(t.x, 3), round(t.y, 3)))
 
     siblings = {i: [j for j, u in enumerate(trans) if j != i and not t.action and not u.action
                     and control(u) == control(t) and u.dst != t.dst]
@@ -564,11 +564,12 @@ def map_data(graph: UIGraph) -> dict:
                                    else len(routes[f"{n}>{HUB}"]))
             for n in screens}
     return dict(
-        screens={n: dict(title=s.title, anchors=list(s.anchors), absent=list(s.absent),
-                         forbidden=s.forbidden, reactive=s.reactive, note=s.note)
+        screens={n: dict(title=s.title, marks=list(s.marks), absent_marks=list(s.absent_marks),
+                         shapes=list(s.shapes), forbidden=s.forbidden, reactive=s.reactive,
+                         note=s.note)
                  for n, s in screens.items()},
         transitions=[dict(src=t.src, dst=t.dst, x=t.x, y=t.y, label=t.label,
-                          settle=t.settle, action=t.action) for t in trans],
+                          settle=t.settle, action=t.action, target=t.target) for t in trans],
         routes=routes, home=home, siblings=siblings,
     )
 
@@ -608,7 +609,8 @@ def build_page(graph: UIGraph) -> tuple[str, list[str]]:
 
     screen_rows = "".join(
         "<tr>" + td(n, "mono") + td(title_text(s) if s.title else "—")
-        + td(", ".join(s.anchors) or "—", "mono") + td(", ".join(s.absent) or "—", "mono")
+        + td(", ".join(s.marks) or "—") + td(", ".join(s.absent_marks) or "—")
+        + td(", ".join(s.shapes) or "—")
         + td(", ".join(flags(n, s)) or "—")
         + td("—" if data["home"][n] is None else data["home"][n], "num")
         + td(s.note or "—") + "</tr>"
@@ -616,7 +618,8 @@ def build_page(graph: UIGraph) -> tuple[str, list[str]]:
     trans_rows = "".join(
         "<tr>" + td(i, "num") + td(t.src, "mono") + td(t.label) + td(t.dst, "mono")
         + td("routine" if t.action else "tap")
-        + td(t.action if t.action else f"({t.x:.3f}, {t.y:.3f})", "mono")
+        + td(t.action if t.action else (f"{t.target} · hint " if t.target else "")
+             + f"({t.x:.3f}, {t.y:.3f})", "mono")
         + td(f"{t.settle:.1f}", "num") + "</tr>"
         for i, t in enumerate(trans))
     n_routine = sum(bool(t.action) for t in trans)

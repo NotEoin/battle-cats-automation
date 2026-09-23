@@ -60,6 +60,7 @@ button.stop { border-color: var(--critical); }
 .cands li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-top: 1px solid var(--hair); }
 .cands li:first-child { border-top: 0; }
 .cands .num { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.cands .shape { font-family: var(--font); color: var(--muted); }
 .exits { margin: 0; padding: 0; list-style: none; font-size: 12.5px; display: grid; gap: 5px; }
 .exits li { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 8px; align-items: baseline; }
 .exits .sw { width: 10px; height: 10px; border-radius: 50%; background: var(--ov-exit); }
@@ -72,6 +73,8 @@ button.stop { border-color: var(--critical); }
   font-variant-ligatures: none; white-space: pre-wrap; color: var(--ink-2);
 }
 .message { font-size: 13px; color: var(--ink-2); }
+.how { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+.layers .opt { margin-left: auto; }
 
 .mapcard { margin-top: 16px; }
 .maphead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding: 12px 16px; border-bottom: 1px solid var(--hair); }
@@ -104,11 +107,12 @@ button.stop { border-color: var(--critical); }
         <div class="empty" id="empty">Waiting for the first frame…</div>
       </div>
       <div class="layers" role="group" aria-label="Overlay layers">
-        <label><input type="checkbox" id="l-exits" checked><span class="key" style="border-color: var(--ov-exit)"></span>Exits: transition taps from this screen</label>
-        <label><input type="checkbox" id="l-buttons" checked><span class="key" style="border-color: var(--ov-button)"></span>Gold buttons (find_buttons)</label>
-        <label><input type="checkbox" id="l-anchors" checked><span class="key" style="border-color: var(--ov-anchor)"></span>Anchors that match</label>
-        <label><input type="checkbox" id="l-misses"><span class="key" style="border-color: #c3c2b7; border-style: dashed"></span>Anchors that don't</label>
-        <label><input type="checkbox" id="l-title" checked><span class="key" style="border-color: #fff; border-style: dashed"></span>OCR title box</label>
+        <label><input type="checkbox" id="l-exits" checked><span class="key" style="border-color: var(--ov-exit)"></span>Exits: where each transition will tap</label>
+        <label><input type="checkbox" id="l-learned" checked><span class="key" style="border-color: var(--ov-anchor)"></span>Learned controls (template found)</label>
+        <label><input type="checkbox" id="l-perceived" checked><span class="key" style="border-color: var(--ov-button)"></span>Perceived controls (OCR + shape)</label>
+        <label><input type="checkbox" id="l-title" checked><span class="key" style="border-color: #fff; border-style: dashed"></span>Title box and Cat Base door</label>
+        <label><input type="checkbox" id="l-buttons"><span class="key" style="border-color: #c3c2b7; border-style: dotted"></span>Raw gold shapes</label>
+        <label class="opt"><input type="checkbox" id="o-full"> Full look every frame (slow)</label>
       </div>
     </div>
 
@@ -116,14 +120,20 @@ button.stop { border-color: var(--critical); }
       <section class="card">
         <h2>Identified as</h2>
         <div class="here-name" id="here">–</div>
+        <p class="how" id="how"></p>
         <dl class="kv" id="here-kv"></dl>
         <div id="dialog"></div>
         <h2 style="margin-top: 12px">Candidates</h2>
+        <p class="how">&#x2713; every piece of evidence checked, ? some not yet. A screen with no text read (&ldquo;shape only&rdquo;, &ldquo;nothing read&rdquo;) is never named.</p>
         <ul class="cands" id="cands"></ul>
       </section>
       <section class="card">
         <h2>Exits from here</h2>
         <ul class="exits" id="exits"></ul>
+      </section>
+      <section class="card">
+        <h2>This device</h2>
+        <dl class="kv" id="device"></dl>
       </section>
       <section class="card">
         <h2>Navigator log</h2>
@@ -148,7 +158,7 @@ button.stop { border-color: var(--critical); }
   const $ = id => document.getElementById(id);
   const overlay = $('overlay');
   const img = $('frame');
-  const layers = ['exits', 'buttons', 'anchors', 'misses', 'title'];
+  const layers = ['exits', 'learned', 'perceived', 'title', 'buttons'];
   // The map is replaced whenever the server draws a new one -- during a
   // carousel scan, after every saga and chapter it reads.
   let D = JSON.parse($('map-data').textContent);
@@ -197,50 +207,62 @@ button.stop { border-color: var(--critical); }
     return e;
   }
   const on = name => $('l-' + name).checked;
+  const upper = text => text[0].toUpperCase() + text.slice(1);
+
+  // Which chapter's Cat Base this is, or why that is not known.
+  function chapterText(v) {
+    const b = v.base;
+    if (v.chapter) return v.chapter_title;
+    if (!b.learned) return 'no backgrounds learned on this device yet';
+    if (!b.door) return 'door not placed: Start!! and Equip not found';
+    const near = b.nearest.map(n => `${n.note} at ${n.distance === null ? '?' : n.distance.toFixed(3)}`);
+    return `no learned background matches (a match is within ${b.match}); nearest ${near.join(', then ')}`;
+  }
 
   // -- overlay: coordinates are frame fractions, drawn into a 1000-wide box ----
   function drawOverlay(v) {
     const W = 1000, H = Math.round(1000 * v.height / v.width);
     overlay.setAttribute('viewBox', `0 0 ${W} ${H}`);
     overlay.replaceChildren();
-    const rect = (x, y, w, hgt, colour, dash) => {
-      const a = { x: x * W, y: y * H, width: w * W, height: hgt * H };
+    const rect = (b, colour, dash) => {
+      const a = { x: b[0] * W, y: b[1] * H, width: (b[2] - b[0]) * W, height: (b[3] - b[1]) * H };
       overlay.append(s('rect', { ...a, class: 'ov-under' }));
       overlay.append(s('rect', { ...a, class: 'ov-box', style: `stroke: ${colour}`, 'stroke-dasharray': dash || '' }));
     };
     const label = (x, y, text, anchor = 'start') =>
       overlay.append(s('text', { x: x * W, y: y * H, class: 'ov-label', 'text-anchor': anchor }, text));
 
+    if (on('buttons')) for (const b of v.buttons) rect([b.x, b.y, b.x + b.w, b.y + b.h], '#c3c2b7', '2 3');
     if (on('title')) {
-      const [x0, y0, x1, y1] = v.title_box;
-      rect(x0, y0, x1 - x0, y1 - y0, '#ffffff', '6 4');
-      label(x0 + 0.004, y1 + 0.045, v.title ? `OCR: “${v.title}”` : 'OCR: nothing read');
-    }
-    for (const a of v.anchors) {
-      if (a.hit ? !on('anchors') : !on('misses')) continue;
-      const [x0, y0, x1, y1] = a.box;
-      rect(x0, y0, x1 - x0, y1 - y0, a.hit ? 'var(--ov-anchor)' : '#c3c2b7', a.hit ? '' : '4 4');
-      label(x0 + 0.003, y0 - 0.008, `${a.name} ${a.score.toFixed(2)}`);
-    }
-    if (on('buttons')) for (const b of v.buttons) {
-      rect(b.x, b.y, b.w, b.h, 'var(--ov-button)');
-      label(b.x + 0.003, b.y + b.h - 0.012, `fill ${Math.round(b.fill * 100)}%`);
-    }
-    if (on('exits')) {
-      for (const e of v.exits) {
-        if (e.action) continue;
-        const cx = e.x * W, cy = e.y * H;
-        overlay.append(s('circle', { cx, cy, r: 11, fill: 'none', stroke: 'rgba(0,0,0,.7)', 'stroke-width': 5 }));
-        overlay.append(s('circle', { cx, cy, r: 11, style: `stroke: var(--ov-exit); fill: ${e.on_button ? 'var(--ov-exit)' : 'none'}`, 'fill-opacity': 0.35, 'stroke-width': 3 }));
-        const text = `${e.label} → ${e.dst}${e.forbidden ? ' (off limits)' : ''}`;
-        const right = e.x > 0.7;
-        overlay.append(s('text', { x: cx + (right ? -16 : 16), y: cy + 5, class: 'ov-label', 'text-anchor': right ? 'end' : 'start' }, text));
+      if (v.title_box) {
+        rect(v.title_box, '#ffffff', '6 4');
+        // A full look reads the title anywhere top-left, not through this box.
+        const read = v.title_from === 'full look' ? 'title (full look)' : 'title';
+        label(v.title_box[0] + 0.004, v.title_box[3] + 0.045, v.title ? `${read}: \u201c${v.title}\u201d` : `${read}: nothing read`);
       }
-      if (v.back) {
-        const [bx, by] = v.back;
-        overlay.append(s('circle', { cx: bx * W, cy: by * H, r: 16, fill: 'none', style: 'stroke: var(--ov-exit)', 'stroke-width': 2, 'stroke-dasharray': '4 3' }));
-        label(bx + 0.02, by - 0.035, 'back arrow');
+      if (v.door) {
+        rect(v.door, '#ffffff', '');
+        label(v.door[0], v.door[3] + 0.04, v.chapter ? `door: ${v.chapter}`
+          : v.base && v.base.learned ? 'door: no learned background matches' : 'door: none learned yet');
       }
+    }
+    if (on('perceived')) for (const c of v.perceived) {
+      if (c.kind === 'tag' && !v.exits.some(e => e.target && c.label.toLowerCase().includes(e.target.toLowerCase()))) continue;
+      rect(c.box, 'var(--ov-button)', c.kind === 'tag' ? '5 3' : '');
+      label(c.box[0] + 0.003, c.box[1] - 0.008, `${c.label} \u00b7 ${c.kind}`);
+    }
+    if (on('learned')) for (const c of v.learned) {
+      rect(c.box, c.found ? 'var(--ov-anchor)' : '#c3c2b7', c.found ? '' : '4 4');
+      if (!on('perceived') || !v.perceived.length) label(c.box[0] + 0.003, c.box[1] - 0.008, `${c.label}${c.found ? ' ' + c.score.toFixed(2) : ' (not found)'}`);
+    }
+    if (on('exits')) for (const e of v.exits) {
+      if (e.x === null) continue;
+      const cx = e.x * W, cy = e.y * H;
+      overlay.append(s('circle', { cx, cy, r: 11, fill: 'none', stroke: 'rgba(0,0,0,.7)', 'stroke-width': 5 }));
+      overlay.append(s('circle', { cx, cy, r: 11, style: 'stroke: var(--ov-exit); fill: var(--ov-exit)', 'fill-opacity': 0.35, 'stroke-width': 3 }));
+      const right = e.x > 0.7;
+      overlay.append(s('text', { x: cx + (right ? -16 : 16), y: cy + 5, class: 'ov-label', 'text-anchor': right ? 'end' : 'start' },
+        `${e.label} \u2192 ${e.dst}${e.forbidden ? ' (off limits)' : ''}`));
     }
   }
 
@@ -249,13 +271,18 @@ button.stop { border-color: var(--critical); }
     const here = $('here');
     here.textContent = v.here || 'Not on the map';
     here.className = 'here-name' + (v.here ? '' : ' unknown');
+    $('how').textContent = `${v.how} \u00b7 ${v.analysis_ms} ms`;
     const sc = v.here ? D.screens[v.here] : null;
-    const rows = [['OCR read', v.title ? `“${v.title}”` : 'nothing']];
+    const rows = [['Title read', v.title_from === null ? 'no title box placed yet'
+      : `${v.title ? `\u201c${v.title}\u201d` : 'nothing'} (${v.title_from})`]];
+    if (v.base) rows.push(['Chapter', chapterText(v)]);
     if (sc) {
-      rows.push(['Expects title', sc.title ? `“${sc.title}”` : 'none (anchors only)']);
-      rows.push(['Anchors', sc.anchors.join(', ') || '—']);
-      if (sc.absent.length) rows.push(['Must be absent', sc.absent.join(', ')]);
-      if (sc.note) rows.push(['Note', sc.note]);
+      if (sc.title) rows.push(['Expects title', `\u201c${sc.title}\u201d`]);
+      if (sc.marks && sc.marks.length) rows.push(['Needs text', sc.marks.join(', ')]);
+      if (sc.absent_marks && sc.absent_marks.length) rows.push(['Must lack', sc.absent_marks.join(', ')]);
+      if (sc.shapes && sc.shapes.length) rows.push(['Needs shape', sc.shapes.join(', ')]);
+      const found = v.learned.filter(c => c.found).length;
+      rows.push(['Learned controls', v.learned.length ? `${found} of ${v.learned.length} found by template` : 'none yet']);
     } else {
       rows.push(['Navigator', 'would tap the back arrow and look again']);
     }
@@ -265,16 +292,28 @@ button.stop { border-color: var(--critical); }
     $('dialog').replaceChildren(v.dialog.present
       ? h('p', 'warn', `Dialog up${v.dialog.spends_cat_food ? ': it would spend Cat Food' : ''}. The navigator answers No.`)
       : '');
-    const cands = $('cands');
-    cands.replaceChildren(...(v.candidates.length
-      ? v.candidates.map(c => h('li', null, h('span', 'mono', c.name), h('span', 'num', c.score.toFixed(1))))
+    $('cands').replaceChildren(...(v.candidates.length
+      ? v.candidates.map(c => h('li', null,
+          // Unread evidence can only be shapes: a score without text is a shape's.
+          h('span', 'mono', `${c.verified ? '\u2713' : '?'} ${c.name}`,
+            c.read ? null : h('span', 'shape', c.score > 0 ? ' \u00b7 shape only' : ' \u00b7 nothing read')),
+          h('span', 'num', c.score.toFixed(1))))
       : [h('li', null, 'No screen fits this frame')]));
-    const exits = $('exits');
-    exits.replaceChildren(...(v.exits.length ? v.exits.map(e => {
-      const sw = h('span', 'sw' + (e.action ? ' routine' : e.on_button ? '' : ' off'));
-      const where = e.action ? `routine ${e.action}` : `tap (${e.x.toFixed(3)}, ${e.y.toFixed(3)})${e.on_button ? ' on a detected button' : ', no button detected there'}`;
-      return h('li', null, sw, h('div', null, h('b', null, e.label), ' → ', h('span', 'mono', e.dst), e.forbidden ? ' (off limits)' : '', h('div', 'meta', where)));
+    $('exits').replaceChildren(...(v.exits.length ? v.exits.map(e => {
+      const sw = h('span', 'sw' + (e.action ? ' routine' : e.how === 'learned template' ? '' : ' off'));
+      const where = e.action ? `routine ${e.action}` : e.x === null ? `${e.target}: not found on screen`
+        : `${e.target || 'tap'} \u00b7 ${e.how} at (${e.x.toFixed(3)}, ${e.y.toFixed(3)})`;
+      return h('li', null, sw, h('div', null, h('b', null, e.label), ' \u2192 ', h('span', 'mono', e.dst), e.forbidden ? ' (off limits)' : '', h('div', 'meta', where)));
     }) : [h('li', null, v.here ? 'No transitions recorded from this screen.' : 'Unknown screen: no recorded exits.')]));
+    const p = v.profile;
+    const dev = $('device');
+    dev.replaceChildren();
+    for (const [k, val] of [
+      ['Profile', p.key],
+      ['Title box', p.title_box ? p.title_box.map(n => n.toFixed(3)).join(', ') : 'not placed yet'],
+      [`Screens learned (${p.screens.length})`, p.screens.join(', ') || 'none yet'],
+      [`Backgrounds (${p.bases.length})`, p.bases.join(', ') || 'none yet'],
+    ]) dev.append(h('dt', null, k), h('dd', null, val));
   }
 
   // -- map ----------------------------------------------------------------------
@@ -298,9 +337,9 @@ button.stop { border-color: var(--critical); }
     $('conn-text').textContent = state.error ? state.error : state.mode === 'replay' ? 'replaying saved frames' : 'device connected';
     const v = state.view;
     $('stop').disabled = !state.nav.running;
-    const scanning = state.nav.target === 'carousel scan';
-    if (state.nav.running) $('message').textContent = scanning ? 'Scanning the saga and chapter carousels…' : `Navigating to ${state.nav.target}…`;
-    else if (state.nav.result) $('message').textContent = scanning ? `Carousel scan: ${state.nav.result}` : `Last walk to ${state.nav.target}: ${state.nav.result}`;
+    const job = state.nav.job;
+    if (state.nav.running) $('message').textContent = job ? `${upper(job)}…` : `Navigating to ${state.nav.target}…`;
+    else if (state.nav.result) $('message').textContent = job ? `${upper(job)}: ${state.nav.result}` : `Last walk to ${state.nav.target}: ${state.nav.result}`;
     $('log').textContent = state.log.join('\n');
     drawMap(state);
     if (!v) return;
@@ -340,6 +379,7 @@ button.stop { border-color: var(--critical); }
 
   $('stop').addEventListener('click', () => post('/api/stop'));
   $('scan').addEventListener('click', () => post('/api/scan'));
+  $('o-full').addEventListener('change', ev => post('/api/options', { full_look: ev.target.checked }));
   for (const name of layers) $('l-' + name).addEventListener('change', () => state && state.view && drawOverlay(state.view));
 
   // Evidence lines on the map shrink to fit their box once the fonts are in.

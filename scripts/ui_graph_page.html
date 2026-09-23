@@ -101,7 +101,7 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
   <header>
     <p class="eyebrow">bcgacha · data/ui_graph.json · {{COMMIT}} · {{DATE}}</p>
     <h1>Battle Cats Screen Map</h1>
-    <p class="lede">The map the bot navigates by. It never trusts a remembered position. At every step it identifies the screen from the frame itself, using OCR on the top-left title and template anchors that must or must not match, then takes the first hop of the fewest-taps route to its goal. A screen it can't place gets the back arrow.</p>
+    <p class="lede">The map the bot navigates by. It never trusts a remembered position. At every step it identifies the screen from the frame itself, by its title and the text and shapes that must or must not be on it, then takes the first hop of the fewest-taps route to its goal. A screen it can't place gets the back arrow.</p>
     <ul class="facts">
       <li><b>{{N_SCREENS}}</b> screens</li>
       <li><b>{{N_TRANS}}</b> transitions: {{N_TAP}} taps, {{N_ROUTINE}} routines</li>
@@ -121,7 +121,7 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
   </div>
 
   <ul class="legend" aria-label="Legend">
-    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="node"><rect class="box" x="1" y="3" width="42" height="16" rx="5"/></g></svg><span><b>Screen</b>: id, the OCR title identify() reads top-left, then its anchors</span></li>
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="node"><rect class="box" x="1" y="3" width="42" height="16" rx="5"/></g></svg><span><b>Screen</b>: id, its title, then the text and shapes that must be on screen</span></li>
     <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="node reactive"><rect class="box" x="1" y="3" width="42" height="16" rx="5"/></g></svg><span><b>Reactive</b>: appears on its own; the map records only ways out</span></li>
     <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="node forbidden"><rect class="box" x="1" y="3" width="42" height="16" rx="5"/><g class="noentry"><circle cx="11" cy="11" r="4.6"/><line x1="8" y1="14" x2="14" y2="8"/></g></g></svg><span><b>Off limits</b>: recognised, but route() never plans into it</span></li>
     <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="edge"><path class="line" d="M2 11 H38"/><polygon class="head" points="44,11 36.5,7.2 36.5,14.8"/></g></svg><span><b>Tap</b>, labelled with the control pressed</span></li>
@@ -134,7 +134,7 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
 
   <figure class="map">
     <div class="map-scroll">{{SVG}}</div>
-    <figcaption>All {{N_SCREENS}} screens and {{N_TRANS}} transitions in data/ui_graph.json. Each screen shows the title text identify() looks for in the top-left corner; screens without one are recognised by template anchors alone. Tap positions and settle times are in the tooltips and the table view.</figcaption>
+    <figcaption>All {{N_SCREENS}} screens and {{N_TRANS}} transitions in data/ui_graph.json. Each screen shows its title and the other text and shapes it is recognised by. None of it is a captured image: each device learns its own templates on first sight. Tap positions and settle times are in the tooltips and the table view.</figcaption>
   </figure>
 
   <div class="below">
@@ -153,12 +153,12 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
     <div class="table-wrap">
       <h3>Screens</h3>
       <table>
-        <thead><tr><th>Screen</th><th>Title (OCR)</th><th>Anchors (must match)</th><th>Absent (must not match)</th><th>Kind</th><th>Steps home</th><th>Note</th></tr></thead>
+        <thead><tr><th>Screen</th><th>Title (OCR)</th><th>Needs text</th><th>Must lack</th><th>Needs shape</th><th>Kind</th><th>Steps home</th><th>Note</th></tr></thead>
         <tbody>{{SCREEN_ROWS}}</tbody>
       </table>
       <h3>Transitions</h3>
       <table>
-        <thead><tr><th>#</th><th>From</th><th>Control</th><th>To</th><th>Type</th><th>Tap (x, y) or routine</th><th>Settle (s)</th></tr></thead>
+        <thead><tr><th>#</th><th>From</th><th>Control</th><th>To</th><th>Type</th><th>Press (hint x, y) or routine</th><th>Settle (s)</th></tr></thead>
         <tbody>{{TRANS_ROWS}}</tbody>
       </table>
     </div>
@@ -198,7 +198,9 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
   const f3 = n => n.toFixed(3);
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const touches = (i, id) => T[i].src === id || T[i].dst === id;
-  const how = t => t.action ? `routine ${t.action}` : `tap at (${f3(t.x)}, ${f3(t.y)})`;
+  const how = t => t.action ? `routine ${t.action}`
+    : t.target ? `press ${t.target.startsWith('@') ? 'the ' + t.target.slice(1) : '"' + t.target + '"'} (hint ${f3(t.x)}, ${f3(t.y)})`
+    : `tap at (${f3(t.x)}, ${f3(t.y)})`;
 
   function flagsOf(id) {
     const s = S[id], out = [];
@@ -211,8 +213,9 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
   function recognitionRows(s) {
     return [
       ['Title (OCR)', s.title ? `“${s.title}”` : '—'],
-      ['Anchors, all must match', s.anchors.length ? s.anchors.join(', ') : '—'],
-      ['Absent, none may match', s.absent.length ? s.absent.join(', ') : '—'],
+      ['Needs text', s.marks.length ? s.marks.join(', ') : '—'],
+      ['Must lack', s.absent_marks.length ? s.absent_marks.join(', ') : '—'],
+      ['Needs shape', s.shapes.length ? s.shapes.join(', ') : '—'],
     ];
   }
   function kv(rows) {

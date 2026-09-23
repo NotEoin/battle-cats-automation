@@ -1,24 +1,29 @@
 #!/usr/bin/env python3
 """Watch what the bot sees, and send it anywhere on the map.
 
-Serves a local page showing the live iPhone screen with what the vision code
-finds on it: the screen identify() settles on and the candidates it weighed,
-the OCR'd title box, every template anchor and its score, the gold controls
-find_buttons() segments, and the tap points of the transitions leaving the
-current screen. Under it sits the UI map; clicking a screen there runs
+Serves a local page showing the live iPhone screen with what recognition finds
+on it: the screen it settles on and the candidates it weighed, the title it
+read, the controls it has learned for this device and the ones a full look
+perceives, the Cat Base door it compares, and the tap points of the
+transitions leaving the current screen. Everything learned is logged as it is
+learned. Under it sits the UI map; clicking a screen there runs
 Navigator.goto() to it, and Stop aborts the walk before its next tap.
 
     python scripts/debug_ui.py                     # then open http://127.0.0.1:8765
     python scripts/debug_ui.py --replay captures/  # no device: cycle saved frames
 
 One device session is shared. While a walk runs the page shows the frames the
-navigator itself takes rather than competing with it for the screen.
+navigator itself takes rather than competing with it for the screen. Replayed
+frames learn into a fresh temporary folder unless --profiles says otherwise,
+never into state/devices, where a running bot keeps what it has learned.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
+import tempfile
 import threading
 import time
 import traceback
@@ -34,15 +39,15 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
 
-from bcgacha import carousel, safety, vision  # noqa: E402
-from bcgacha.uigraph import (  # noqa: E402
-    TITLE_BOX, Navigator, NoRoute, UIGraph, find_back_arrow, find_buttons,
-)
+from bcgacha import bases, carousel, safety, vision  # noqa: E402
+from bcgacha.profile import DEVICES_DIR  # noqa: E402
+from bcgacha.uigraph import Navigator, NoRoute, UIGraph, find_buttons  # noqa: E402
 import draw_ui_graph  # noqa: E402
 
 PAGE = HERE / "debug_ui.html"
 VIEW_WIDTH = 1280           # frames are downscaled to this for the browser
 KEEP_SNAPSHOTS = 4
+FRAME_SUFFIXES = {".png", ".jpg", ".jpeg"}
 
 
 class Stopped(RuntimeError):
@@ -106,8 +111,8 @@ class ReplaySession:
     def __init__(self, paths: list[Path]):
         files: list[Path] = []
         for p in paths:
-            files += sorted(p.glob("*.png")) if p.is_dir() else [p]
-        self.frames = [f for f in files if f.suffix.lower() in {".png", ".jpg", ".jpeg"}]
+            files += sorted(p.iterdir()) if p.is_dir() else [p]
+        self.frames = [f for f in files if f.suffix.lower() in FRAME_SUFFIXES]
         if not self.frames:
             raise SystemExit("--replay found no .png or .jpg frames")
         self._next = 0
@@ -124,42 +129,51 @@ class ReplaySession:
 
 
 class Debugger:
-    def __init__(self, session, graph: UIGraph, replay: bool, interval: float):
+    def __init__(self, session, replay: bool, interval: float, profile_root: Path | None = None):
         self.shared = SharedSession(session)
-        self.graph = graph
         self.replay = replay
         self.interval = interval
-        self.error: str | None = None
+        # Kept apart so a good frame cannot clear an analysis failure, nor a
+        # good analysis a dropped tunnel.
+        self.grab_error: str | None = None
+        self.analysis_error: str | None = None
+        self._failures: set = set()                 # analysis tracebacks already logged
         self.log_lines: deque[str] = deque(maxlen=200)
-        self.nav = dict(running=False, target=None, result=None)
+        # `job` names a background scan; a walk has a `target` instead.
+        self.nav = dict(running=False, target=None, job=None, result=None)
+        self.options = dict(full_look=False)
+        # Every graph built here learns under this root into these profiles,
+        # so the page, the navigator and a scan share one set of learning.
+        self.profile_root = profile_root
+        self._profiles: dict = {}
+        self.graph: UIGraph | None = None
         self._nav_graph: UIGraph | None = None      # its own OCR engine, not shared
         self._lock = threading.Lock()
         self._snaps: dict[int, dict] = {}
         self._latest = 0
         self._quit = threading.Event()
         self.map_version = 0
-        self._set_graph(graph)
+        self._set_graph(self._load())
+        self.log(f"learning device profiles into {profile_root or DEVICES_DIR}")
+
+    def _load(self, carousels: bool = True, ocr=None) -> UIGraph:
+        """The map, built as every graph here must be: under --profiles, into
+        the one set of profiles. `ocr` shares a loaded engine; without one the
+        graph loads its own when it first reads."""
+        graph = UIGraph.load(carousels=carousels)
+        graph.profile_root, graph._profiles, graph._ocr = self.profile_root, self._profiles, ocr
+        return graph
 
     def _set_graph(self, graph: UIGraph) -> None:
-        """Adopt a new map: identification, the drawing and the page all follow."""
-        if self.graph is not graph and self.graph._ocr is not None:
+        """Adopt a new map from _load(): identification, the drawing and the page all follow."""
+        if graph._ocr is None and self.graph is not None:
             graph._ocr = self.graph._ocr            # keep the loaded OCR engine
         self.graph = graph
         self._nav_graph = None
-        self._rebuild_usage()
         with self._lock:
             self.map_version += 1
             self.map = map_payload(graph, self.map_version)
             self.page = build_page(self.map).encode()
-
-    def _rebuild_usage(self) -> None:
-        """Which screens lean on each anchor, and which way."""
-        self.used_by: dict[str, list[str]] = {}
-        for s in self.graph.screens.values():
-            for a in s.anchors:
-                self.used_by.setdefault(a, []).append(s.name)
-            for a in s.absent:
-                self.used_by.setdefault(a, []).append(f"not {s.name}")
 
     def log(self, line: str) -> None:
         self.log_lines.append(f"{time.strftime('%H:%M:%S')} {line}")
@@ -177,9 +191,9 @@ class Debugger:
                 continue
             try:
                 self.shared.screenshot()
-                self.error = None
+                self.grab_error = None
             except Exception as exc:        # a dropped tunnel should not kill the page
-                self.error = f"screenshot failed: {exc}"
+                self.grab_error = f"screenshot failed: {exc}"
                 time.sleep(2)
                 continue
             time.sleep(self.interval)
@@ -194,8 +208,9 @@ class Debugger:
             try:
                 snap = self.analyse(frame)
             except Exception as exc:
-                self.error = f"analysis failed: {exc}"
+                self._analysis_failed(exc)
                 continue
+            self.analysis_error = None
             snap["version"], snap["taken_at"] = version, taken_at
             with self._lock:
                 self._snaps[version] = snap
@@ -203,42 +218,113 @@ class Debugger:
                     del self._snaps[old]
                 self._latest = version
 
-    def analyse(self, frame: np.ndarray) -> dict:
-        """Everything the bot can tell about one frame."""
-        started = time.monotonic()
-        h, w = frame.shape[:2]
-        title = self.graph.read_title(frame)
-        found = sorted(self.graph.candidates(frame, title=title), reverse=True)
-        here = found[0][1] if found else None
+    def _analysis_failed(self, exc: Exception) -> None:
+        # The message stays up until a frame analyses cleanly. The traceback is
+        # logged once per kind of failure and place it was raised: a bug hit on
+        # every frame would otherwise bury the log.
+        self.analysis_error = f"analysis failed: {type(exc).__name__}: {exc} (traceback in the log)"
+        where = (type(exc).__name__,
+                 tuple((f.filename, f.lineno) for f in traceback.extract_tb(exc.__traceback__)))
+        if where not in self._failures:
+            self._failures.add(where)
+            self.log(traceback.format_exc().rstrip())
 
-        anchors = []
-        for name, anchor in vision.ANCHORS.items():
-            score = vision.match(frame, anchor)
-            anchors.append(dict(name=name, box=anchor.box, score=round(score, 3),
-                                threshold=anchor.threshold, hit=score > anchor.threshold,
-                                used_by=self.used_by.get(name, [])))
-        buttons = find_buttons(frame)
+    def analyse(self, frame: np.ndarray) -> dict:
+        """Everything the bot can tell about one frame, and how it told."""
+        from bcgacha.perception import perceive
+
+        started = time.monotonic()
+        graph = self.graph                  # a scan may swap in a new map meanwhile
+        h, w = frame.shape[:2]
+        profile = graph.profile_for(frame)
+        if self.log not in profile.listeners:
+            profile.listeners.append(self.log)
+
+        # The title is read once, through the learned box, and handed to
+        # recognition, whose fast path goes on exactly that reading: the page
+        # then shows what identification saw, not a second OCR's guess.
+        title_box = profile.title_box
+        title = graph.read_title(frame, title_box, largest=True) if title_box else None
+        # The real recognition, learning included: the page shows the process.
+        rec = graph.recognise(frame, title=title)
+        here = rec.here
+        percept = rec.percept
+        full_look = percept is not None
+        if full_look:
+            title = percept.title.text if percept.title else ""    # what the full look went on
+        elif self.options["full_look"]:
+            percept = perceive(frame, graph.ocr)                    # shown, not needed
+        title_box = profile.title_box       # a full look may have just placed or widened it
+
+        learned = []
+        for key, entry in (profile.controls(here) if here else {}).items():
+            found = profile.find(frame, here, key)
+            learned.append(dict(key=key, label=entry.get("label", key), kind=entry.get("kind"),
+                                found=found is not None,
+                                box=list(found["box"]) if found else entry["box"],
+                                score=found["score"] if found else None))
+        perceived = [dict(label=c.label, kind=c.kind, box=list(c.box), tap=list(c.tap))
+                     for c in (percept.controls if percept else [])]
+
+        known_bases = profile.bases()
+        base = None
+        if here == "cat_base":
+            # Why the chapter is or is not known: nothing learned yet, the door
+            # not found, or learned doors that are all too far from this one.
+            nearest = []
+            if known_bases and rec.door:
+                sig = bases.signature(frame, rec.door)
+                nearest = sorted(
+                    (bases.distance(sig, s), name) for name, s in known_bases.items())[:2]
+            base = dict(learned=len(known_bases), door=rec.door is not None,
+                        match=bases.MATCH_DISTANCE,
+                        nearest=[dict(chapter=name, note=screen_note(graph, name),
+                                      distance=round(d, 4) if math.isfinite(d) else None)
+                                 for d, name in nearest])
+
         exits = []
-        for i, t in enumerate(self.graph.transitions):
-            if t.src != here:
+        for i, t in enumerate(graph.transitions):
+            if t.src != here or t.src == t.dst:
                 continue
-            on_button = not t.action and any(
-                b.left <= t.x <= b.left + b.w and b.top <= t.y <= b.top + b.h for b in buttons)
-            exits.append(dict(i=i, label=t.label, dst=t.dst, x=t.x, y=t.y, action=t.action,
-                              forbidden=self.graph.screens[t.dst].forbidden,
-                              on_button=on_button))
+            how, point = "routine", None
+            if not t.action:
+                if not t.target or t.target == "@card":
+                    how, point = "fixed point", (t.x, t.y)
+                else:
+                    found = profile.find(frame, here, t.target)
+                    control = percept.find(t.target) if (found is None and percept) else None
+                    if found:
+                        how, point = "learned template", found["tap"]
+                    elif control:
+                        how, point = "perception", control.tap
+                    elif t.x or t.y:
+                        how, point = "recorded hint", (t.x, t.y)
+                    else:
+                        how = "not found"
+            exits.append(dict(i=i, label=t.label, target=t.target, dst=t.dst, action=t.action,
+                              how=how, x=point[0] if point else None, y=point[1] if point else None,
+                              forbidden=graph.screens[t.dst].forbidden))
         dialog = safety.inspect_dialog(frame)
+        buttons = find_buttons(frame)
 
         scale = VIEW_WIDTH / w if w > VIEW_WIDTH else 1.0
         small = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
         ok, jpeg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 82])
+        chapter = rec.chapter
         return dict(
-            width=w, height=h, here=here, title=title, title_box=TITLE_BOX,
-            candidates=[dict(name=n, score=round(s, 1)) for s, n in found],
-            anchors=anchors,
+            width=w, height=h, here=here, title=title, title_box=title_box,
+            title_from=("full look" if full_look else "learned title box") if title is not None else None,
+            how="full look: OCR and shape segmentation" if full_look else "fast: learned title box and templates",
+            candidates=[dict(name=c.name, score=round(c.score, 1), verified=c.verified, read=c.read)
+                        for c in sorted(rec.candidates, key=lambda c: -c.score)],
+            learned=learned, perceived=perceived,
             buttons=[dict(x=b.left, y=b.top, w=b.w, h=b.h,
                           fill=round(b.area / max(b.w * w * b.h * h, 1), 2)) for b in buttons],
-            back=find_back_arrow(frame), exits=exits,
+            exits=exits, chapter=chapter,
+            chapter_title=screen_note(graph, chapter) if chapter else None,
+            door=list(rec.door) if rec.door else None, base=base,
+            profile=dict(key=profile.key, title_box=title_box,
+                         screens=profile.screen_names(), bases=sorted(known_bases)),
             dialog=dict(present=dialog.present, spends_cat_food=dialog.spends_cat_food),
             analysis_ms=round((time.monotonic() - started) * 1000),
             jpeg=jpeg.tobytes() if ok else b"",
@@ -255,8 +341,9 @@ class Debugger:
                 route = [index[id(t)] for t in self.graph.route(view["here"], self.nav["target"])]
             except NoRoute:
                 route = None
-        return dict(mode="replay" if self.replay else "device", error=self.error,
-                    map_version=self.map_version,
+        errors = [e for e in (self.grab_error, self.analysis_error) if e]
+        return dict(mode="replay" if self.replay else "device", error="; ".join(errors) or None,
+                    map_version=self.map_version, options=self.options,
                     now=time.time(), view=view, route=route, nav=dict(self.nav),
                     log=list(self.log_lines)[-80:])
 
@@ -277,18 +364,22 @@ class Debugger:
             return False, f"{dst} is off limits; the navigator never routes into it."
         with self._lock:
             if self.nav["running"]:
-                return False, f"Already navigating to {self.nav['target']}. Stop it first."
-            self.nav = dict(running=True, target=dst, result=None)
+                return False, f"{self._busy()}. Stop it first."
+            self.nav = dict(running=True, target=dst, job=None, result=None)
         self.shared.stop_requested.clear()
         threading.Thread(target=self._walk, args=(dst,), daemon=True).start()
         return True, f"Navigating to {dst}."
+
+    def _busy(self) -> str:
+        return (f"Busy {self.nav['job']}" if self.nav["job"]
+                else f"Already navigating to {self.nav['target']}")
 
     def _walk(self, dst: str) -> None:
         self.log(f"goto {dst}")
         result = "gave up"
         try:
             if self._nav_graph is None:
-                self._nav_graph = UIGraph.load()
+                self._nav_graph = self._load()
             if Navigator(self.shared, self._nav_graph).goto(dst, log=self.log):
                 result = "arrived"
         except Stopped:
@@ -299,49 +390,92 @@ class Debugger:
         finally:
             self.log(f"goto {dst}: {result}")
             with self._lock:
-                self.nav = dict(running=False, target=dst, result=result)
+                self.nav = dict(running=False, target=dst, job=None, result=result)
             self.shared.stop_requested.clear()
 
-    def scan(self) -> tuple[bool, str]:
-        """Read this save's sagas and chapters in the background, then redraw the map."""
+    def scan(self, rescan: bool = True) -> tuple[bool, str]:
+        """In the background, read this save's sagas and chapters -- again if
+        `rescan`, else only if none are saved -- and learn any Cat Base
+        backgrounds this device lacks. The map redraws as it grows."""
         if self.replay:
             return False, "Replay mode has no device, so it cannot scan."
+        scanning = rescan or carousel.load_catalogue() is None
+        job = ("scanning the saga and chapter carousels" if scanning
+               else "learning this device's Cat Base backgrounds")
         with self._lock:
             if self.nav["running"]:
-                return False, f"Busy with {self.nav['target']}. Stop it first."
-            self.nav = dict(running=True, target="carousel scan", result=None)
+                return False, f"{self._busy()}. Stop it first."
+            self.nav = dict(running=True, target=None, job=job, result=None)
         self.shared.stop_requested.clear()
-        threading.Thread(target=self._scan, daemon=True).start()
-        return True, "Scanning the saga and chapter carousels."
+        threading.Thread(target=self._scan, args=(rescan, scanning), daemon=True).start()
+        return True, f"{job[0].upper()}{job[1:]}."
 
-    def _scan(self) -> None:
-        self.log("scanning the saga and chapter carousels")
-        result = "failed"
+    def _scan(self, rescan: bool, scanning: bool) -> None:
+        job, result = self.nav["job"], "failed"
+
         def grow(catalogue: dict) -> None:
             # Every saga and chapter joins the map the moment it is read.
-            graph = UIGraph.load(carousels=False)
+            graph = self._load(carousels=False)
             carousel.extend(graph, catalogue)
             self._set_graph(graph)
 
         try:
-            carousel.ensure(self.shared, rescan=True, log=self.log, progress=grow)
-            self._set_graph(UIGraph.load())
-            result = "done; the map now has this save's sagas and chapters"
+            scan_graph = self._load(carousels=False, ocr=self.graph._ocr)
+            carousel.ensure(self.shared, rescan=rescan, log=self.log, progress=grow,
+                            graph=scan_graph)
+            if scanning:
+                self._set_graph(self._load())
+                result = "done; the map now has this save's sagas and chapters"
+            else:
+                result = "done"
         except Stopped:
             result = "stopped"
         except Exception as exc:
             result = f"error: {exc}"
             self.log(traceback.format_exc(limit=4).rstrip())
         finally:
-            self.log(f"carousel scan: {result}")
+            self.log(f"{job}: {result}")
             with self._lock:
-                self.nav = dict(running=False, target="carousel scan", result=result)
+                self.nav = dict(running=False, target=None, job=job, result=result)
             self.shared.stop_requested.clear()
+
+    def catch_up(self, rescan: bool = False) -> None:
+        """Once the device sends a frame, start a scan if this save's carousels
+        are not saved (or `rescan`), or if the device lacks any Cat Base
+        background they lead to: a new phone, or a chapter unlocked since."""
+        threading.Thread(target=self._catch_up, args=(rescan,), daemon=True).start()
+
+    def _catch_up(self, rescan: bool) -> None:
+        try:
+            catalogue = None if rescan else carousel.load_catalogue()
+            if catalogue is not None:
+                frame = None
+                while frame is None and not self._quit.is_set():
+                    frame, _, _ = self.shared.latest(0, timeout=5.0)
+                if frame is None:
+                    return
+                missing = carousel.missing_bases(self.graph, catalogue, frame)
+                if not missing:
+                    return
+                self.log(f"this device has yet to learn {len(missing)} Cat Base "
+                         f"background{'s' if len(missing) != 1 else ''}")
+            ok, message = self.scan(rescan=rescan)
+            if not ok:
+                self.log(f"startup scan not run: {message}")
+        except Exception:
+            self.log(traceback.format_exc(limit=4).rstrip())
 
     def stop(self) -> None:
         if self.nav["running"]:
             self.shared.stop_requested.set()
             self.log("stop requested; the walk ends before its next tap")
+
+
+def screen_note(graph: UIGraph, name: str) -> str:
+    """A chapter's saga, number and name, from its note; a screen the map
+    has lost since its background was learned is known only by name."""
+    screen = graph.screens.get(name)
+    return screen.note if screen and screen.note else name
 
 
 def map_payload(graph: UIGraph, version: int) -> dict:
@@ -410,6 +544,9 @@ def make_handler(dbg: Debugger):
             elif url.path == "/api/scan":
                 ok, message = dbg.scan()
                 self._json(200 if ok else 409, dict(ok=ok, message=message))
+            elif url.path == "/api/options":
+                dbg.options.update({k: bool(v) for k, v in body.items() if k in dbg.options})
+                self._json(200, dict(ok=True, message="", options=dbg.options))
             elif url.path == "/api/stop":
                 dbg.stop()
                 self._json(200, dict(ok=True, message="Stopping."))
@@ -419,13 +556,13 @@ def make_handler(dbg: Debugger):
     return Handler
 
 
-def serve(dbg: Debugger, host: str, port: int, scan: bool = False) -> None:
+def serve(dbg: Debugger, host: str, port: int, rescan: bool = False) -> None:
     dbg.start()
     server = ThreadingHTTPServer((host, port), make_handler(dbg))
-    if scan:
-        dbg.scan()
-    print(f"debug UI on http://{host}:{port}  ({'replay' if dbg.replay else 'device'})",
-          file=sys.stderr)
+    if not dbg.replay:
+        dbg.catch_up(rescan)
+    print(f"debug UI on http://{host}:{port}  ({'replay' if dbg.replay else 'device'}); "
+          f"learning device profiles into {dbg.profile_root or DEVICES_DIR}", file=sys.stderr)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -442,26 +579,33 @@ def main() -> int:
     ap.add_argument("--interval", type=float, default=0.3,
                     help="pause between frames while idle, seconds (default 0.3)")
     ap.add_argument("--replay", nargs="+", type=Path, metavar="PATH",
-                    help="PNG files or folders to cycle through instead of the device")
+                    help="PNG or JPEG frames, or folders of them, to cycle through "
+                         "instead of the device")
     ap.add_argument("--serial", help="device serial, if more than one is attached")
+    ap.add_argument("--profiles", type=Path, default=None, metavar="DIR",
+                    help="learn device profiles here instead of state/devices; with "
+                         "--replay, a fresh temporary folder unless given "
+                         "(an empty folder shows what a fresh device learns)")
     ap.add_argument("--rescan", action="store_true",
                     help="read the saga and chapter carousels again once serving")
     args = ap.parse_args()
 
     if args.replay:
-        graph = UIGraph.load()
-        serve(Debugger(ReplaySession(args.replay), graph, True, max(args.interval, 1.5)),
+        # Replayed frames learn as live ones do. Into state/devices that could
+        # overwrite what a bot running on the real device has learned.
+        profiles = args.profiles or Path(tempfile.mkdtemp(prefix="bcgacha-profiles-"))
+        serve(Debugger(ReplaySession(args.replay), True, max(args.interval, 1.5), profiles),
               args.host, args.port)
         return 0
 
     from bcgacha.session import DeviceSession
 
     with DeviceSession(args.serial) as session:
-        # This save's sagas and chapters are scanned the first time, in the
-        # background, so the page is up at once and shows the scan happening.
-        scan = args.rescan or carousel.load_catalogue() is None
-        serve(Debugger(session, UIGraph.load(), False, args.interval),
-              args.host, args.port, scan=scan)
+        # This save's sagas and chapters, and any Cat Base backgrounds this
+        # device lacks, are learned in the background, so the page is up at
+        # once and shows the learning happen.
+        serve(Debugger(session, False, args.interval, args.profiles),
+              args.host, args.port, rescan=args.rescan)
     return 0
 
 
