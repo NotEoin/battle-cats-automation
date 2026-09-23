@@ -47,6 +47,9 @@ import draw_ui_graph  # noqa: E402
 PAGE = HERE / "debug_ui.html"
 VIEW_WIDTH = 1280           # frames are downscaled to this for the browser
 KEEP_SNAPSHOTS = 4
+# While a job drives the phone, a frame is analysed at most this often. The
+# picture itself is sent as soon as it is taken, whatever this is.
+BUSY_ANALYSIS = 0.8
 FRAME_SUFFIXES = {".png", ".jpg", ".jpeg"}
 
 
@@ -151,6 +154,9 @@ class Debugger:
         self._lock = threading.Lock()
         self._snaps: dict[int, dict] = {}
         self._latest = 0
+        # The newest frame taken, by anyone, ready to send: the picture on the
+        # page never waits for analysis.
+        self._live: tuple[int, float, bytes] | None = None
         self._quit = threading.Event()
         self.map_version = 0
         # What the pipeline has found so far, by section, for the page.
@@ -188,6 +194,22 @@ class Debugger:
     def start(self) -> None:
         threading.Thread(target=self._grab, daemon=True).start()
         threading.Thread(target=self._analyse_loop, daemon=True).start()
+        threading.Thread(target=self._encode_loop, daemon=True).start()
+
+    def _encode_loop(self) -> None:
+        seen = 0
+        while not self._quit.is_set():
+            frame, version, taken_at = self.shared.latest(seen, timeout=1.0)
+            if frame is None or version == seen:
+                continue
+            seen = version
+            h, w = frame.shape[:2]
+            scale = VIEW_WIDTH / w if w > VIEW_WIDTH else 1.0
+            small = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+            ok, jpeg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 82])
+            if ok:
+                with self._lock:
+                    self._live = (version, taken_at, jpeg.tobytes())
 
     def _grab(self) -> None:
         while not self._quit.is_set():
@@ -210,8 +232,8 @@ class Debugger:
             if frame is None or version == seen:
                 continue
             seen = version
-            if self.nav["running"] and time.monotonic() - getattr(self, "_last_busy", 0.0) < 2.5:
-                continue        # a job is driving: show a frame now and then, not every one
+            if self.nav["running"] and time.monotonic() - getattr(self, "_last_busy", 0.0) < BUSY_ANALYSIS:
+                continue        # a job is driving: analyse a frame now and then, not every one
             self._last_busy = time.monotonic()
             try:
                 snap = self.analyse(frame)
@@ -252,12 +274,16 @@ class Debugger:
         # recognition, whose fast path goes on exactly that reading: the page
         # then shows what identification saw, not a second OCR's guess.
         title_box = profile.title_box
-        title = ((profile.known_text(frame, title_box) or graph.read_title(frame, title_box, largest=True))
-                 if title_box else None)
+        # While a job drives, no OCR at all: the job needs the CPU, and a
+        # screen it knows is named from remembered pictures alone.
+        busy = self.nav["running"]
+        title = profile.known_text(frame, title_box) if title_box else None
+        if title is None and title_box and not busy:
+            title = graph.read_title(frame, title_box, largest=True)
         # The real recognition, learning included: the page shows the process.
         # While a job drives the device, only the quick look: a full look on
         # the page's thread would take the CPU the job needs.
-        rec = graph.recognise(frame, title=title, slow=not self.nav["running"])
+        rec = graph.recognise(frame, title=title, slow=not busy, ocr=not busy)
         here = rec.here
         percept = rec.percept
         full_look = percept is not None
@@ -357,10 +383,14 @@ class Debugger:
                     map_version=self.map_version, options=self.options,
                     pipeline_version=self.pipeline_version,
                     now=time.time(), view=view, route=route, nav=dict(self.nav),
+                    live=dict(version=self._live[0], taken_at=self._live[1]) if self._live else None,
                     log=list(self.log_lines)[-80:])
 
     def jpeg(self, version: int | None) -> bytes | None:
         with self._lock:
+            live = self._live
+            if live and (version is None or version == live[0]):
+                return live[2]
             snap = self._snaps.get(version if version is not None else self._latest)
             return snap["jpeg"] if snap else None
 

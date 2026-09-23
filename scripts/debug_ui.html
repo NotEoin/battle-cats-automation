@@ -212,6 +212,7 @@ button.stop { border-color: var(--critical); }
   let D = JSON.parse($('map-data').textContent);
   let map, nodes, edges;
   let state = null, shownVersion = 0, mapVersion = D.version, fetchingMap = false;
+  let overlaidVersion = 0, panelVersion = 0, loading = false;
 
   function bindMap() {
     map = $('map');
@@ -390,20 +391,36 @@ button.stop { border-color: var(--critical); }
     else if (state.nav.result) $('message').textContent = job ? `${upper(job)}: ${state.nav.result}` : `Last walk to ${state.nav.target}: ${state.nav.result}`;
     $('log').textContent = state.log.join('\n');
     drawMap(state);
-    if (!v) return;
-    $('frame-age').textContent = `${Math.max(0, state.now - v.taken_at).toFixed(1)} s old`;
-    $('analysis-ms').textContent = `${v.analysis_ms} ms`;
-    if (v.version !== shownVersion) {
-      // Swap image and overlay together so the boxes never sit on another frame.
+    const live = state.live;
+    if (live) $('frame-age').textContent = `${Math.max(0, state.now - live.taken_at).toFixed(1)} s old`;
+    if (v) $('analysis-ms').textContent = `${v.analysis_ms} ms`;
+    // The picture is always the newest frame taken; the overlay is drawn only
+    // on the frame it was worked out from, so boxes never sit on another one.
+    if (live && live.version !== shownVersion && !loading) {
+      loading = true;
       const next = new Image();
       next.onload = () => {
         img.src = next.src;
         $('empty').hidden = true;
-        shownVersion = v.version;
-        drawOverlay(v);
-        drawPanel(v);
+        shownVersion = live.version;
+        overlaidVersion = 0;
+        overlay.replaceChildren();
+        loading = false;
+        fitOverlay();
       };
-      next.src = `/frame.jpg?v=${v.version}`;
+      next.onerror = () => { loading = false; };
+      next.src = `/frame.jpg?v=${live.version}`;
+    }
+    fitOverlay();
+  }
+
+  function fitOverlay() {
+    const v = state && state.view;
+    if (!v) return;
+    if (v.version !== panelVersion) { panelVersion = v.version; drawPanel(v); }
+    if (v.version === shownVersion && overlaidVersion !== v.version) {
+      overlaidVersion = v.version;
+      drawOverlay(v);
     }
   }
 
