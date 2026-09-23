@@ -15,18 +15,18 @@ FIXTURE_CAROUSELS = Path(__file__).resolve().parent / "fixtures" / "carousels.js
 
 
 @pytest.fixture(params=["base", "with-carousels"])
-def graph(request):
+def graph(request, tmp_path):
     """Every invariant holds for the base map and with a save's carousels on top."""
-    if request.param == "base":
-        return UIGraph.load(carousels=False)
-    return UIGraph.load(carousels=FIXTURE_CAROUSELS)
+    graph = UIGraph.load(carousels=False if request.param == "base" else FIXTURE_CAROUSELS)
+    graph.profile_root = tmp_path       # never the phone's own state/devices
+    return graph
 
 
 def test_every_screen_can_be_identified(graph):
     """A screen with neither a title nor anchors can never be recognised."""
     blind = [
         s.name for s in graph.screens.values()
-        if not s.title and not s.anchors and not s.forbidden
+        if not (s.title or s.marks or s.shapes) and not s.forbidden
     ]
     assert not blind, f"unidentifiable: {blind}"
 
@@ -148,11 +148,12 @@ def test_a_similar_title_does_not_pass_for_another():
     assert title_match("Rare Capsules", "Rare Capsules 3") >= TITLE_MATCH
 
 
-def test_a_notice_is_read_with_the_extra_words_on_its_line():
+def test_a_notice_is_read_with_the_extra_words_on_its_line(tmp_path):
     """Legend Stages' notice reads "Stage Clear Reward (13 more)"."""
     import numpy as np
 
     graph = UIGraph.load(carousels=False)
+    graph.profile_root = tmp_path
 
     class NoticeReads:
         def __call__(self, crop):

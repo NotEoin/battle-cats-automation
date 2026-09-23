@@ -2,24 +2,30 @@
  "screens": [
   {
    "name": "base_select",
-   "title": null,
-   "anchors": [
-    "select_back",
-    "select_close"
+   "title": "Chapter",
+   "shapes": [
+    "close"
    ],
-   "absent": [],
    "forbidden": false,
    "reactive": false,
-   "note": "Chapter carousel within a saga; every chapter enters a Cat Base"
+   "note": "Chapter carousel within a saga; every chapter enters a Cat Base",
+   "title_box": [
+    0.38,
+    0.375,
+    0.5,
+    0.45
+   ]
   },
   {
    "name": "cat_base",
    "title": "Cat Base",
-   "anchors": [
-    "base_start",
-    "base_menu"
+   "marks": [
+    "Start!!",
+    "Equip"
    ],
-   "absent": [],
+   "absent_marks": [
+    "Enemy Guide"
+   ],
    "forbidden": false,
    "reactive": false,
    "note": ""
@@ -27,8 +33,6 @@
   {
    "name": "cat_guide",
    "title": "Cat Guide",
-   "anchors": [],
-   "absent": [],
    "forbidden": false,
    "reactive": false,
    "note": ""
@@ -36,8 +40,6 @@
   {
    "name": "catnip_challenges",
    "title": "Catnip Challenges",
-   "anchors": [],
-   "absent": [],
    "forbidden": false,
    "reactive": false,
    "note": "Reached from Missions"
@@ -45,10 +47,9 @@
   {
    "name": "chapter_back_card",
    "title": "Back",
-   "anchors": [
-    "select_close"
+   "shapes": [
+    "close"
    ],
-   "absent": [],
    "forbidden": false,
    "reactive": false,
    "note": "The Back card centred, left of Chapter 1. Tapping it returns to the saga carousel.",
@@ -62,13 +63,9 @@
   },
   {
    "name": "gamatoto",
-   "title": null,
-   "anchors": [
-    "gamatoto_banner"
-   ],
-   "absent": [
-    "gamatoto_rewards",
-    "gamatoto_ongoing"
+   "title": "GAMATOTO Expedition",
+   "absent_marks": [
+    "Rewards"
    ],
    "forbidden": false,
    "reactive": false,
@@ -76,34 +73,31 @@
   },
   {
    "name": "gamatoto_ongoing",
-   "title": null,
-   "anchors": [
-    "gamatoto_ongoing"
-   ],
-   "absent": [],
+   "title": "Ongoing",
    "forbidden": false,
    "reactive": false,
    "note": "GAMATOTO away on an expedition. Its banner reads 'Ongoing' rather than 'GAMATOTO Expedition', and the back arrow works normally here."
   },
   {
    "name": "gamatoto_report",
-   "title": null,
-   "anchors": [
-    "gamatoto_banner",
-    "gamatoto_rewards"
+   "title": "GAMATOTO Expedition",
+   "marks": [
+    "Rewards"
    ],
-   "absent": [],
    "forbidden": false,
    "reactive": true,
    "note": "Expedition log replaying. The back arrow is dimmed and inert while it plays; pressing Rewards skips the playback and is the only way out."
   },
   {
    "name": "menu",
-   "title": null,
-   "anchors": [
-    "menu_dialog"
+   "title": "Cat Base",
+   "marks": [
+    "Enemy Guide",
+    "Meow Medals"
    ],
-   "absent": [],
+   "shapes": [
+    "close"
+   ],
    "forbidden": false,
    "reactive": false,
    "note": "Cat Guide / Enemy Guide / Meow Medals / Officers' Club"
@@ -111,10 +105,9 @@
   {
    "name": "opening",
    "title": null,
-   "anchors": [
-    "opening_skip"
+   "marks": [
+    "Skip"
    ],
-   "absent": [],
    "forbidden": false,
    "reactive": false,
    "note": "Intro text on first launch; Skip bottom right"
@@ -122,8 +115,6 @@
   {
    "name": "organize_cats",
    "title": "Organize Cats",
-   "anchors": [],
-   "absent": [],
    "forbidden": false,
    "reactive": false,
    "note": "Reached from Equip on the Cat Base"
@@ -131,12 +122,12 @@
   {
    "name": "platinum_capsules",
    "title": "Platinum Capsules",
-   "anchors": [
-    "plat_try_once"
+   "marks": [
+    "Try once!"
    ],
-   "absent": [
-    "result_actions",
-    "sent_to_storage"
+   "absent_marks": [
+    "Exchange",
+    "Sent to Cat Storage"
    ],
    "forbidden": false,
    "reactive": false,
@@ -145,10 +136,9 @@
   {
    "name": "purchase_offer",
    "title": null,
-   "anchors": [
-    "offer_banner"
+   "marks": [
+    "Limited Time"
    ],
-   "absent": [],
    "forbidden": false,
    "reactive": true,
    "note": "REAL MONEY offer popup with a Buy button. Never crawled; only ever left by the back arrow in the bottom-left."
@@ -156,13 +146,12 @@
   {
    "name": "rare_capsules",
    "title": "Rare Capsules",
-   "anchors": [
-    "try_once_button",
-    "storage_button"
+   "marks": [
+    "Try once!"
    ],
-   "absent": [
-    "result_actions",
-    "sent_to_storage"
+   "absent_marks": [
+    "Exchange",
+    "Sent to Cat Storage"
    ],
    "forbidden": false,
    "reactive": false,
@@ -171,10 +160,10 @@
   {
    "name": "roll_result",
    "title": null,
-   "anchors": [
-    "result_actions"
+   "marks": [
+    "Use now",
+    "Exchange"
    ],
-   "absent": [],
    "forbidden": false,
    "reactive": true,
    "note": "Reveal screen after a draw: Use now / Exchange / name plate / Ok"
@@ -182,23 +171,26 @@
   {
    "name": "saga_select",
    "title": null,
-   "anchors": [
-    "select_close"
+   "marks": [
+    "Show Code"
    ],
-   "absent": [
-    "select_back"
+   "absent_marks": [
+    "Chapter",
+    "Settings"
+   ],
+   "shapes": [
+    "close"
    ],
    "forbidden": false,
    "reactive": false,
-   "note": "Saga carousel: Empire of Cats, Into The Future, Cats of the Cosmos, Legend Stages, Catclaw Dojo. One level above the chapter carousel, which is told apart by its Back card."
+   "note": "Saga carousel: Empire of Cats, Into The Future, Cats of the Cosmos, Legend Stages, Catclaw Dojo. One level above the chapter carousel, which is told apart by its Back card. Shares the title screen's Show Code corner; carries no Chapter label."
   },
   {
    "name": "sent_to_storage",
    "title": null,
-   "anchors": [
-    "sent_to_storage"
+   "marks": [
+    "Sent to Cat Storage"
    ],
-   "absent": [],
    "forbidden": false,
    "reactive": true,
    "note": "'Sent to Cat Storage' notice; keeps the Rare Capsules title"
@@ -206,11 +198,12 @@
   {
    "name": "settings",
    "title": null,
-   "anchors": [
-    "settings_banner",
-    "settings_close"
+   "marks": [
+    "Settings"
    ],
-   "absent": [],
+   "shapes": [
+    "close"
+   ],
    "forbidden": true,
    "reactive": false,
    "note": "OFF LIMITS. Carries Change Account/Device, which can move the save. Never routed into and never crawled; recognised only so it can be left."
@@ -218,8 +211,6 @@
   {
    "name": "stage_reward_notice",
    "title": "Stage Clear Reward",
-   "anchors": [],
-   "absent": [],
    "forbidden": false,
    "reactive": true,
    "note": "Reward notice raised on entering Legend Stages: 'Stage Clear Reward (13 more)' over a silhouette. Ok dismisses it into the Cat Base.",
@@ -233,8 +224,6 @@
   {
    "name": "stage_select",
    "title": "Stage Select",
-   "anchors": [],
-   "absent": [],
    "forbidden": false,
    "reactive": false,
    "note": "Stage map of the chapter the Cat Base belongs to, opened by Start!!. Attack! starts a battle and spends energy: never tapped. Left by the back arrow."
@@ -242,8 +231,9 @@
   {
    "name": "storage",
    "title": "Storage",
-   "anchors": [],
-   "absent": [],
+   "marks": [
+    "Use all"
+   ],
    "forbidden": false,
    "reactive": false,
    "note": ""
@@ -251,11 +241,10 @@
   {
    "name": "title",
    "title": null,
-   "anchors": [
-    "title_play",
-    "title_settings"
+   "marks": [
+    "Play",
+    "Mailbox"
    ],
-   "absent": [],
    "forbidden": false,
    "reactive": false,
    "note": "Play / Settings / Mailbox"
@@ -263,8 +252,6 @@
   {
    "name": "upgrade",
    "title": "Upgrade",
-   "anchors": [],
-   "absent": [],
    "forbidden": false,
    "reactive": false,
    "note": ""
@@ -278,7 +265,8 @@
    "y": 0.895,
    "label": "Skip",
    "settle": 2.5,
-   "action": null
+   "action": null,
+   "target": "Skip"
   },
   {
    "src": "title",
@@ -287,7 +275,8 @@
    "y": 0.712,
    "label": "Settings",
    "settle": 1.8,
-   "action": null
+   "action": null,
+   "target": "Settings"
   },
   {
    "src": "title",
@@ -296,7 +285,8 @@
    "y": 0.578,
    "label": "Play",
    "settle": 3.0,
-   "action": null
+   "action": null,
+   "target": "Play"
   },
   {
    "src": "cat_base",
@@ -305,7 +295,8 @@
    "y": 0.719,
    "label": "Menu",
    "settle": 2.0,
-   "action": null
+   "action": null,
+   "target": "Menu"
   },
   {
    "src": "menu",
@@ -314,7 +305,8 @@
    "y": 0.3425,
    "label": "Cat Guide",
    "settle": 2.5,
-   "action": null
+   "action": null,
+   "target": "Cat Guide"
   },
   {
    "src": "menu",
@@ -323,7 +315,8 @@
    "y": 0.178,
    "label": "Close",
    "settle": 1.5,
-   "action": null
+   "action": null,
+   "target": "@close"
   },
   {
    "src": "cat_base",
@@ -332,7 +325,8 @@
    "y": 0.776,
    "label": "Rare Capsule",
    "settle": 2.5,
-   "action": null
+   "action": null,
+   "target": "Rare Capsule"
   },
   {
    "src": "cat_base",
@@ -341,7 +335,8 @@
    "y": 0.776,
    "label": "Storage",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "Storage"
   },
   {
    "src": "rare_capsules",
@@ -350,7 +345,8 @@
    "y": 0.8,
    "label": "Storage",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "Storage"
   },
   {
    "src": "rare_capsules",
@@ -359,7 +355,8 @@
    "y": 0.89,
    "label": "Back",
    "settle": 2.0,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "storage",
@@ -368,7 +365,8 @@
    "y": 0.877,
    "label": "Back",
    "settle": 2.0,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "cat_guide",
@@ -377,7 +375,8 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.0,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "gamatoto_report",
@@ -386,7 +385,8 @@
    "y": 0.124,
    "label": "Rewards",
    "settle": 2.5,
-   "action": null
+   "action": null,
+   "target": "Rewards"
   },
   {
    "src": "gamatoto",
@@ -395,7 +395,8 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "cat_base",
@@ -404,7 +405,8 @@
    "y": 0.719,
    "label": "GAMATOTO",
    "settle": 3.0,
-   "action": null
+   "action": null,
+   "target": "GAMATOTO"
   },
   {
    "src": "cat_base",
@@ -413,7 +415,8 @@
    "y": 0.413,
    "label": "Upgrade",
    "settle": 2.6,
-   "action": null
+   "action": null,
+   "target": "Upgrade"
   },
   {
    "src": "upgrade",
@@ -422,7 +425,8 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "cat_base",
@@ -431,7 +435,8 @@
    "y": 0.525,
    "label": "Equip",
    "settle": 2.6,
-   "action": null
+   "action": null,
+   "target": "Equip"
   },
   {
    "src": "organize_cats",
@@ -440,7 +445,8 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "cat_base",
@@ -449,7 +455,8 @@
    "y": 0.719,
    "label": "Missions",
    "settle": 2.6,
-   "action": null
+   "action": null,
+   "target": "Missions"
   },
   {
    "src": "catnip_challenges",
@@ -458,7 +465,8 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "purchase_offer",
@@ -467,7 +475,8 @@
    "y": 0.933,
    "label": "Back",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "roll_result",
@@ -476,7 +485,8 @@
    "y": 0.8139,
    "label": "Ok",
    "settle": 1.8,
-   "action": null
+   "action": null,
+   "target": "Ok"
   },
   {
    "src": "sent_to_storage",
@@ -485,7 +495,8 @@
    "y": 0.6265,
    "label": "Ok",
    "settle": 1.8,
-   "action": null
+   "action": null,
+   "target": "Ok"
   },
   {
    "src": "platinum_capsules",
@@ -494,7 +505,8 @@
    "y": 0.8,
    "label": "Storage",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "Storage"
   },
   {
    "src": "platinum_capsules",
@@ -503,7 +515,8 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "rare_capsules",
@@ -530,7 +543,8 @@
    "y": 0.6265,
    "label": "Ok",
    "settle": 1.8,
-   "action": null
+   "action": null,
+   "target": "Ok"
   },
   {
    "src": "settings",
@@ -539,7 +553,8 @@
    "y": 0.087,
    "label": "Close",
    "settle": 2.0,
-   "action": null
+   "action": null,
+   "target": "@close"
   },
   {
    "src": "title",
@@ -548,7 +563,8 @@
    "y": 0.578,
    "label": "Play",
    "settle": 3.0,
-   "action": null
+   "action": null,
+   "target": "Play"
   },
   {
    "src": "saga_select",
@@ -557,7 +573,8 @@
    "y": 0.552,
    "label": "enter selected saga",
    "settle": 3.2,
-   "action": null
+   "action": null,
+   "target": "@card"
   },
   {
    "src": "saga_select",
@@ -566,7 +583,8 @@
    "y": 0.349,
    "label": "X",
    "settle": 2.0,
-   "action": null
+   "action": null,
+   "target": "@close"
   },
   {
    "src": "saga_select",
@@ -593,7 +611,8 @@
    "y": 0.585,
    "label": "enter selected chapter",
    "settle": 3.5,
-   "action": null
+   "action": null,
+   "target": "@card"
   },
   {
    "src": "base_select",
@@ -602,7 +621,8 @@
    "y": 0.354,
    "label": "X",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "@close"
   },
   {
    "src": "base_select",
@@ -611,7 +631,8 @@
    "y": 0.617,
    "label": "Back card",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "Back"
   },
   {
    "src": "base_select",
@@ -638,7 +659,8 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "cat_base",
@@ -647,7 +669,8 @@
    "y": 0.719,
    "label": "GAMATOTO",
    "settle": 3.0,
-   "action": null
+   "action": null,
+   "target": "GAMATOTO"
   },
   {
    "src": "cat_base",
@@ -656,7 +679,8 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.4,
-   "action": null
+   "action": null,
+   "target": "@back"
   },
   {
    "src": "stage_reward_notice",
@@ -665,7 +689,8 @@
    "y": 0.585,
    "label": "Ok",
    "settle": 2.5,
-   "action": null
+   "action": null,
+   "target": "Ok"
   },
   {
    "src": "base_select",
@@ -683,7 +708,8 @@
    "y": 0.552,
    "label": "Back card",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "@card"
   },
   {
    "src": "cat_base",
@@ -692,7 +718,8 @@
    "y": 0.275,
    "label": "Start!!",
    "settle": 2.5,
-   "action": null
+   "action": null,
+   "target": "Start!!"
   },
   {
    "src": "stage_select",
@@ -701,7 +728,8 @@
    "y": 0.872,
    "label": "Back",
    "settle": 2.2,
-   "action": null
+   "action": null,
+   "target": "@back"
   }
  ]
 }

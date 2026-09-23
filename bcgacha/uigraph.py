@@ -21,6 +21,7 @@ planned through it.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
@@ -31,6 +32,8 @@ import numpy as np
 from rapidfuzz import fuzz
 
 GRAPH_FILE = Path(__file__).resolve().parent.parent / "data" / "ui_graph.json"
+# Two threads meeting a new resolution at once must share one Profile.
+_PROFILES_LOCK = threading.Lock()
 
 # Most screens print their name here.
 TITLE_BOX = (0.015, 0.005, 0.260, 0.060)
@@ -54,7 +57,10 @@ def title_match(expected: str, read: str, within: bool = True) -> float:
     """
     expected, read = expected.lower(), read.lower()
     whole = fuzz.ratio(expected, read)
-    if whole >= TITLE_MATCH or not within:
+    if not within:
+        # A card's two-line name can come back with its lines swapped.
+        return max(whole, fuzz.token_sort_ratio(expected, read))
+    if whole >= TITLE_MATCH:
         return whole
     words, n = read.split(), len(expected.split())
     best = 0.0
@@ -86,6 +92,12 @@ class Screen:
     # A more specific version of another screen: one card of a carousel is
     # still that carousel, so reaching it counts as reaching the parent.
     parent: str | None = None
+    # Text that must be somewhere on screen, and text that must not be. Read,
+    # never matched against captured images, so it holds on any device.
+    marks: tuple[str, ...] = ()
+    absent_marks: tuple[str, ...] = ()
+    # Controls known by shape rather than text: "close" (a gold disc with an X).
+    shapes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -96,6 +108,11 @@ class Transition:
     carousel has no fixed tab for a given event, so reaching the Platinum
     machine means running the picker rather than tapping a memorised spot.
     Those carry an `action` and their x/y are ignored.
+
+    `target` names what to press, so the tap is found on whatever device is
+    attached: a control's label ("Rare Capsule"), or "@back", "@close" or
+    "@card" (the centred carousel card). x/y are a hint from one device, used
+    only when the target cannot be found.
     """
 
     src: str
@@ -105,6 +122,26 @@ class Transition:
     label: str = ""
     settle: float = 1.8
     action: str | None = None
+    target: str | None = None
+
+
+@dataclass(frozen=True)
+class Candidate:
+    score: float
+    name: str
+    verified: bool          # every piece of evidence was checked, none assumed
+    # Some text -- its title or a mark -- was actually read. A shape alone (a
+    # gold X) is on too many panels to name a screen by itself.
+    read: bool = True
+
+
+@dataclass
+class Recognition:
+    here: str | None
+    candidates: list
+    percept: object | None  # the full look, when one was needed
+    chapter: str | None = None      # which chapter's Cat Base, from its background
+    door: tuple | None = None       # the background region that was compared
 
 
 class UnknownScreen(RuntimeError):
@@ -120,6 +157,9 @@ class UIGraph:
     screens: dict[str, Screen] = field(default_factory=dict)
     transitions: list[Transition] = field(default_factory=list)
     _ocr: object | None = field(default=None, repr=False)
+    # Where learned device profiles live; None is state/devices.
+    profile_root: Path | None = field(default=None, repr=False)
+    _profiles: dict = field(default_factory=dict, repr=False)
 
     # -- persistence --------------------------------------------------------
 
@@ -148,6 +188,9 @@ class UIGraph:
                     note=s.get("note", ""),
                     title_box=tuple(s["title_box"]) if s.get("title_box") else None,
                     parent=s.get("parent"),
+                    marks=tuple(s.get("marks", ())),
+                    absent_marks=tuple(s.get("absent_marks", ())),
+                    shapes=tuple(s.get("shapes", ())),
                 )
                 for s in raw.get("screens", [])
             },
@@ -167,15 +210,20 @@ class UIGraph:
         path.write_text(json.dumps({
             "screens": [
                 {
-                    "name": s.name, "title": s.title, "anchors": list(s.anchors),
-                    "absent": list(s.absent), "forbidden": s.forbidden,
-                    "reactive": s.reactive, "note": s.note,
+                    "name": s.name, "title": s.title,
+                    **({"marks": list(s.marks)} if s.marks else {}),
+                    **({"absent_marks": list(s.absent_marks)} if s.absent_marks else {}),
+                    **({"shapes": list(s.shapes)} if s.shapes else {}),
+                    **({"anchors": list(s.anchors)} if s.anchors else {}),
+                    **({"absent": list(s.absent)} if s.absent else {}),
+                    "forbidden": s.forbidden, "reactive": s.reactive, "note": s.note,
                     **({"title_box": list(s.title_box)} if s.title_box else {}),
                     **({"parent": s.parent} if s.parent else {}),
                 }
                 for s in sorted(self.screens.values(), key=lambda s: s.name)
             ],
-            "transitions": [vars(t) for t in self.transitions],
+            "transitions": [{k: v for k, v in vars(t).items() if k != "target" or v}
+                            for t in self.transitions],
         }, indent=1))
         return path
 
@@ -189,92 +237,263 @@ class UIGraph:
             self._ocr = RapidOCR()
         return self._ocr
 
-    def read_title(self, frame: np.ndarray, box=TITLE_BOX) -> str:
+    def read_title(self, frame: np.ndarray, box=TITLE_BOX, largest: bool = False) -> str:
+        """Text in `box`, in reading order. `largest` keeps only title-sized
+        lettering, dropping smaller text that strays into the box."""
         h, w = frame.shape[:2]
         x0, y0, x1, y1 = box
         crop = frame[int(y0 * h): int(y1 * h), int(x0 * w): int(x1 * w)]
-        crop = cv2.resize(
-            crop, None, fx=TITLE_SCALE, fy=TITLE_SCALE, interpolation=cv2.INTER_CUBIC
-        )
+        if crop.size == 0:
+            return ""
+        # Scaled against a 2532-wide frame, so small and large screens read alike.
+        scale = TITLE_SCALE * 2532 / w
+        crop = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
         result, _ = self.ocr(crop)
+        result = result or []
+
+        def top(r):
+            return min(p[1] for p in r[0])
+
+        def bottom(r):
+            return max(p[1] for p in r[0])
+
+        if largest and result:
+            tall = max(bottom(r) - top(r) for r in result)
+            result = [r for r in result if bottom(r) - top(r) >= 0.6 * tall]
         # Pieces come back in detection order; a two-line card name needs
         # reading order -- line by line, top to bottom, then left to right.
-        line = 12 * TITLE_SCALE
-        pieces = sorted(result or [], key=lambda r: (
-            int(min(p[1] for p in r[0]) // line), min(p[0] for p in r[0])))
+        # A piece joins a line when its middle is within half its own height.
+        lines: list[list] = []
+        for r in sorted(result, key=lambda r: top(r) + bottom(r)):
+            middle, height = (top(r) + bottom(r)) / 2, bottom(r) - top(r)
+            if lines:
+                last = lines[-1]
+                last_middle = sum(top(p) + bottom(p) for p in last) / (2 * len(last))
+                if abs(middle - last_middle) <= 0.5 * height:
+                    last.append(r)
+                    continue
+            lines.append([r])
+        pieces = [r for line in lines for r in sorted(line, key=lambda r: r[0][0][0])]
         return " ".join(r[1] for r in pieces).strip()
+
+    def profile_for(self, frame: np.ndarray):
+        """What has been learned about the device this frame came from."""
+        from .profile import Profile
+
+        h, w = frame.shape[:2]
+        with _PROFILES_LOCK:
+            if (w, h) not in self._profiles:
+                self._profiles[(w, h)] = Profile(w, h, self.profile_root)
+            return self._profiles[(w, h)]
 
     def identify(self, frame: np.ndarray, title: str | None = None) -> str | None:
         """Name the screen in `frame`, or None if it is not in the map."""
-        found = self.candidates(frame, title)
-        return max(found)[1] if found else None
+        return self.recognise(frame, title=title).here
+
+    def recognise(self, frame: np.ndarray, title: str | None = None, slow: bool = True):
+        """Identify the screen, learning about this device when that takes a full look.
+
+        The fast path uses only what the device profile already knows: the
+        learned title box and templates of controls seen before. When that
+        cannot vouch for every piece of a screen's evidence -- always, the first
+        time a screen is met on a device -- the frame is read in full (OCR and
+        shape segmentation), identified from that, and the screen's controls
+        and title box are learned so the next look is fast.
+        """
+        from .perception import perceive
+
+        found = self._evaluate(frame, None, title)
+        sure = [c for c in found if c.verified]
+        best_sure = max((c.score for c in sure), default=None)
+        # Answer fast only if no unverified screen, with evidence already in
+        # its favour, might still outscore the best verified one.
+        doubt = [c for c in found if not c.verified and c.score > 0
+                 and (best_sure is None or c.score >= best_sure)]
+        if (sure and not doubt) or not slow:
+            best = max(sure or found, default=None, key=lambda c: c.score)
+            return self._with_chapter(frame, Recognition(best.name if best else None, found, None))
+        percept = perceive(frame, self.ocr)
+        profile = self.profile_for(frame)
+        found = self._evaluate(frame, percept, title)
+        # Only a screen whose text was read is named. One known by a shape
+        # alone -- any panel with a gold X -- is left unknown, so the caller
+        # backs out rather than tapping into an unmapped popup.
+        best = max((c for c in found if c.read), default=None, key=lambda c: c.score)
+        if best is not None:
+            screen = self.screens[best.name]
+            # The title box is placed only from a title that has just
+            # identified its screen: the logo on the title screen, or a
+            # carousel card's name, is not where screen names are printed.
+            if (screen.title and not screen.title_box and percept.title is not None
+                    and title_match(screen.title, percept.title.text) >= TITLE_MATCH):
+                profile.learn_title(percept.title.box)
+            profile.learn(best.name, frame, percept.controls, wanted=self.wanted(best.name))
+        return self._with_chapter(frame, Recognition(best.name if best else None, found, percept))
+
+    def wanted(self, screen: str) -> set[str]:
+        """What is worth learning on `screen`: the controls its exits press,
+        and any text a screen is recognised by."""
+        names = {t.target for t in self.transitions
+                 if t.src == screen and t.target and t.target != "@card"}
+        for s in self.screens.values():
+            names.update(s.marks, s.absent_marks)
+        return names
+
+    def _with_chapter(self, frame: np.ndarray, recognition):
+        """Name the chapter of a Cat Base from the door behind its buttons."""
+        if recognition.here == "cat_base":
+            from . import bases
+
+            recognition.chapter, recognition.door = bases.chapter_of(
+                frame, self, recognition.percept)
+        return recognition
 
     def candidates(
-        self, frame: np.ndarray, title: str | None = None
+        self, frame: np.ndarray, title: str | None = None, percept=None
     ) -> list[tuple[float, str]]:
-        """Every screen the frame could be, scored. `identify` takes the best.
+        """Every screen the frame could be, scored. `identify` takes the best."""
+        return [(c.score, c.name) for c in self._evaluate(frame, percept, title)]
 
-        `title` is the already-read top-left text, for a caller that wants to
-        show it as well without paying for the OCR twice.
+    def _evaluate(self, frame: np.ndarray, percept, title: str | None):
+        """Weigh each screen's evidence: title, marks, and shapes.
 
-        Either kind of evidence is enough on its own. Titles are convenient but
-        the recogniser is unreliable on them -- the very same "Cat Base" header
-        reads perfectly in one capture and comes back empty in the next -- so a
-        screen with matching anchors is accepted even when its title does not
-        read, and a screen with no anchors is accepted on its title. Having
-        both simply scores higher, which is what separates screens that share a
-        header.
+        Evidence is True, False or unknown. False rules a screen out; unknown
+        -- a mark never yet seen on this device, a title box not yet placed --
+        leaves it possible but unverified, which is what sends identification
+        down the slow path to find out.
         """
-        from . import vision
+        from .perception import CLOSE_SCORE, close_glyph_score, find_discs
 
-        def anchor_hit(name: str) -> bool:
-            anchor = vision.ANCHORS.get(name)
-            if anchor is None:
-                return False
-            return vision.match(frame, anchor) > anchor.threshold
+        profile = self.profile_for(frame)
+        texts: dict[tuple, str] = {}
+        title_box = profile.title_box
 
-        # Text is read once per region, and only when a screen needs it.
-        texts: dict[tuple, str] = {} if title is None else {TITLE_BOX: title}
-
-        def text_in(box) -> str:
+        def text_in(box) -> str | None:
+            if box is None or box == title_box:
+                # A full look has just read the title itself; use that.
+                if percept is not None:
+                    return percept.title.text if percept.title else ""
+                if title is not None:
+                    return title
+            if box is None:
+                return None
             if box not in texts:
-                texts[box] = self.read_title(frame, box)
+                texts[box] = self.read_title(frame, box, largest=box == title_box)
             return texts[box]
 
-        candidates: list[tuple[float, str]] = []
+        shapes: dict[str, bool] = {}
+
+        def shape_seen(kind: str, screen: Screen) -> bool:
+            # Once this screen (or the carousel it is a card of) has learned
+            # where its X sits, the X must be there: a gold X somewhere else
+            # belongs to some other panel.
+            key = f"@{kind}"
+            homes = [n for n in (screen.name, screen.parent) if n and key in profile.controls(n)]
+            if homes and percept is None:
+                return any(profile.find(frame, n, key) for n in homes)
+            if kind not in shapes:
+                if kind == "close":
+                    shapes[kind] = any(close_glyph_score(frame, box) >= CLOSE_SCORE
+                                       for box, _ in find_discs(frame))
+                elif kind == "back":
+                    shapes[kind] = find_back_arrow(frame) is not None
+                else:
+                    shapes[kind] = False
+            return shapes[kind]
+
+        def mark_seen(mark: str, screen: str, absent: bool = False) -> bool | None:
+            # A control learned under this name, on any screen, is looked for
+            # by its template first: that costs milliseconds, not an OCR pass.
+            learned_on = set()
+            for name in profile.screen_names():
+                if mark in profile.controls(name):
+                    learned_on.add(name)
+                    if profile.locate(frame, name, mark) is not None:
+                        return True
+            if percept is not None:
+                return any(title_match(mark, t.text, within=True) >= TITLE_MATCH
+                           for t in percept.texts + percept.groups)
+            # Not where it was learned. For a mark this screen must show, that
+            # settles it only if it was learned on this screen: the same word
+            # elsewhere sits elsewhere. A mark that must be absent is absent
+            # when it is at none of the places it has ever been seen.
+            if absent:
+                return False if learned_on else None
+            return False if screen in learned_on else None
+
+        top_titles = {s.title for s in self.screens.values() if s.title and not s.title_box}
+
+        def named_other(read: str) -> bool:
+            return any(title_match(t, read) >= TITLE_MATCH for t in top_titles)
+
+        out = []
         for screen in self.screens.values():
             # Forbidden screens are still identified. Refusing to recognise one
             # would leave the bot blind exactly where it most needs to know
             # where it is, so that it can leave deliberately rather than tap
             # about. Forbidding governs routing INTO a screen, nothing else.
-            score = 0.0
-
-            if screen.anchors:
-                if not all(anchor_hit(a) for a in screen.anchors):
-                    continue
-                score += 200.0
-            if any(anchor_hit(a) for a in screen.absent):
+            if not (screen.title or screen.marks or screen.shapes):
                 continue
-
-            # A carousel card is only that card if its name reads; otherwise
-            # the carousel it refines is all the frame can be said to show.
-            needs_title = not screen.anchors or screen.parent is not None
+            score, verified, ruled_out, read_any = 0.0, True, False, False
+            for kind in screen.shapes:
+                if not shape_seen(kind, screen):
+                    ruled_out = True
+                    break
+                score += 40.0
+            if ruled_out:
+                continue
             if screen.title:
-                title = text_in(screen.title_box or TITLE_BOX)
-                if title:
-                    match = title_match(screen.title, title,
-                                        within=screen.parent is None)
+                read = text_in(screen.title_box or title_box)
+                if read is None:
+                    verified = False            # no title box placed yet
+                else:
+                    # A carousel card holds only its name, so it must match whole.
+                    match = title_match(screen.title, read, within=screen.parent is None)
                     if match >= TITLE_MATCH:
                         score += match
-                    elif needs_title:
-                        continue        # title was needed, and it failed
-                elif needs_title:
-                    continue            # needed a title, did not get one
-            elif not screen.anchors:
-                continue                # nothing to identify this screen by
-
-            candidates.append((score, screen.name))
-        return candidates
+                        read_any = True
+                    elif percept is None and not screen.title_box and not named_other(read):
+                        # A quick read through the learned box that misses,
+                        # and names no other screen either, may be an OCR
+                        # flake: leave it to a full look, not a ruling out.
+                        verified = False
+                    else:
+                        continue
+            for mark in screen.marks:
+                seen = mark_seen(mark, screen.name)
+                if seen is False:
+                    ruled_out = True
+                    break
+                if seen is None:
+                    verified = False
+                else:
+                    score += 60.0
+                    read_any = True
+            if ruled_out:
+                continue
+            unsure_absent = set()
+            for mark in screen.absent_marks:
+                seen = mark_seen(mark, screen.name, absent=True)
+                if seen:
+                    ruled_out = True
+                    break
+                if seen is None:
+                    unsure_absent.add(mark)
+            if ruled_out:
+                continue
+            out.append((Candidate(score, screen.name, verified and read_any, read_any), unsure_absent))
+        # A mark that must be absent but has never been learned here only
+        # matters if some screen that shows it is still possible: with no X on
+        # screen the menu is ruled out, so its Enemy Guide cannot be showing.
+        alive = {c.name for c, _ in out}
+        out = [c if not unsure or not any(
+                   set(self.screens[n].marks) & unsure for n in alive if n != c.name)
+               else Candidate(c.score, c.name, False, c.read)
+               for c, unsure in out]
+        # A card that fits beats the carousel it belongs to: the generic
+        # carousel is only the answer when no card's name reads.
+        refined = {self.screens[c.name].parent for c in out if self.screens[c.name].parent}
+        return [c for c in out if c.name not in refined]
 
     # -- routing ------------------------------------------------------------
 
@@ -316,6 +535,7 @@ class UIGraph:
 # rather than assumed -- a fixed point misses on enough screens to matter.
 GENERIC_BACK = (0.089, 0.872)
 BACK_SEARCH_REGION = (0.02, 0.74, 0.22, 0.99)
+BACK_MIN_AREA = 4000            # pixels, on a REFERENCE_HEIGHT frame
 
 
 
@@ -329,11 +549,12 @@ def find_back_arrow(frame: np.ndarray) -> tuple[float, float] | None:
     hsv = cv2.cvtColor(region, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, (18, 140, 170), (34, 255, 255))
     count, _lab, stats, cent = cv2.connectedComponentsWithStats(mask, 8)
+    smallest = BACK_MIN_AREA * (h / REFERENCE_HEIGHT) ** 2
     best = None
     for i in range(1, count):
         area = stats[i, 4]
         ratio = stats[i, 2] / max(stats[i, 3], 1)
-        if area > 4000 and 0.6 < ratio < 1.7:     # roughly circular
+        if area > smallest and 0.6 < ratio < 1.7:     # roughly circular
             if best is None or area > best[0]:
                 best = (area, cent[i][0], cent[i][1])
     if best is None:
@@ -342,6 +563,15 @@ def find_back_arrow(frame: np.ndarray) -> tuple[float, float] | None:
         x0 + (best[1] / region.shape[1]) * (x1 - x0),
         y0 + (best[2] / region.shape[0]) * (y1 - y0),
     )
+
+
+def frame_changed(a: np.ndarray, b: np.ndarray, fraction: float = 0.08) -> bool:
+    """Whether two frames differ by more than an idle screen's own movement:
+    over `fraction` of a small grey thumbnail changed clearly."""
+    size = (96, 44)
+    ga = cv2.cvtColor(cv2.resize(a, size, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
+    gb = cv2.cvtColor(cv2.resize(b, size, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
+    return float((cv2.absdiff(ga, gb) > 30).mean()) > fraction
 
 
 class Navigator:
@@ -384,6 +614,27 @@ class Navigator:
             self.human.sleep(1.0)
             return True
         return False
+
+    def _resolve(self, here: str, step: Transition, frame: np.ndarray, log=None):
+        """Where to press for this step on this device, or None if it is not there."""
+        if not step.target or step.target == "@card":
+            return step.x, step.y           # the centred card sits mid-screen on any iPhone
+        profile = self.graph.profile_for(frame)
+        hit = profile.locate(frame, here, step.target)
+        if hit is not None:
+            return hit
+        from .perception import perceive
+
+        percept = perceive(frame, self.graph.ocr)
+        profile.learn(here, frame, percept.controls, wanted=self.graph.wanted(here))
+        control = percept.find(step.target)
+        if control is not None:
+            return control.tap
+        if step.x or step.y:
+            if log:
+                log(f"    {step.target!r} not found; using the recorded position")
+            return step.x, step.y
+        return None
 
     def _run_action(self, step: Transition, log=None) -> bool:
         """Carry out a transition that needs a routine rather than a tap."""
@@ -430,6 +681,11 @@ class Navigator:
         # a second time repeats the same nothing; without this the walk spins
         # on its first choice forever.
         barren: set[tuple[str, str, float, float]] = set()
+        # A step taken again and again that keeps landing elsewhere -- GAMATOTO
+        # while it is away, which only ever opens the Ongoing screen -- cannot
+        # reach its screen in the game's present state, so stop trying it.
+        tries: dict[tuple, int] = {}
+        forgiven = False
         for _ in range(max_steps):
             frame = self.session.screenshot()
             if self._clear_obstruction(frame):
@@ -457,22 +713,58 @@ class Navigator:
             try:
                 path = self.graph.route(here, destination, exclude=barren)
             except NoRoute:
+                if barren and not forgiven:
+                    # Every way on has been written off, perhaps one that was
+                    # only slow to answer. Give them all one more chance.
+                    forgiven = True
+                    barren.clear()
+                    tries.clear()
+                    continue
                 if log:
                     log(f"no route from {here!r} to {destination!r}")
                 return False
             step = path[0]
+            key = (step.src, step.dst, round(step.x, 3), round(step.y, 3))
+            tries[key] = tries.get(key, 0) + 1
+            if tries[key] > 3:
+                barren.add(key)
+                if log:
+                    log(f"    {step.label!r} never reaches {step.dst}; giving it up")
+                continue
             if log:
                 log(f"  {here} --{step.label}--> {step.dst}")
             if step.action:
                 if not self._run_action(step, log=log):
                     return False
                 continue
-            self._tap(step.x, step.y, step.settle)
-            if self.graph.identify(self.session.screenshot()) == here:
-                barren.add((step.src, step.dst, round(step.x, 3), round(step.y, 3)))
+            point = self._resolve(here, step, frame, log=log)
+            if point is None:
+                barren.add(key)
+                if log:
+                    log(f"    no {step.target!r} on screen; trying another way")
+                continue
+            self._tap(*point, step.settle)
+            if self._unmoved(here, frame):
+                barren.add(key)
                 if log:
                     log(f"    {step.label!r} changed nothing; trying another way")
         return False
+
+    def _unmoved(self, here: str, before: np.ndarray, wait: float = 1.5) -> bool:
+        """Whether a tap left the game exactly as it was, on `here`.
+
+        A screen still animating out reads as unchanged, so it gets a second
+        look before the tap is blamed. One that changed without leaving did
+        answer -- Back on Upgrade first steps from a unit list up to the
+        Characters overview -- so the same tap is left to be tried again.
+        """
+        for look in range(2):
+            if look:
+                self.human.sleep(wait)
+            frame = self.session.screenshot()
+            if self.graph.identify(frame) != here or frame_changed(before, frame):
+                return False
+        return True
 
 
 # The game draws nearly every control as a gold button with a dark outline, at
@@ -480,7 +772,11 @@ class Navigator:
 # controls on screens nobody has mapped yet, and it survives layout drift.
 BUTTON_HSV_LOW = (16, 120, 140)
 BUTTON_HSV_HIGH = (34, 255, 255)
+# Pixel sizes below were measured on a 1170-high frame. The game scales its
+# layout with the screen's height, so they are scaled by height to match.
+REFERENCE_HEIGHT = 1170
 BUTTON_MIN_AREA = 2600
+BUTTON_CLOSE_KERNEL = (25, 15)
 BUTTON_MAX_AREA_FRACTION = 0.22
 BUTTON_ASPECT = (0.45, 9.0)
 # Share of its bounding box a blob must fill. Gold scattered across the frame --
@@ -516,17 +812,20 @@ def find_buttons(frame: np.ndarray) -> list[Button]:
     h, w = frame.shape[:2]
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, BUTTON_HSV_LOW, BUTTON_HSV_HIGH)
+    k = h / REFERENCE_HEIGHT
     # Close the dark glyphs printed on top of a button so it reads as one blob.
+    kernel = tuple(max(3, round(v * k)) for v in BUTTON_CLOSE_KERNEL)
     mask = cv2.morphologyEx(
-        mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (25, 15))
+        mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, kernel)
     )
     count, _lab, stats, cent = cv2.connectedComponentsWithStats(mask, 8)
     limit = BUTTON_MAX_AREA_FRACTION * h * w
+    smallest = BUTTON_MIN_AREA * k * k
     out: list[Button] = []
     for i in range(1, count):
         area = int(stats[i, 4])
         bw, bh = int(stats[i, 2]), int(stats[i, 3])
-        if area < BUTTON_MIN_AREA or area > limit or bh == 0:
+        if area < smallest or area > limit or bh == 0:
             continue
         if not (BUTTON_ASPECT[0] <= bw / bh <= BUTTON_ASPECT[1]):
             continue

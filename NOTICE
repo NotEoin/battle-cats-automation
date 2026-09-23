@@ -1,0 +1,21 @@
+bcgacha
+Copyright (c) 2026 NotEoin. Released under the MIT License (see LICENSE).
+
+Third-party material
+--------------------
+
+tests/fixtures/data/bc-en.yaml is cut down from the bc-en.yaml dataset of
+battle-cats-rolls by godfat (https://gitlab.com/godfat/battle-cats-rolls),
+licensed under the Apache License 2.0. The pages under tests/fixtures/*.html
+were saved from bc.godfat.org, the same project's site. bcgacha downloads the
+full dataset at run time; it does not ship it.
+
+tests/fixtures/data/tiers.json maps cat ids to the tiers of the community
+tier list at https://www.battlecatstierlist.com, cut down to those two facts.
+
+Trademarks
+----------
+
+The Battle Cats is a trademark of PONOS Corporation. This project is not
+affiliated with, endorsed by or supported by PONOS. iPhone and iPad are
+trademarks of Apple Inc.

@@ -1,0 +1,9309 @@
+cats:
+  1:
+    name:
+    - Cat
+    - Macho Cat
+    - Mohawk Cat
+    rarity: 0
+  2:
+    name:
+    - Tank Cat
+    - Wall Cat
+    - Eraser Cat
+    rarity: 0
+  3:
+    name:
+    - Axe Cat
+    - Brave Cat
+    - Dark Cat
+    rarity: 0
+  4:
+    name:
+    - Gross Cat
+    - Sexy Legs Cat
+    - Macho Leg Cat
+    rarity: 0
+  5:
+    name:
+    - Cow Cat
+    - Giraffe Cat
+    - Lion Cat
+    rarity: 0
+  6:
+    name:
+    - Bird Cat
+    - UFO Cat
+    - The Flying Cat
+    rarity: 0
+  7:
+    name:
+    - Fish Cat
+    - Whale Cat
+    - Island Cat
+    rarity: 0
+  8:
+    name:
+    - Lizard Cat
+    - Dragon Cat
+    - King Dragon Cat
+    rarity: 0
+  9:
+    name:
+    - Titan Cat
+    - Mythical Titan Cat
+    - Jamiera Cat
+    rarity: 0
+  10:
+    name:
+    - Actress Cat
+    - Mother Cat
+    - Beefcake Cat
+    rarity: 1
+  11:
+    name:
+    - Kung Fu Cat
+    - Drunken Master Cat
+    - Dancer Cat
+    rarity: 1
+  12:
+    name:
+    - Mr.
+    - Super Mr.
+    - Hyper Mr.
+    rarity: 1
+  13:
+    name:
+    - Bondage Cat
+    - Bondage CatNEO
+    - Ultimate Bondage Cat
+    rarity: 1
+  14:
+    name:
+    - Dom Cat
+    - Executioner
+    - Dark Lazer
+    rarity: 1
+  15:
+    name:
+    - Cats in a Box
+    - Cat Gang
+    - Heavy Assault C.A.T.
+    rarity: 1
+  16:
+    name:
+    - Panties Cat
+    - Leaf Cat
+    - Lollycat
+    rarity: 1
+  17:
+    name:
+    - Moneko
+    - Miss Moneko
+    - Superstar Moneko
+    rarity: 1
+  18:
+    name:
+    - Tricycle Cat
+    - Biker Cat
+    - Unicycle Cat
+    rarity: 1
+  19:
+    name:
+    - Ninja Cat
+    - Frog Ninja Cat
+    - Flying Ninja Cat
+    rarity: 1
+  20:
+    name:
+    - Zombie Cat
+    - Devil Cat
+    - Skelecat
+    rarity: 1
+  21:
+    name:
+    - Samurai Cat
+    - Knight Cat
+    - Pastry Cat
+    rarity: 1
+  22:
+    name:
+    - Sumo Cat
+    - Madame Sumo
+    - Riceball Cat
+    rarity: 1
+  23:
+    name:
+    - Boogie Cat
+    - Samba Cat
+    - Gato Amigo
+    rarity: 1
+  24:
+    name:
+    - Skirt Cat
+    - Tights Cat
+    - Loincloth Cat
+    rarity: 1
+  25:
+    name:
+    - Valkyrie Cat
+    - True Valkyrie Cat
+    - Holy Valkyrie Cat
+    rarity: 1
+  26:
+    name:
+    - Bahamut Cat
+    - Crazed Bahamut Cat
+    - Awakened Bahamut Cat
+    rarity: 1
+  27:
+    name:
+    - Kerihime
+    - Full color Kerihime
+    - Bridal Princess Punt
+    rarity: 1
+  28:
+    name:
+    - Cat Princess
+    - Cat Princess beauty
+    rarity: 1
+  29:
+    name:
+    - Capsule Cat
+    - Cramped Cats
+    rarity: 1
+  30:
+    name:
+    - Masked Cat
+    - Luchador Cat
+    rarity: 1
+  31:
+    name:
+    - Bodhisattva Cat
+    - Avalokitesvara Cat
+    - Tathagata Cat
+    rarity: 3
+  32:
+    name:
+    - Delinquent Cat
+    - Angry Delinquent Cat
+    - Ultra Delinquent Cat
+    rarity: 3
+  33:
+    name:
+    - Hip Hop Cat
+    - Dancing Flasher Cat
+    - Can Can Cat
+    rarity: 3
+  34:
+    name:
+    - Kotatsu Cat
+    - Sadako Cat
+    - Octopus Cat
+    rarity: 3
+  35:
+    name:
+    - Nekoluga
+    - Unknown Cat
+    - Ultralan Pasalan
+    rarity: 4
+  36:
+    name:
+    - Nerd Cat
+    - Hacker Cat
+    - Cyberpunk Cat
+    rarity: 3
+  37:
+    name:
+    - Swimmer Cat
+    - Butterfly Cat
+    - Fishman Cat
+    rarity: 3
+  38:
+    name:
+    - Pogo Cat
+    - Masai Cat
+    - Jiangshi Cat
+    rarity: 2
+  39:
+    name:
+    - Wheel Cat
+    - Solar Cat
+    - Chill Cat
+    rarity: 2
+  40:
+    name:
+    - Apple Cat
+    - Face Cat
+    - iCat
+    rarity: 3
+  41:
+    name:
+    - Bath Cat
+    - Sexy Bathtub Cat
+    - Luxury Bath Cat
+    rarity: 3
+  42:
+    name:
+    - Salon Cat
+    - Paris Cat
+    - Cyborg Cat
+    rarity: 2
+  43:
+    name:
+    - Ice Cat
+    - Ice Queen Cat
+    - Ice Crystal Cat
+    rarity: 4
+  44:
+    name:
+    - Cat Machine
+    - Cat Machine Mk 2
+    - Cat Machine Mk 3
+    rarity: 4
+  45:
+    name:
+    - Lesser Demon Cat
+    - Greater Demon Cat
+    - Greater Balrog Cat
+    rarity: 4
+  46:
+    name:
+    - Maiko Cat
+    - Geisha Cat
+    rarity: 1
+  47:
+    name:
+    - Jurassic Cat
+    - Jurassic Cat Sitter
+    - Catasaurus
+    rarity: 2
+  48:
+    name:
+    - Viking Cat
+    - Thor Cat
+    - Maximum the Fighter
+    rarity: 2
+  49:
+    name:
+    - Pirate Cat
+    - Captain Cat
+    - Dread Pirate Catley
+    rarity: 2
+  50:
+    name:
+    - Thief Cat
+    - Phantom Thief Cat
+    - Goemon Cat
+    rarity: 2
+  51:
+    name:
+    - Bishop Cat
+    - Monk Cat
+    - Sanzo Cat
+    rarity: 2
+  52:
+    name:
+    - Fortune Teller Cat
+    - Fisherman Cat
+    - Doctor Cat
+    rarity: 2
+  53:
+    name:
+    - Shaman Cat
+    - Necromancer Cat
+    - Necro-Dancer Cat
+    rarity: 2
+  54:
+    name:
+    - Evangelist Cat
+    - Filibuster Cat
+    rarity: 4
+  56:
+    name:
+    - Witch Cat
+    - Sorceress Cat
+    - Enchantress Cat
+    rarity: 2
+  57:
+    name:
+    - Archer Cat
+    - Cupid Cat
+    - Cataur
+    rarity: 2
+  58:
+    name:
+    - Marauder Cat
+    - Berserker Cat
+    - Paladin Cat
+    rarity: 4
+  59:
+    name:
+    - Swordsman Cat
+    - Sword Master Cat
+    - Elemental Duelist Cat
+    rarity: 2
+  60:
+    name:
+    - Baby Cat
+    - Baby Cats
+    - Cats in the Cradle
+    - Cats in the Stroller
+    rarity: 4
+  61:
+    name:
+    - Bronze Cat
+    - Michelangelo Cat
+    - Quizmaster Cat
+    rarity: 2
+  62:
+    name:
+    - Sushi Cat
+    - Fried Shrimp Cat
+    - Roe Cat
+    rarity: 3
+  63:
+    name:
+    - Toy Machine Cat
+    - Vendor Cat
+    rarity: 1
+  64:
+    name:
+    - Sports Day Cat
+    - Kidnapper Cats
+    - Rampage Cats
+    rarity: 2
+  65:
+    name:
+    - Swordsman
+    - Swordsman Johnny
+    rarity: 2
+  66:
+    name:
+    - Cow Princess
+    - Giraffe Princess
+    rarity: 2
+  67:
+    name:
+    - PPT48
+    - Dark PPT48
+    - PPT46
+    rarity: 4
+  68:
+    name:
+    - Li'l Gau
+    - Li'l Gau Gau
+    - Crystal Li'l Gau Gau
+    rarity: 2
+  69:
+    name:
+    - Reaper
+    - Reaper 999
+    - Judgment
+    rarity: 3
+  70:
+    name:
+    - Sleeping Beauty Punt
+    - Sleeping Beauty Punt II
+    - Oversleeping Beauty Punt
+    rarity: 3
+  71:
+    name:
+    - Salaryman Cat
+    - Grudge Cat
+    - Ritual Cat
+    rarity: 2
+  72:
+    name:
+    - Sanada Yukimura
+    - Wargod Yukimura
+    - Immortal Yukimura
+    rarity: 4
+  73:
+    name:
+    - Maeda Keiji
+    - Wargod Keiji
+    - Immortal Keiji
+    rarity: 4
+  74:
+    name:
+    - Oda Nobunaga
+    - Wargod Nobunaga
+    - Immortal Nobunaga
+    - Phantasmal Nobunaga
+    rarity: 4
+  75:
+    name:
+    - Reindeer Fish Cat
+    - Sashimi Cat
+    - Xmas Pudding Cat
+    rarity: 2
+  76:
+    name:
+    - Windy
+    - "Windy, type \u03B1"
+    - "Divine Windy \u03B1"
+    - "Ultimate Windy \u03B1"
+    rarity: 4
+  77:
+    name:
+    - Thundia
+    - "Thundia, type \u03B2"
+    - "Divine Thundia \u03B2"
+    - "Ultimate Thundia \u03B2"
+    rarity: 4
+  78:
+    name:
+    - Droid Cat
+    - Droid Cat Mk 2
+    - SpringDroid
+    rarity: 2
+  79:
+    name:
+    - Space Cat
+    - Major Space Cat
+    - Space Marine Cat
+    rarity: 2
+  80:
+    name:
+    - Adult Cat
+    - Sick Cat
+    - Prisoner Cat
+    rarity: 2
+  81:
+    name:
+    - Evil Cat
+    - Gentleman Cat
+    - Gentleman Bros.
+    rarity: 2
+  82:
+    name:
+    - Doll Cats
+    - Cat-o-tron
+    - Nyalladin
+    rarity: 2
+  83:
+    name:
+    - Blue Shinobi
+    - Orange Shinobi
+    rarity: 1
+  84:
+    name:
+    - Sodom
+    - Earth King Sodom
+    - God-Emperor Sodom
+    rarity: 4
+  85:
+    name:
+    - Megidora
+    - Holy Dragon Megidora
+    - God-Emperor Megidora
+    rarity: 4
+  86:
+    name:
+    - Vars
+    - Dragon King Vars
+    - God-Emperor Vars
+    rarity: 4
+  87:
+    name:
+    - Kamukura
+    - God Dragon Kamukura
+    - God-Emperor Kamukura
+    rarity: 4
+  88:
+    name:
+    - Raiden
+    - Dragonslayer Raiden
+    - God-Emperor Raiden
+    rarity: 4
+  89:
+    name:
+    - Rope Jump Cat
+    - Pair Rope Jump Cat
+    - Noodle Cats
+    rarity: 2
+  92:
+    name:
+    - Crazed Cat
+    - Crazed Macho Cat
+    - Manic Mohawk Cat
+    rarity: 3
+  93:
+    name:
+    - Crazed Tank Cat
+    - Crazed Wall Cat
+    - Manic Eraser Cat
+    rarity: 3
+  94:
+    name:
+    - Crazed Axe Cat
+    - Crazed Brave Cat
+    - Manic Dark Cat
+    rarity: 3
+  95:
+    name:
+    - Crazed Gross Cat
+    - Crazed Sexy Legs Cat
+    - Manic Macho Legs
+    rarity: 3
+  96:
+    name:
+    - Crazed Cow Cat
+    - Crazed Giraffe Cat
+    - Manic Lion Cat
+    rarity: 3
+  97:
+    name:
+    - Crazed Bird Cat
+    - Crazed UFO Cat
+    - Manic Flying Cat
+    rarity: 3
+  98:
+    name:
+    - Crazed Fish Cat
+    - Crazed Whale Cat
+    - Manic Island Cat
+    rarity: 3
+  99:
+    name:
+    - Crazed Lizard Cat
+    - Crazed Dragon Cat
+    - Manic King Dragon
+    rarity: 3
+  100:
+    name:
+    - Crazed Titan Cat
+    - Crazed M. Titan Cat
+    - Manic Jamiera Cat
+    rarity: 3
+  101:
+    name:
+    - Maiden Cat
+    - Sportsgirl Cat
+    - Wrestling Cat
+    rarity: 2
+  104:
+    name:
+    - Cabaret Cat
+    - Mega Cat
+    - Mega Cat EX
+    rarity: 1
+  105:
+    name:
+    - Koi Cat
+    - Gross Koi Cat
+    - Kiss and Koi
+    rarity: 2
+  106:
+    name:
+    - Kuu
+    - "Kuu, type \u03B3"
+    - "Divine Kuu \u03B3"
+    rarity: 4
+  107:
+    name:
+    - Kai
+    - "Kai, type \u03BC"
+    - "Divine Kai \u03BC"
+    rarity: 4
+  108:
+    name:
+    - Coppermine
+    - "Coppermine, type \u03BA"
+    - "Divine Coppermine \u03BA"
+    rarity: 4
+  109:
+    name:
+    - Cat Bros
+    - Secret Base
+    rarity: 1
+  110:
+    name:
+    - Madam Bride
+    - Madam King
+    - Madam the Savannah
+    rarity: 2
+  111:
+    name:
+    - Celesse
+    - Celesse CC
+    rarity: 2
+  112:
+    name:
+    - Nono
+    - Nono CC
+    - Frolicking Nono CC
+    rarity: 2
+  113:
+    name:
+    - Olga
+    - Olga CC
+    rarity: 2
+  114:
+    name:
+    - Norn
+    - Norn CC
+    rarity: 2
+  115:
+    name:
+    - Yoichi
+    - Yoichi CC
+    rarity: 2
+  116:
+    name:
+    - Serum
+    - Serum CC
+    rarity: 2
+  117:
+    name:
+    - Fuu
+    - Fuu CC
+    rarity: 2
+  118:
+    name:
+    - Aura
+    - Aura CC
+    rarity: 3
+  119:
+    name:
+    - Rei
+    - Rei CC
+    rarity: 3
+  120:
+    name:
+    - Wyvern
+    - Wyvern Cat
+    - Wyvern and Alec
+    rarity: 4
+  121:
+    name:
+    - Healer
+    - Healer CC
+    - Healer Cat CC
+    rarity: 1
+  122:
+    name:
+    - Merc
+    - Merc CC
+    - Merc & Cat CC
+    rarity: 1
+  123:
+    name:
+    - Vacation Queen
+    - Office Lady Cat
+    - Call Center Cat
+    rarity: 2
+  124:
+    name:
+    - Bean Cats
+    - Brah Cats
+    - Val Val Cat
+    rarity: 1
+  125:
+    name:
+    - Date Masamune
+    - Wargod Masamune
+    - Immortal Masamune
+    rarity: 4
+  126:
+    name:
+    - Takeda Shingen
+    - Wargod Shingen
+    - Immortal Shingen
+    rarity: 4
+  127:
+    name:
+    - Clockwork Cat
+    - Puppetmaster Cat
+    - Puppetmaster & Charley
+    rarity: 2
+  128:
+    name:
+    - Flower Cat
+    - Cooldown Cat
+    - Bombercat
+    rarity: 1
+  129:
+    name:
+    - Vengeful Cat
+    - Groucho Cat
+    - Kite Cat
+    rarity: 2
+  130:
+    name:
+    - Gold Cat
+    - Gold Macho Cat
+    - Glittering Macho Cat
+    rarity: 3
+  131:
+    name:
+    - Ururun Wolf
+    - Ururun Cat
+    - Awakened Ururun
+    rarity: 1
+  132:
+    name:
+    - Neneko
+    - Miss NENEKO
+    rarity: 3
+  133:
+    name:
+    - Kung Fu Cat X
+    - Drunken Master Cat X
+    - Iron Claw X
+    rarity: 2
+  135:
+    name:
+    - Urashima Taro
+    - Guardian Gamereon
+    - King Gamereon
+    rarity: 4
+  136:
+    name:
+    - The Grateful Crane
+    - Super Galaxy Cosmo
+    - Ultima Galaxy Cosmo
+    - Supernova Cosmo
+    rarity: 4
+  137:
+    name:
+    - Momotaro
+    - The Peach Angels
+    - The Peach Devils
+    rarity: 4
+  138:
+    name:
+    - Kasa Jizo
+    - Jizo's Moving Castle
+    - Jizo's Mega-Castle
+    - Ultra Kasa Jizo
+    rarity: 4
+  139:
+    name:
+    - Princess Kaguya
+    - The Death Moon
+    - The Chaos Moon
+    - Ultra Kaguya
+    rarity: 4
+  141:
+    name:
+    - Squish Ball Cat
+    - Muscleman Cat
+    rarity: 1
+  142:
+    name:
+    - God
+    - Secret God
+    rarity: 1
+  144:
+    name:
+    - Nurse Cat
+    - Heartful Nurse Cat
+    - Joyful Nurse Cat
+    rarity: 4
+  145:
+    name:
+    - Cat Base Mini
+    - Cat Base Jr.
+    - Cat Base Ultra
+    rarity: 3
+  146:
+    name:
+    - Cat Gunslinger
+    - Cat Eastwood
+    - Rodeo Cat
+    rarity: 2
+  147:
+    name:
+    - Stilts Cat
+    - Totem Cat
+    - Acrobat Cats
+    rarity: 2
+  148:
+    name:
+    - Tin Cat
+    - Plane Cat
+    - Robocat
+    rarity: 2
+  149:
+    name:
+    - Rocker Cat
+    - Artist Cat
+    - Ramen Cat
+    rarity: 2
+  150:
+    name:
+    - Mer-Cat
+    - Commando Cat
+    - Cameraman Cat
+    rarity: 2
+  151:
+    name:
+    - Juliet Cat
+    - Princess Juliet Cat
+    - Juliet the Maiko
+    rarity: 3
+  152:
+    name:
+    - Weightlifter Cat
+    - Ring Girl Cat
+    - Pizza Cat
+    rarity: 3
+  153:
+    name:
+    - Figure Skating Cats
+    - Drama Cats
+    - Slapstick Cats
+    rarity: 3
+  154:
+    name:
+    - Cat Toaster
+    - Cat Projector
+    - Catophone
+    rarity: 3
+  155:
+    name:
+    - Hoop Cat
+    - Showoff Cat
+    - Hoopmaster Cat
+    rarity: 2
+  159:
+    name:
+    - Uesugi Kenshin
+    - Wargod Kenshin
+    - Immortal Kenshin
+    - Hellrider Kenshin
+    rarity: 4
+  160:
+    name:
+    - Kalisa
+    - "Kalisa, type \u03C7"
+    - "Divine Kalisa \u03C7"
+    rarity: 4
+  161:
+    name:
+    - Yurinchi
+    - Phoenix Yurinchi
+    - Gekirinchi
+    rarity: 3
+  162:
+    name:
+    - Crazed Princess Punt
+    - Crazed Princess Punt CC
+    - Manic Princess Punt
+    rarity: 4
+  169:
+    name:
+    - Asiluga
+    - Asilan Pasalan
+    - Assassinlan Pasalan
+    rarity: 4
+  170:
+    name:
+    - Kubiluga
+    - Kubilan Pasalan
+    - E. Kubilan Pasalan
+    rarity: 4
+  171:
+    name:
+    - Tecoluga
+    - Tesalan Pasalan
+    - Lufalan Pasalan
+    rarity: 4
+  172:
+    name:
+    - Balaluga
+    - Balalan Pasalan
+    - Piccolan Pasalan
+    rarity: 4
+  173:
+    name:
+    - Li'l Nyandam
+    - Dark Emperor Catdam
+    - Schoolbus Nyandam
+    rarity: 1
+  174:
+    name:
+    - Baby Mola
+    - Young Man Mola
+    - Citizen Mola
+    rarity: 3
+  175:
+    name:
+    - Mola King
+    - Living Legend
+    - Master of the Pacific
+    rarity: 4
+  176:
+    name:
+    - Meowla Meowla
+    - Catorpedo
+    rarity: 1
+  177:
+    name:
+    - Marshmallow Cat
+    - Creepmallow
+    rarity: 2
+  178:
+    name:
+    - Dioramos
+    - Archdragon Dioramos
+    - God-Emperor Dioramos
+    - Ascendant Dioramos
+    rarity: 4
+  180:
+    name:
+    - "Takuya \uFF06 Yuki"
+    - "Takuya, Yuki \uFF06 Cat"
+    - "Takuya\uFF06 Lovely Yuki"
+    rarity: 2
+  181:
+    name:
+    - Mystery Girl Yuki
+    - "Mystery Yuki \uFF06 Cat"
+    - Mystery Catgirl Yuki
+    rarity: 4
+  182:
+    name:
+    - Yuki Cat
+    - Lovely Yuki Cat
+    rarity: 1
+  184:
+    name:
+    - Cat Kart R
+    - Cat Kart G
+    - Cat Kart P
+    rarity: 2
+  185:
+    name:
+    - Mr. Ninja
+    - Mint
+    rarity: 1
+  186:
+    name:
+    - Hearscht
+    - Hearscht CC
+    - Revolutionary Hearscht CC
+    rarity: 4
+  187:
+    name:
+    - Cornelia
+    - Cornelia CC
+    rarity: 4
+  188:
+    name:
+    - Juvens
+    - Juvens CC
+    - Holiday Juvens CC
+    rarity: 4
+  189:
+    name:
+    - Mystica
+    - Mystica CC
+    - Savior Mystica CC
+    rarity: 4
+  190:
+    name:
+    - Alois
+    - Alois CC
+    rarity: 3
+  191:
+    name:
+    - Citrouille
+    - Citrouille CC
+    rarity: 3
+  192:
+    name:
+    - Titi
+    - Titi CC
+    - Titi Cat CC
+    rarity: 1
+  195:
+    name:
+    - Akira
+    - Shadow Akira
+    - Inferno Akira
+    rarity: 4
+  196:
+    name:
+    - Mekako Saionji
+    - Dr. Mekako
+    - Mission Control Mekako
+    rarity: 4
+  197:
+    name:
+    - Catman
+    - Dark Catman
+    - Ultimate Catman
+    - Catman Forever
+    rarity: 4
+  198:
+    name:
+    - Psychocat
+    - Neo Psychocat
+    - Corrupted Psychocat
+    rarity: 2
+  199:
+    name:
+    - Onmyoji Cat
+    - Magica Cat
+    - Thaumaturge Cat
+    rarity: 2
+  200:
+    name:
+    - Surfer Cat
+    - Castaway Cat
+    - Seafarer Cat
+    rarity: 3
+  201:
+    name:
+    - Metal Cat
+    - Metal Macho
+    rarity: 3
+  202:
+    name:
+    - Drumcorps Cat
+    - Banner Cat
+    - Mochi Cat
+    rarity: 2
+  203:
+    name:
+    - Baozi Cat
+    - Big Baozi
+    rarity: 1
+  204:
+    name:
+    - Kachi-Kachi
+    - Fire Squad Kachiyama
+    - Kachiyama Assault Brigade
+    rarity: 4
+  210:
+    name:
+    - Li'l Cat
+    - Li'l Macho Cat
+    - Li'l Mohawk Cat
+    rarity: 1
+  211:
+    name:
+    - Li'l Tank Cat
+    - Li'l Wall Cat
+    - Li'l Eraser Cat
+    rarity: 1
+  212:
+    name:
+    - Li'l Axe Cat
+    - Li'l Brave Cat
+    - Li'l Dark Cat
+    rarity: 1
+  213:
+    name:
+    - The White Rabbit
+    - The Black Cat
+    - The Grey Fox
+    - The Spectral Cat
+    rarity: 4
+  214:
+    name:
+    - Catburger
+    - Cat Royale
+    - Value Meal Cat
+    rarity: 1
+  215:
+    name:
+    - HYAKUTARO
+    - HYAKUTARO CC
+    rarity: 2
+  216:
+    name:
+    - MARCO
+    - MARCO CC
+    rarity: 2
+  217:
+    name:
+    - TARMA
+    - TARMA CC
+    rarity: 2
+  218:
+    name:
+    - ERI
+    - ERI CC
+    rarity: 2
+  219:
+    name:
+    - FIO
+    - FIO CC
+    rarity: 2
+  220:
+    name:
+    - SV-001
+    - SV-001 CC
+    rarity: 3
+  221:
+    name:
+    - ALLEN O'NEIL
+    - ALLEN O'NEIL CC
+    rarity: 3
+  222:
+    name:
+    - MARS PEOPLE
+    - MARS PEOPLE CC
+    rarity: 2
+  223:
+    name:
+    - HUGE HERMIT
+    - HUGE HERMIT CC
+    - GOLDEN HUGE HERMIT CC
+    rarity: 4
+  224:
+    name:
+    - JUPITER KING
+    - JUPITER KING CC
+    - GOLDEN JUPITER CC
+    rarity: 4
+  225:
+    name:
+    - DONALD MORDEN
+    - GENERAL MORDEN
+    - GOLDEN MORDEN CC
+    rarity: 4
+  226:
+    name:
+    - HI-DO
+    - HI-DO CC
+    - HI-DO MK III
+    rarity: 4
+  227:
+    name:
+    - Warlock and Pierre
+    - Dark Merchant Babil
+    - Mad Doctor Klay
+    rarity: 4
+  228:
+    name:
+    - Pumpcat
+    - Cat O'Lantern
+    - Harbinger Cat
+    rarity: 2
+  229:
+    name:
+    - Gloomy Neneko
+    - Witchy Neneko
+    - Costumed Witchy Neneko
+    rarity: 3
+  230:
+    name:
+    - Hallowindy
+    - "Hallowindy, type \u03B1"
+    rarity: 4
+  231:
+    name:
+    - Spooky Thundia
+    - "Spooky Thundia, type \u03B2"
+    rarity: 4
+  238:
+    name:
+    - Freshman Cat Jobs
+    - Prof. Cat Jobs
+    - Headmaster Cat Jobs
+    rarity: 3
+  239:
+    name:
+    - Rich Cat III
+    - Rich Cat Sr.
+    - Richest Cat
+    rarity: 3
+  240:
+    name:
+    - Sniper the Recruit
+    - Sniper the Heavy
+    - Sniper the Deadeye
+    rarity: 3
+  241:
+    name:
+    - Togeluga
+    - Togelan Pasalan
+    - Shishilan Pasalan
+    rarity: 4
+  242:
+    name:
+    - Frosty Kai
+    - "Frosty Kai, type \u03BC"
+    - "Frostspirit Kai, type \u03BC"
+    rarity: 4
+  243:
+    name:
+    - Santa Kuu
+    - "Santa Kuu, type \u03B3"
+    rarity: 4
+  244:
+    name:
+    - Holy Coppermine
+    - "Holy Coppermine, type \u03BA"
+    rarity: 4
+  245:
+    name:
+    - A Gift of Cats
+    - Cat's Gift
+    rarity: 2
+  246:
+    name:
+    - Li'l Gross Cat
+    - Li'l Sexy Legs Cat
+    - Li'l Macho Legs Cat
+    rarity: 1
+  247:
+    name:
+    - Li'l Cow Cat
+    - Li'l Giraffe Cat
+    - Li'l Lion Cat
+    rarity: 1
+  248:
+    name:
+    - Li'l Bird Cat
+    - Li'l UFO Cat
+    - Li'l Flying Cat
+    rarity: 1
+  249:
+    name:
+    - Undead Cat
+    - Bake-Nyanko
+    - Extra-Life Cat
+    rarity: 1
+  258:
+    name:
+    - Thunder God Zeus
+    - The Majestic Zeus
+    - Almighty Zeus
+    rarity: 4
+  259:
+    name:
+    - Anubis the Protector
+    - Anubis the Unblemished
+    - Almighty Anubis
+    rarity: 4
+  260:
+    name:
+    - Radiant Aphrodite
+    - Megaphrodite
+    - Almighty Aphrodite
+    rarity: 4
+  261:
+    name:
+    - Catway
+    - Drone Cat
+    - Time Traveller Cat
+    rarity: 3
+  262:
+    name:
+    - Hayabusa
+    - Oni Hayabusa
+    - Akuma Hayabusa
+    rarity: 4
+  268:
+    name:
+    - Catornado
+    - Hurricat
+    - Catyphoon
+    rarity: 3
+  269:
+    name:
+    - Red Riding Mina
+    - Crimson Mina
+    - Awakened Mina
+    rarity: 1
+  270:
+    name:
+    - Baby Gao
+    - Mighty Lord Gao
+    rarity: 4
+  271:
+    name:
+    - Crazed Yuki
+    - Crazed Yuki & Cat
+    - Crazed Catgirl Yuki
+    rarity: 4
+  272:
+    name:
+    - Shining Amaterasu
+    - Glorious Amaterasu
+    - Almighty Amaterasu
+    rarity: 4
+  273:
+    name:
+    - Splendid Ganesha
+    - Exalted Ganesha
+    - Almighty Ganesha
+    rarity: 4
+  274:
+    name:
+    - Cheerleader Cat
+    - Waitress Cat
+    - Soba Cat
+    rarity: 3
+  275:
+    name:
+    - Tropical Kalisa
+    - "Tropical Kalisa, type \u03C7"
+    rarity: 4
+  276:
+    name:
+    - Midsummer Rabbit
+    - Midsummer Cat
+    - Brightsummer Cat
+    rarity: 4
+  277:
+    name:
+    - Sunny Neneko
+    - Seaside Neneko
+    - Early Summer Neneko
+    rarity: 3
+  278:
+    name:
+    - Funghi
+    - Funghi 'n' Cat
+    rarity: 2
+  279:
+    name:
+    - Tanky
+    - Tanky 'n' Cat
+    rarity: 1
+  280:
+    name:
+    - White Cat
+    - Gross White Cat
+    rarity: 1
+  281:
+    name:
+    - Fortressy
+    - Castley
+    rarity: 1
+  283:
+    name:
+    - Awa-Odori Cat
+    - So-Ran Cat
+    - Gorgeous Groovin' Cat
+    rarity: 2
+  284:
+    name:
+    - Pai-Pai
+    - Pai-Pai Z
+    - Pai-Pai DX
+    rarity: 4
+  285:
+    name:
+    - Express Cat
+    - Maglev Cat
+    - Bullet Train Cat
+    rarity: 3
+  287:
+    name:
+    - Strike Unit R.E.I.
+    - Assault Unit R.E.I.
+    - Flight Unit R.E.I.
+    rarity: 4
+  288:
+    name:
+    - Little Leaguer Cat
+    - Major Leaguer Cat
+    - Golfer Cat
+    rarity: 3
+  289:
+    name:
+    - Madoka Kaname
+    - Madoka & Cat
+    - Ultimate Madoka
+    rarity: 4
+  290:
+    name:
+    - Homura Akemi
+    - Homura & Cat
+    - Devil Homura
+    rarity: 4
+  291:
+    name:
+    - Sayaka Miki
+    - Sayaka & Cat
+    rarity: 4
+  292:
+    name:
+    - Mami Tomoe
+    - Mami & Cat
+    rarity: 4
+  293:
+    name:
+    - Kyoko Sakura
+    - Kyoko & Cat
+    rarity: 4
+  294:
+    name:
+    - Kyubey
+    - Kyubey & Cat
+    rarity: 3
+  295:
+    name:
+    - Madoka Cat
+    - Magical Girl Madoka Cat
+    rarity: 2
+  296:
+    name:
+    - Homura Cat
+    - Magical Girl Homura Cat
+    rarity: 2
+  297:
+    name:
+    - Sayaka Cat
+    - Magical Girl Sayaka Cat
+    rarity: 2
+  298:
+    name:
+    - Mami Cat
+    - Magical Girl Mami Cat
+    rarity: 2
+  299:
+    name:
+    - Kyoko Cat
+    - Magical Girl Kyoko Cat
+    rarity: 2
+  300:
+    name:
+    - Li'l Madoka
+    - Li'l Magical Girl Madoka
+    - Li'l Ultimate Madoka
+    rarity: 2
+  301:
+    name:
+    - Li'l Homura
+    - Li'l Magical Girl Homura
+    - Li'l Devil Homura
+    rarity: 1
+  302:
+    name:
+    - Kyubey Cat
+    - Tank Kyubey Cat
+    rarity: 2
+  303:
+    name:
+    - Lilith Cat
+    - Succubus Cat
+    - Queen Succubus Cat
+    rarity: 4
+  304:
+    name:
+    - Food Stall Cat
+    - Delivery Cat
+    - Cafeteria Cat
+    rarity: 2
+  305:
+    name:
+    - Mighty Kat-A-Pult
+    - CAT-6 Siege Engine
+    - CAT-8 Behemoth
+    - CAT-10 Gigapult
+    rarity: 4
+  306:
+    name:
+    - Mighty Drednot
+    - B.C.S. Lionheart
+    - B.C.S. Tigerclaw
+    - B.C.S. Beartooth
+    rarity: 4
+  307:
+    name:
+    - Mighty Bomburr
+    - NEK-0 Sky Fortress
+    - NEK-02 Air Citadel
+    - NEK-03 Cloud Emperor
+    rarity: 4
+  308:
+    name:
+    - Vaulter Cat
+    - Polevaulter Cat
+    - Housewife Cat
+    rarity: 3
+  309:
+    name:
+    - Gardener Cat
+    - Lumbercat
+    - Weedwacker Cat
+    rarity: 2
+  311:
+    name:
+    - Yuletide Nurse
+    - Yule Knight Nurse
+    - Xmas Spirit Nurse
+    rarity: 4
+  312:
+    name:
+    - Li'l Fish Cat
+    - Li'l Whale Cat
+    - Li'l Island Cat
+    rarity: 1
+  313:
+    name:
+    - Li'l Lizard Cat
+    - Li'l Dragon Cat
+    - Li'l King Dragon Cat
+    rarity: 1
+  314:
+    name:
+    - Li'l Titan Cat
+    - Li'l Mythical Titan
+    - Li'l Jamiera Cat
+    rarity: 1
+  315:
+    name:
+    - Years-End Neneko
+    - New Year Neneko
+    - Festive New Year Neneko
+    rarity: 3
+  316:
+    name:
+    - PIKOTARO
+    - NEKOTARO
+    rarity: 2
+  317:
+    name:
+    - Wrathful Poseidon
+    - Valiant Poseidon
+    - Almighty Poseidon
+    rarity: 4
+  318:
+    name:
+    - CPAC
+    - PPAP
+    rarity: 1
+  319:
+    name:
+    - Miko Mitama
+    - Mitama the Oracle
+    rarity: 4
+  320:
+    name:
+    - Killer Cat
+    - True Killer Cat
+    - Radical Cat
+    rarity: 2
+  323:
+    name:
+    - Sarukani
+    - Rock Revengers
+    - The One-Hit Wonders
+    rarity: 4
+  324:
+    name:
+    - Miyamoku Musashi
+    - Heroic Musashi
+    - Awakened Musashi
+    rarity: 1
+  325:
+    name:
+    - Curling Cat
+    - Cleanerbot Cat
+    - Green Shell Cat
+    rarity: 2
+  326:
+    name:
+    - Welterweight Cat
+    - Heavyweight Cat
+    - Ectoweight Cat
+    rarity: 2
+  327:
+    name:
+    - Mobius
+    - Miraculous Mobius
+    rarity: 4
+  328:
+    name:
+    - Belial
+    - Reckless Belial
+    rarity: 3
+  329:
+    name:
+    - Happy 100
+    - Heartful Happy 100
+    rarity: 1
+  330:
+    name:
+    - Eggy Cat
+    - Easter Cat
+    - Easter Egg Cat
+    rarity: 2
+  331:
+    name:
+    - Springtime Kenshin
+    - Full-Bloom Kenshin
+    - Spring Breeze Kenshin
+    rarity: 4
+  332:
+    name:
+    - Bunny & Canard
+    - Disciple Psychoduck
+    - Malevolent Mad-Duck
+    rarity: 4
+  333:
+    name:
+    - Easter Neneko
+    - Hoppity Neneko
+    - Blossoming Neneko
+    rarity: 3
+  334:
+    name:
+    - Shadow Gao
+    - Diabolic Gao
+    rarity: 4
+  335:
+    name:
+    - Trickster Himeyuri
+    - Himeyuri Ninetails
+    - Fox Queen Himeyuri
+    rarity: 4
+  336:
+    name:
+    - Sea Maiden Ruri
+    - Sea Mistress Ruri
+    - Mer-Queen Ruri
+    rarity: 4
+  337:
+    name:
+    - Queen Reika
+    - Pharaoh Reika
+    - Eternal Reika
+    rarity: 4
+  338:
+    name:
+    - HMS Princess
+    - HMS Princess CC
+    - HMS Princess II CC
+    rarity: 4
+  339:
+    name:
+    - Imagawa Yoshimoto
+    - Wargod Yoshimoto
+    - Immortal Yoshimoto
+    rarity: 4
+  341:
+    name:
+    - Redhead Yuki Cat
+    - Redhead Lovely Yuki Cat
+    - Redhead Muscled Yuki Cat
+    rarity: 2
+  342:
+    name:
+    - Lost World Yuki
+    - "Lost World Yuki \uFF06 Cat"
+    - Lost World Catgirl Yuki
+    rarity: 4
+  343:
+    name:
+    - Maneki Cat
+    - Neo Maneki Cat
+    rarity: 1
+  344:
+    name:
+    - Slug Jockey Cat
+    - Slugcat
+    rarity: 2
+  345:
+    name:
+    - Orthos
+    - Orthos CC
+    - Artist Orthos CC
+    rarity: 3
+  346:
+    name:
+    - Michelia
+    - Michelia CC
+    - Naptime Michelia CC
+    rarity: 4
+  347:
+    name:
+    - Todomeki
+    - Todomeki CC
+    rarity: 4
+  352:
+    name:
+    - Twinstars
+    - "Twinstars, type \u03A6"
+    - "Divine Twinstars \u03A6"
+    rarity: 4
+  353:
+    name:
+    - Hermit Cat
+    - Grandmaster Cat
+    - Masked Grandmaster Cat
+    rarity: 1
+  355:
+    name:
+    - Seashore Kai
+    - "Seashore Kai, type \u03BC"
+    rarity: 4
+  356:
+    name:
+    - Mighty Rekon Korps
+    - Orbital Platform Armageddon
+    - Orbital Annihilator Ragnarok
+    rarity: 4
+  358:
+    name:
+    - Wolfchild Deale
+    - Wolf Princess Deale
+    - Jester Queen Deale
+    rarity: 4
+  359:
+    name:
+    - Graveflower Verbena
+    - Verbena the Bride
+    - Opulent Verbena
+    rarity: 4
+  360:
+    name:
+    - Bora
+    - Bazibon
+    - Bazibastra
+    - Bazifenix
+    rarity: 4
+  361:
+    name:
+    - Mizli
+    - Marinmizu
+    - Mizuririn
+    - Mizunade
+    rarity: 4
+  362:
+    name:
+    - Aer
+    - Erphuan
+    - Aervanta
+    - Aervantex
+    rarity: 4
+  363:
+    name:
+    - Saber
+    - Saber CC
+    - Saber Alter CC
+    rarity: 4
+  364:
+    name:
+    - Rin Tohsaka
+    - Rin Tohsaka CC
+    rarity: 4
+  365:
+    name:
+    - Illyasviel
+    - Illyasviel CC
+    rarity: 4
+  366:
+    name:
+    - Archer
+    - Archer CC
+    rarity: 4
+  367:
+    name:
+    - Lancer
+    - Lancer CC
+    rarity: 4
+  368:
+    name:
+    - Rider
+    - Rider CC
+    rarity: 4
+  369:
+    name:
+    - Gilgamesh
+    - Gilgamesh CC
+    rarity: 4
+  370:
+    name:
+    - Saber the Cat
+    - Heroic Spirit Saber Cat
+    - Saber Alter Cat
+    rarity: 1
+  371:
+    name:
+    - Sakura the Cat
+    - Apron Sakura Cat
+    - Dreaming Sakura Cat
+    rarity: 2
+  372:
+    name:
+    - Rin the Cat
+    - Mage Rin Cat
+    rarity: 2
+  373:
+    name:
+    - Illya the Cat
+    - Snow Faerie Illya
+    rarity: 2
+  374:
+    name:
+    - Li'l Shirou
+    - Li'l Shirou CC
+    rarity: 2
+  375:
+    name:
+    - Li'l Sakura
+    - Li'l Sakura CC
+    rarity: 1
+  376:
+    name:
+    - Coin Cat
+    - Macho Coin Cat
+    rarity: 1
+  377:
+    name:
+    - Rover Cat
+    - Rover Cat Mk II
+    - Catellite
+    rarity: 2
+  378:
+    name:
+    - Fencer Cat
+    - Kendo Cat
+    - The Kitty of Liberty
+    rarity: 3
+  379:
+    name:
+    - Dark Mitama
+    - Gothic Mitama
+    rarity: 4
+  380:
+    name:
+    - Volley Cat
+    - Ballet Cat
+    - Curry Cat
+    rarity: 2
+  381:
+    name:
+    - D'artanyan
+    - Meow-sketeer
+    rarity: 4
+  382:
+    name:
+    - Farmer Cat
+    - Harvest Cat
+    rarity: 1
+  383:
+    name:
+    - Glass Cat
+    - Macho Glass Cat
+    - Macho Crystal Cat
+    rarity: 2
+  384:
+    name:
+    - Masked Yulala
+    - Mystic Yulala
+    - Spiritual Yulala
+    rarity: 1
+  385:
+    name:
+    - Satori Hikami & Cat
+    - Satori Hikami & Cat CC
+    rarity: 1
+  386:
+    name:
+    - Akio Yabe
+    - Akio Yabe CC
+    - Akio & Gunder CC
+    rarity: 2
+  387:
+    name:
+    - Sairi Nijitani
+    - Sairi Nijitani CC
+    rarity: 2
+  388:
+    name:
+    - Misaki Konno
+    - Misaki Konno CC
+    rarity: 2
+  389:
+    name:
+    - Ren Katagiri
+    - Ren Katagiri CC
+    rarity: 2
+  390:
+    name:
+    - Karin Nekozuka
+    - Karin Nekozuka CC
+    rarity: 2
+  391:
+    name:
+    - Aoi Hayakawa
+    - Aoi Hayakawa CC
+    - "Baseball Mask \u03B1"
+    rarity: 3
+  392:
+    name:
+    - Mizuki Tachibana
+    - Mizuki Tachibana CC
+    - "Baseball Mask \u03B2"
+    rarity: 3
+  393:
+    name:
+    - Hijiri Rokudo
+    - Hijiri Rokudo CC
+    - "Baseball Mask \u03B3"
+    rarity: 3
+  394:
+    name:
+    - Saki Nijima
+    - Saki Nijima CC
+    - Samba Saki CC
+    rarity: 4
+  395:
+    name:
+    - Subaru Hoshi
+    - Subaru Hoshi CC
+    - Dark Subaru CC
+    rarity: 4
+  396:
+    name:
+    - Miyabi Oyama
+    - Miyabi Oyama CC
+    - "Baseball Mask \u03B4"
+    rarity: 4
+  397:
+    name:
+    - Ganglion
+    - Ganglion the Ancient
+    - Ganglion the Unleashed
+    rarity: 4
+  398:
+    name:
+    - Sakura Sonic
+    - Afterschool Sakura
+    - Sacred Blade Sakura
+    - Sacred Blade Sakura Z
+    rarity: 4
+  400:
+    name:
+    - Mentori
+    - Mentori CC
+    rarity: 2
+  401:
+    name:
+    - Imoto
+    - Imoto CC
+    rarity: 1
+  402:
+    name:
+    - Voli
+    - Volta
+    - Gigavolta
+    rarity: 4
+  403:
+    name:
+    - Shinji & Cat
+    - Plug Suit Shinji
+    - Plug Suit Shinji Black
+    rarity: 2
+  404:
+    name:
+    - Gendo & Fuyutsuki Cats
+    - Moon Gendo & Fuyutsuki Cats
+    rarity: 1
+  405:
+    name:
+    - Giraffe Unit-01
+    - Giraffe Unit-02
+    rarity: 2
+  406:
+    name:
+    - Kaworu & Cat
+    - Plug Suit Kaworu
+    - Moon Kaworu
+    rarity: 1
+  407:
+    name:
+    - Rei Cat
+    - Ayanami Cat (TBC)
+    rarity: 2
+  408:
+    name:
+    - Asuka Cat
+    - Apron Asuka
+    rarity: 2
+  409:
+    name:
+    - Mari Cat
+    - Special Ops Mari
+    rarity: 2
+  410:
+    name:
+    - Rei Ayanami
+    - Plug Suit Rei
+    - Reunion Li'l Rei
+    rarity: 3
+  411:
+    name:
+    - Asuka Langley
+    - Plug Suit Asuka
+    - Eyepatch Li'l Asuka
+    rarity: 3
+  412:
+    name:
+    - Mari Illustrious
+    - Plug Suit Mari
+    rarity: 3
+  413:
+    name:
+    - EVA Unit-00
+    - EVA Unit-00 & Cat
+    rarity: 4
+  414:
+    name:
+    - EVA Unit-01
+    - EVA Unit-01 & Cat
+    - Determined Unit-01 & Cat
+    rarity: 4
+  415:
+    name:
+    - EVA Unit-02
+    - EVA Unit-02 & Cat
+    - Unit-02, Code 777
+    rarity: 4
+  416:
+    name:
+    - Shinji Cat
+    - Toji & Kensuke Cats
+    rarity: 4
+  417:
+    name:
+    - Moon Operators
+    - NERV Moon
+    rarity: 4
+  418:
+    name:
+    - Mighty Thermae D-Lux
+    - Subterra Guardians
+    - Subterra Sentinels
+    - Subterra Saviors
+    rarity: 4
+  419:
+    name:
+    - Crazed Moneko
+    - Corrupted Moneko
+    rarity: 1
+  420:
+    name:
+    - Pokota
+    - Pokota CC
+    rarity: 2
+  421:
+    name:
+    - Ovis
+    - Ovis CC
+    rarity: 2
+  422:
+    name:
+    - Coco
+    - Coco CC
+    rarity: 2
+  427:
+    name:
+    - Mecha-Bun
+    - Mecha-Bun Mk II
+    - Ultimate Mecha-Bun
+    rarity: 1
+  428:
+    name:
+    - Cat Clan Heroes
+    - Cat Guild Heroes
+    - Cat Quest Heroes
+    - Heavenly Cat Heroes
+    rarity: 4
+  429:
+    name:
+    - Souma Cat
+    - Stylish Souma Cat
+    rarity: 2
+  430:
+    name:
+    - Otaku Geek Cat
+    - Hacker Geek Cat
+    rarity: 3
+  432:
+    name:
+    - Detective Vigler
+    - Inspector Gabriel
+    - Section Chief Gravicci
+    - Arcane Commissioner Gravicci
+    rarity: 4
+  433:
+    name:
+    - Betakkuma
+    - Black Betakkuma
+    rarity: 2
+  434:
+    name:
+    - Nekokkuma
+    - Killer Nekokkuma
+    rarity: 1
+  436:
+    name:
+    - Li'l Valkyrie
+    - Wind Dancer Valkyrie
+    rarity: 4
+  437:
+    name:
+    - Nobiluga
+    - Nobilan Pasalan
+    - Mystican Pasalan
+    rarity: 4
+  438:
+    name:
+    - Cat God the Great
+    - Cat God the Awesome
+    - Cat God the Golden
+    rarity: 1
+  439:
+    name:
+    - Waverider Kuu
+    - "Waverider Kuu, type \u03B3"
+    rarity: 4
+  440:
+    name:
+    - Empress Chronos
+    - Chronos the Infinite
+    - Almighty Chronos
+    rarity: 4
+  441:
+    name:
+    - Bebe
+    - Nagisa & Cat
+    - Law of Cycles Nagisa
+    rarity: 4
+  442:
+    name:
+    - D'arktanyan
+    - Valiant D'arktanyan
+    rarity: 4
+  443:
+    name:
+    - Lone Cat and Kitten
+    - Vendor Cat and Kitten
+    - Tourist Cat
+    rarity: 2
+  444:
+    name:
+    - Driller Cat
+    - Power Driller Cat
+    - Neo Driller Cat
+    rarity: 3
+  445:
+    name:
+    - Piledriver Cat
+    - Power Piledriver Cat
+    - Neo Piledriver Cat
+    rarity: 3
+  446:
+    name:
+    - Cutter Cat
+    - Power Cutter Cat
+    - Neo Cutter Cat
+    rarity: 3
+  447:
+    name:
+    - Backhoe Cat
+    - Power Backhoe Cat
+    - Neo Backhoe Cat
+    rarity: 3
+  448:
+    name:
+    - Miter Saw Cat
+    - Power Saw Cat
+    - Neo Saw Cat
+    rarity: 3
+  449:
+    name:
+    - Musashi Miyamoto
+    - Wargod Miyamoto
+    - Immortal Miyamoto
+    rarity: 5
+  450:
+    name:
+    - Jeanne
+    - "Jeanne, type \u03C8"
+    - "Divine Jeanne \u03C8"
+    rarity: 5
+  451:
+    name:
+    - High Lord Babel
+    - Babel the Darkflame
+    - God-Emperor Babel
+    rarity: 5
+  452:
+    name:
+    - Ushiwakamaru
+    - Colossal Benkei
+    rarity: 5
+  453:
+    name:
+    - Primordial Cat
+    - Modern Cat
+    - Future Cat
+    rarity: 2
+  456:
+    name:
+    - Wonder MOMOCO
+    - Cutie MOMOCO
+    - Starlight MOMOCO
+    rarity: 5
+  457:
+    name:
+    - Sakura Matou
+    - Sakura Matou CC
+    - Dark Sakura CC
+    rarity: 4
+  458:
+    name:
+    - Shirou the Cat
+    - Novice Mage Shirou Cat
+    rarity: 1
+  459:
+    name:
+    - Archer the Cat
+    - Heroic Spirit Archer Cat
+    rarity: 2
+  460:
+    name:
+    - Rider the Cat
+    - Heroic Spirit Rider Cat
+    rarity: 2
+  461:
+    name:
+    - Kotomine & Gilgamesh Cats
+    - Gilgamesh & Kotomine Cats
+    rarity: 3
+  462:
+    name:
+    - Legeluga
+    - Legelan Pasalan
+    rarity: 5
+  463:
+    name:
+    - Filibuster Cat X
+    - Filibuster Cat Y
+    - Metafilibuster
+    rarity: 1
+  464:
+    name:
+    - Mighty Kristul Muu
+    - Doom Engine Pandora
+    rarity: 5
+  465:
+    name:
+    - Dogumaru
+    - Doguemon
+    - Reborn Warrior Doguemon
+    rarity: 1
+  467:
+    name:
+    - Black Zeus
+    - Dark Lord Zeus
+    rarity: 5
+  468:
+    name:
+    - Super Zeus
+    - All-Powerful Super Zeus
+    - Super S-Zeus
+    rarity: 4
+  469:
+    name:
+    - Holy Phoenix
+    - Holy Warrior Phoenix
+    - Head Rococo
+    rarity: 4
+  470:
+    name:
+    - Super Devil
+    - Imposter Super Devil
+    - Super D-Devil
+    rarity: 4
+  471:
+    name:
+    - Satanmaria
+    - Wondermaria
+    rarity: 4
+  472:
+    name:
+    - Heracrist
+    - Perfect Heracrist
+    rarity: 4
+  473:
+    name:
+    - Fiendish Nero
+    - Beastly Nero
+    - Beastly Nero
+    rarity: 3
+  474:
+    name:
+    - Prince Yamato
+    - Holy Yamato
+    - Rampaging Yamato
+    rarity: 2
+  475:
+    name:
+    - Rosary Angel
+    - Cross Angel
+    - Strike Angel
+    rarity: 1
+  476:
+    name:
+    - Wakamiko Cat
+    - Warrior King Cat
+    rarity: 1
+  477:
+    name:
+    - Cat Devil
+    - Infernal Cat
+    rarity: 1
+  478:
+    name:
+    - Nekonosuke
+    - Old Guardian Cat
+    rarity: 1
+  479:
+    name:
+    - Lumina
+    - Luminalia
+    rarity: 5
+  482:
+    name:
+    - Doktor Heaven
+    - Professor Abyss
+    rarity: 5
+  483:
+    name:
+    - Benevolent Souma
+    - "Souma \uFF06 Cat"
+    - Cat-Eared Souma
+    rarity: 4
+  484:
+    name:
+    - "Kano \uFF06 Souma"
+    - "Kano \uFF06 Souma \uFF06 Cat"
+    rarity: 2
+  485:
+    name:
+    - Li'l Valkyrie Dark
+    - Dark Rider Valkyrie
+    rarity: 4
+  486:
+    name:
+    - Calette
+    - Calette CC
+    rarity: 4
+  487:
+    name:
+    - Hina
+    - Swordswoman Hina
+    rarity: 3
+  488:
+    name:
+    - EVA Unit-08
+    - EVA Unit-08 & Cat
+    rarity: 4
+  489:
+    name:
+    - AAA Wunder
+    - NNN Wunder
+    - Vanished NNN Wunder
+    rarity: 4
+  490:
+    name:
+    - Misato Katsuragi
+    - Captain Misato
+    rarity: 3
+  491:
+    name:
+    - Ritsuko Akagi
+    - First Officer Ritsuko
+    rarity: 3
+  492:
+    name:
+    - Rei Ayanami (???)
+    - Awakened Ayanami
+    rarity: 3
+  494:
+    name:
+    - Gaia the Creator
+    - Gaia the Supreme
+    rarity: 5
+  495:
+    name:
+    - Seabreeze Coppermine
+    - "Seabreeze Coppermine, type \u03BA"
+    rarity: 4
+  496:
+    name:
+    - Matador Cat
+    - Flamenco Cat
+    - Bellydance Cat
+    rarity: 2
+  497:
+    name:
+    - Narita Kaihime
+    - Wargod Kaihime
+    - Immortal Kaihime
+    - Cleansing Flame Kaihime
+    rarity: 4
+  498:
+    name:
+    - Shakurel Cat
+    - Shakurel Macho Cat
+    rarity: 1
+  499:
+    name:
+    - Shakurel Lion
+    - Shakurel Lion CC
+    rarity: 1
+  500:
+    name:
+    - Shakurel Tiger
+    - Shakurel Tiger CC
+    rarity: 1
+  501:
+    name:
+    - Shakurel Panda
+    - Shakurel Panda CC
+    rarity: 1
+  502:
+    name:
+    - Cat Bros
+    - Baka Cat Bros
+    rarity: 2
+  503:
+    name:
+    - Myrcia
+    - "Myrcia, type \u03BE"
+    - "Divine Myrcia \u03BE"
+    rarity: 4
+  505:
+    name:
+    - Burgle Boss Cat (Retired)
+    - Burgle Boss Cat (Prime)
+    rarity: 1
+  506:
+    name:
+    - Relentless Gladios
+    - Gladios the Annihilator
+    - God-Emperor Gladios
+    rarity: 4
+  507:
+    name:
+    - Eyewaltz
+    - Eyewaltz CC
+    - Nameless Eyewaltz CC
+    rarity: 4
+  508:
+    name:
+    - Mightycat
+    - Supercat
+    - Ironcat
+    rarity: 2
+  509:
+    name:
+    - Ryu Cat
+    - Ryu Cat CC
+    rarity: 2
+  510:
+    name:
+    - Chun-Li Cat
+    - Chun-Li Cat CC
+    rarity: 1
+  511:
+    name:
+    - Akuma
+    - Akuma CC
+    rarity: 5
+  512:
+    name:
+    - Ryu
+    - Ryu CC
+    - Kage
+    rarity: 4
+  513:
+    name:
+    - Chun-Li
+    - Chun-Li CC
+    rarity: 4
+  514:
+    name:
+    - Guile
+    - Guile CC
+    rarity: 4
+  515:
+    name:
+    - Zangief
+    - Zangief CC
+    rarity: 4
+  516:
+    name:
+    - Blanka
+    - Blanka CC
+    rarity: 4
+  517:
+    name:
+    - Dhalsim
+    - Dhalsim CC
+    rarity: 4
+  518:
+    name:
+    - Ken
+    - Ken CC
+    - Crimson King of Battle Ken
+    rarity: 4
+  519:
+    name:
+    - Akuma Giraffe
+    - Akuma Lion
+    rarity: 2
+  520:
+    name:
+    - Lasvoss
+    - Ultimate Lasvoss
+    - Lasvoss Reborn
+    rarity: 4
+  521:
+    name:
+    - Good-Luck Ebisu
+    - Bad-Luck Ebisu
+    rarity: 3
+  522:
+    name:
+    - Medusa Cat
+    - Twintail Medusa Cat
+    - Naga Cat
+    rarity: 2
+  523:
+    name:
+    - Nymph Cat
+    - Medalist Cat
+    - Fiend Cat
+    rarity: 3
+  524:
+    name:
+    - Wushu Cat
+    - Sifu Cat
+    - Shigong Cat
+    rarity: 2
+  526:
+    name:
+    - Kintaro
+    - Kinrangers RoboForce
+    - Kinrangers GigaForce
+    rarity: 4
+  527:
+    name:
+    - Snow Angel Twinstars
+    - "Snow Angel Twinstars, type \u03A6"
+    rarity: 4
+  528:
+    name:
+    - Slime Cat
+    - Jellycat
+    - Jelly Dumpling Cat
+    rarity: 2
+  529:
+    name:
+    - Cossack Cat
+    - Vodka Cat
+    - Royal Guard Cat
+    rarity: 2
+  530:
+    name:
+    - Kasli the Scourge
+    - Ritual Saint Kasli
+    rarity: 4
+  531:
+    name:
+    - Herme
+    - Herme CC
+    rarity: 4
+  532:
+    name:
+    - Teacher BearCat
+    - Assassin BearCat
+    - Cadaver BearCat
+    rarity: 2
+  533:
+    name:
+    - Urs & Fenrir
+    - Urs & Minka
+    - Awakened Urs
+    rarity: 1
+  534:
+    name:
+    - Sharpshooter Saki
+    - Nighthunter Saki
+    - Bad Blaster Saki
+    rarity: 4
+  535:
+    name:
+    - Hades the Punisher
+    - Hades the Deathdealer
+    - Almighty Hades
+    rarity: 4
+  536:
+    name:
+    - Hatsune Miku
+    - Hatsune Miku CC
+    rarity: 4
+  537:
+    name:
+    - Sakura Miku
+    - Sakura Miku CC
+    rarity: 4
+  538:
+    name:
+    - Kagamine Rin & Len
+    - Kagamine Rin & Len CC
+    rarity: 4
+  539:
+    name:
+    - Miku Cat
+    - Miku Cat CC
+    rarity: 2
+  540:
+    name:
+    - Rugby Cat
+    - Quarterback Cat
+    - Gridiron Cat
+    rarity: 2
+  544:
+    name:
+    - Kasli the Bane
+    - Kasli, Daughter of Chaos
+    rarity: 4
+  545:
+    name:
+    - Kyosaka Nanaho
+    - True Kyosaka Nanaho
+    rarity: 5
+  546:
+    name:
+    - Phantom Cat
+    - Miasma Cat
+    - Bubble Cat
+    rarity: 2
+  547:
+    name:
+    - Papaluga
+    - Papalan Pasalan
+    - Sukelan Kakulan
+    rarity: 4
+  548:
+    name:
+    - Night Oracle Rei
+    - Heavenly Herald Rei
+    rarity: 4
+  549:
+    name:
+    - The 4th Angel
+    - 4th Angel Cat
+    rarity: 4
+  550:
+    name:
+    - The 6th Angel
+    - 6th Angel Cat
+    rarity: 4
+  551:
+    name:
+    - The 10th Angel
+    - 10th Angel Cat
+    rarity: 4
+  552:
+    name:
+    - The 9th Angel
+    - 9th Angel Cat
+    rarity: 4
+  553:
+    name:
+    - Kaworu Cat
+    - Moon Kaworu Cat
+    rarity: 2
+  554:
+    name:
+    - Bakery Cat
+    - Boomerang Cat
+    - Fried Chicken Cat
+    rarity: 2
+  555:
+    name:
+    - Master Uril
+    - Mystic Uril
+    - Esoteric Uril
+    rarity: 1
+  556:
+    name:
+    - Shaman Khan
+    - All-Loving Shaman Khan
+    rarity: 4
+  557:
+    name:
+    - Holy Knight Alibaba
+    - Holy King Alibaba
+    - Ghost Alibaba
+    rarity: 3
+  558:
+    name:
+    - Heavenly Jack
+    - Heavenly Lord Jack
+    rarity: 1
+  559:
+    name:
+    - Gacha Cat
+    - Lucky Gacha Cat
+    rarity: 1
+  560:
+    name:
+    - Hell Warden Emma
+    - Hell Sentinel Emma
+    - Hell Commissioner Emma
+    rarity: 4
+  561:
+    name:
+    - Megurine Luka
+    - Megurine Luka CC
+    rarity: 4
+  562:
+    name:
+    - MEIKO & Cat
+    - MEIKO & Cat CC
+    rarity: 3
+  563:
+    name:
+    - Luka Cat
+    - Luka Cat CC
+    rarity: 2
+  564:
+    name:
+    - Squirtgun Saki
+    - Aquabuster Saki
+    - Aquablaster Saki
+    rarity: 4
+  565:
+    name:
+    - Summerluga
+    - Bikinilan Pasalan
+    - Fabulous Pasalan
+    rarity: 4
+  566:
+    name:
+    - Suntan Cat
+    - Macho Suntan Cat
+    - Permed Suntan Cat
+    rarity: 3
+  567:
+    name:
+    - Lifeguard Cats
+    - Sweet Bro Cats
+    - Gelato Bro Cats
+    rarity: 3
+  569:
+    name:
+    - Idi:N
+    - Idi:N2
+    - Idi:NX
+    rarity: 1
+  570:
+    name:
+    - Gravi
+    - Gravolo
+    - Gravolodon
+    rarity: 4
+  571:
+    name:
+    - Skull Rider Vars
+    - Nightmare King Vars
+    - Halloween Knight Vars
+    rarity: 4
+  572:
+    name:
+    - E. Honda
+    - E. Honda CC
+    rarity: 4
+  573:
+    name:
+    - Balrog
+    - Balrog CC
+    rarity: 4
+  574:
+    name:
+    - Vega
+    - Vega CC
+    rarity: 4
+  575:
+    name:
+    - Sagat
+    - Sagat CC
+    rarity: 4
+  576:
+    name:
+    - M. Bison
+    - M. Bison CC
+    rarity: 4
+  577:
+    name:
+    - C. Honda
+    - C. Honda CC
+    rarity: 3
+  578:
+    name:
+    - Balrog Cat
+    - Balrog Cat CC
+    rarity: 2
+  579:
+    name:
+    - Vega Cat
+    - Vega Cat CC
+    rarity: 2
+  580:
+    name:
+    - Sagat Cat
+    - Sagat Cat CC
+    rarity: 2
+  581:
+    name:
+    - M. Bison Cat
+    - M. Bison Cat CC
+    rarity: 2
+  582:
+    name:
+    - Stone Cat
+    - Boulder Cat
+    rarity: 2
+  583:
+    name:
+    - 'Hatsune Miku: MM2020 Osaka'
+    - 'Hatsune Miku CC: MM2020 Osaka'
+    rarity: 4
+  584:
+    name:
+    - 'Hatsune Miku: MM2020 Tokyo'
+    - 'Hatsune Miku CC: MM2020 Tokyo'
+    rarity: 4
+  585:
+    name:
+    - Keiji Claus
+    - Maeda Christmas
+    - Maeda Christmas DX
+    rarity: 4
+  586:
+    name:
+    - Baby Garu
+    - Mighty Aegis Garu
+    rarity: 4
+  587:
+    name:
+    - Emperor Cat
+    - Tyrant Cat
+    rarity: 5
+  588:
+    name:
+    - Sweet Aphrodite
+    - Chocoladite
+    rarity: 4
+  589:
+    name:
+    - First-Love Myrcia
+    - "First-Love Myrcia, type \u03BE"
+    rarity: 4
+  590:
+    name:
+    - Valentine's Neneko
+    - Sweetheart Neneko
+    - True Love Neneko
+    rarity: 3
+  591:
+    name:
+    - Snow Miku 2021
+    - Snow Miku CC 2021
+    rarity: 4
+  592:
+    name:
+    - KAITO & Cat
+    - KAITO & Cat CC
+    rarity: 3
+  593:
+    name:
+    - Neko Rin
+    - Neko Rin CC
+    rarity: 2
+  594:
+    name:
+    - Neko Len
+    - Neko Len CC
+    rarity: 2
+  595:
+    name:
+    - Mighty Aethur Ltd.
+    - Atlantis Logistix
+    - Ultra Atlantis Logistix
+    rarity: 4
+  596:
+    name:
+    - Blooming Kamukura
+    - Everbloom Kamukura
+    - Everbloom Lord Kamukura
+    rarity: 4
+  597:
+    name:
+    - Ranma Saotome (M)
+    - Ranma Saotome (F)
+    rarity: 4
+  598:
+    name:
+    - Akane Tendo
+    - Akane Tendo (Gi)
+    rarity: 4
+  599:
+    name:
+    - Ryoga Hibiki (Pig)
+    - Ryoga Hibiki
+    rarity: 4
+  600:
+    name:
+    - Shampoo (Cat)
+    - Shampoo
+    rarity: 4
+  601:
+    name:
+    - Mousse (Duck)
+    - Mousse
+    rarity: 4
+  602:
+    name:
+    - Happosai
+    - Happosai (Lewd)
+    rarity: 3
+  603:
+    name:
+    - Ukyo Kuonji (GR)
+    - Ukyo Kuonji
+    rarity: 3
+  604:
+    name:
+    - Tatewaki Kuno (Gi)
+    - Tatewaki Kuno
+    rarity: 3
+  605:
+    name:
+    - Ranma Cat (M)
+    - Ranma Cat (F)
+    rarity: 2
+  606:
+    name:
+    - Akane Cat
+    - Akane Cat (Gi)
+    rarity: 2
+  607:
+    name:
+    - Panda Cat
+    - Genma Cat
+    rarity: 1
+  608:
+    name:
+    - Adventurer Kanna
+    - Swashbuckler Kanna
+    - Fabled Adventure Girl Kanna
+    rarity: 4
+  610:
+    name:
+    - Dark Aegis Garu
+    - Dark Beastlord Garu
+    rarity: 4
+  611:
+    name:
+    - Gold Brick Cat
+    - King Ingot Cat
+    - King Nekokhamen
+    rarity: 1
+  612:
+    name:
+    - Godzilla Cat
+    - Shin Godzilla Cat
+    rarity: 2
+  613:
+    name:
+    - Princess Cat
+    - Empress Cat
+    rarity: 4
+  614:
+    name:
+    - Elder Mask Doron
+    - Cat Mask Doron
+    - Awakened Doron
+    rarity: 1
+  615:
+    name:
+    - Kaguya of the Coast
+    - The Southern Sun
+    - The Southern Sunflare
+    rarity: 4
+  616:
+    name:
+    - Kabuto Cat
+    - Golden Kabuto Cat
+    rarity: 1
+  617:
+    name:
+    - Kuwagata Cat
+    - King Kuwagata Cat
+    rarity: 1
+  618:
+    name:
+    - Summoner Satoru
+    - Dark Summoner Satoru
+    - Devil Hunter Satoru
+    rarity: 4
+  619:
+    name:
+    - Amakusa Shiro
+    - Wargod Amakusa
+    - Immortal Amakusa
+    rarity: 4
+  620:
+    name:
+    - Lilin
+    - "Lilin, type \u03C0"
+    - "Divine Lilin \u03C0"
+    rarity: 4
+  621:
+    name:
+    - Hevijak the Wicked
+    - Wicked King Hevijak
+    - God-Emperor Hevijak
+    rarity: 4
+  622:
+    name:
+    - Aku Researcher
+    - Evil Aku Researcher
+    - Cat Researcher
+    rarity: 2
+  623:
+    name:
+    - Jagando Jr.
+    - Lord of Ruin Jagando Jr.
+    rarity: 1
+  624:
+    name:
+    - Pied Piper Cat
+    - Komuso Cat
+    - Brass Cat
+    rarity: 2
+  625:
+    name:
+    - Kunio-kun
+    - Dodgeball Kunio-kun
+    rarity: 4
+  626:
+    name:
+    - Furiluga
+    - Furilan Pasalan
+    - Ragelan Pasalan
+    rarity: 4
+  630:
+    name:
+    - Brainwashed Cat
+    - Brainwashed Macho Cat
+    - Brainwashed Mohawk Cat
+    rarity: 3
+  631:
+    name:
+    - Calligraphy Cat
+    - Tea Master Cat
+    rarity: 2
+  632:
+    name:
+    - Yamii
+    - Yaminoir
+    - Yaminora
+    rarity: 4
+  633:
+    name:
+    - Mighty Deth-Troy-R
+    - Siege Walker Diabolosa
+    - Obliterator Diabolosa
+    rarity: 4
+  634:
+    name:
+    - Shitakiri Sparrow
+    - Chunchun Haunters
+    - Grand Chunchun Haunters
+    rarity: 4
+  635:
+    name:
+    - White Knight Cyclops
+    - Black Knight Kyklops
+    - Demon Knight Kyklops
+    rarity: 4
+  636:
+    name:
+    - Million-Dollar Cat
+    - Hundred-Million-Dollar Cat
+    rarity: 1
+  637:
+    name:
+    - Brainwashed Tank Cat
+    - Brainwashed Wall Cat
+    - Brainwashed Eraser Cat
+    rarity: 3
+  642:
+    name:
+    - Iz the Dancer
+    - Iz the Alluring Dancer
+    rarity: 4
+  643:
+    name:
+    - Lucifer the Fallen
+    - Grand Lucifer
+    - Almighty Lucifer
+    rarity: 4
+  644:
+    name:
+    - Superfeline
+    - Superfeline II
+    - True Superfeline
+    rarity: 0
+  645:
+    name:
+    - Sweet Love Mekako
+    - Bittersweet Mekako
+    - Minty Love Mekako
+    rarity: 4
+  646:
+    name:
+    - Brainwashed Axe Cat
+    - Brainwashed Brave Cat
+    - Brainwashed Dark Cat
+    rarity: 3
+  647:
+    name:
+    - Firecracker Cat
+    - Macho Firecracker Cat
+    rarity: 1
+  648:
+    name:
+    - Terun
+    - "Terun, type \u03B6"
+    - "Divine Terun \u03B6"
+    rarity: 4
+  649:
+    name:
+    - Lovestruck Lesser Demon
+    - Lovestruck Greater Demon
+    rarity: 4
+  650:
+    name:
+    - Hattori Hanzo
+    - Wargod Hanzo
+    - Immortal Hanzo
+    rarity: 4
+  651:
+    name:
+    - Secret Crush Cat
+    - Girlfriend Cat
+    rarity: 1
+  652:
+    name:
+    - Tomboy Lion Cat
+    - Iron-Masked Lion Cat
+    rarity: 1
+  653:
+    name:
+    - Chalkboard Eraser Cat
+    - Chalkboard Punk Cat
+    rarity: 1
+  654:
+    name:
+    - Elder Beast Naala
+    - Storm Beast Naala
+    - Awakened Naala
+    rarity: 1
+  655:
+    name:
+    - Brainwashed Gross Cat
+    - Brainwashed Sexy Legs Cat
+    - Brainwashed Macho Legs Cat
+    rarity: 3
+  656:
+    name:
+    - Bliza
+    - Blizana
+    - Blizarena
+    rarity: 4
+  657:
+    name:
+    - 'Ancient Egg: N001'
+    - 'Mystic Egg: N001'
+    - Haniwa Cat
+    rarity: 1
+  658:
+    name:
+    - Iz the Dancer of Grief
+    - Iz the Lady of Mourning
+    rarity: 4
+  659:
+    name:
+    - 'Ancient Egg: N101'
+    - 'Cinnabar Egg: N101'
+    - Courier Cat
+    rarity: 2
+  660:
+    name:
+    - 'Ancient Egg: N102'
+    - 'Teal Egg: N102'
+    - Catarzan
+    rarity: 2
+  661:
+    name:
+    - Sea Serpent Daliasan
+    - Sea King Daliasan
+    - God-Emperor Daliasan
+    rarity: 4
+  662:
+    name:
+    - Chronos the Bride
+    - Wedding Chronos
+    rarity: 4
+  663:
+    name:
+    - Brainwashed Cow Cat
+    - Brainwashed Giraffe Cat
+    - Brainwashed Lion Cat
+    rarity: 3
+  664:
+    name:
+    - 'Ancient Egg: N103'
+    - 'Dark Egg: N103'
+    - Gas Mask Cat
+    rarity: 2
+  665:
+    name:
+    - 'Ancient Egg: N104'
+    - 'Green Egg: N104'
+    - Surgeon Cat
+    rarity: 2
+  666:
+    name:
+    - 'Ancient Egg: N201'
+    - 'Dark Egg: N201'
+    - Exorcist Cat
+    rarity: 1
+  667:
+    name:
+    - Night Beach Lilin
+    - "Night Beach Lilin, type \u03C0"
+    rarity: 4
+  668:
+    name:
+    - Brainwashed Bird Cat
+    - Brainwashed UFO Cat
+    - Brainwashed Flying Cat
+    rarity: 3
+  669:
+    name:
+    - Cat Tengu
+    - Grand Yokai Tengu
+    - Immortal Master Tengu
+    rarity: 4
+  670:
+    name:
+    - 'Ancient Egg: N003'
+    - 'Evil Egg: N003'
+    - Cat Cactus
+    rarity: 1
+  671:
+    name:
+    - 'Ancient Egg: N202'
+    - 'Cinnabar Egg: N202'
+    - Armored Firefly Cat
+    rarity: 1
+  672:
+    name:
+    - Ranma Saotome (Leotard)
+    - Ranma Saotome (Cheer)
+    rarity: 4
+  673:
+    name:
+    - Genma Saotome (Panda)
+    - Genma Saotome
+    rarity: 3
+  674:
+    name:
+    - "\u30CD\u30B3\u30C1\u30FC\u30BF\u30FC"
+    rarity: 4
+  675:
+    name:
+    - Mighty Carrowsell
+    - Extraterrestrial Envanz
+    - Extradimensional Envanz
+    rarity: 4
+  676:
+    name:
+    - 'Ancient Egg: N105'
+    - 'Teal Egg: N105'
+    - Racquet Cat
+    rarity: 2
+  677:
+    name:
+    - 'Ancient Egg: N106'
+    - 'Amber Egg: N106'
+    - Mushroom Cat
+    rarity: 2
+  678:
+    name:
+    - Osamu Mikumo & Cat
+    - Osamu Mikumo & Cat CC
+    rarity: 2
+  679:
+    name:
+    - Yuma Kuga & Cat
+    - Yuma Kuga & Cat CC
+    rarity: 2
+  680:
+    name:
+    - Chika Amatori & Cat
+    - Chika Amatori & Cat CC
+    rarity: 1
+  681:
+    name:
+    - Sakura
+    - Sakura CC
+    rarity: 4
+  682:
+    name:
+    - Luke
+    - Luke CC
+    rarity: 4
+  683:
+    name:
+    - Spectral Goth Vega
+    - Illusory Guardian Vega
+    - Lady of Deception Vega
+    rarity: 4
+  684:
+    name:
+    - Count Yukimura
+    - Nosferatu Yukimura
+    - Vampiric Yukimura
+    rarity: 4
+  685:
+    name:
+    - Brainwashed Fish Cat
+    - Brainwashed Whale Cat
+    - Brainwashed Island Cat
+    rarity: 3
+  686:
+    name:
+    - 'Ancient Egg: N004'
+    - 'Mystic Egg: N004'
+    - Supercar Cat
+    rarity: 1
+  687:
+    name:
+    - Goddess of Light Sirius
+    - Goddess of Sunrise Sirius
+    rarity: 4
+  688:
+    name:
+    - Reindeer Terun
+    - "Reindeer Terun, type \u03B6"
+    rarity: 4
+  689:
+    name:
+    - Brainwashed Lizard Cat
+    - Brainwashed Dragon Cat
+    - Brainwashed King Dragon Cat
+    rarity: 3
+  690:
+    name:
+    - Meditation Cat
+    - Paragon Cat
+    rarity: 1
+  691:
+    name:
+    - Child of Destiny Phono
+    - King of Destiny Phonoa
+    rarity: 4
+  692:
+    name:
+    - 'Ancient Egg: N000'
+    - 'Elder Egg: N000'
+    - Ape Lord Luza
+    rarity: 1
+  693:
+    name:
+    - Issun Boshi
+    - Oni Landshaker Kozuchimaru
+    - Oni Battlepod Kozuchimaru
+    rarity: 4
+  694:
+    name:
+    - White Butler Vigler
+    - Black Butler Vigler
+    rarity: 4
+  695:
+    name:
+    - Brainwashed Titan Cat
+    - Brainwashed Mythic Titan
+    - Brainwashed Jamiera Cat
+    rarity: 3
+  696:
+    name:
+    - Killer Tank Cat
+    - True Killer Tank Cat
+    rarity: 2
+  697:
+    name:
+    - Class Rep Cat
+    - Stealth Class Rep Cat
+    rarity: 1
+  698:
+    name:
+    - 'Ancient Egg: N107'
+    - 'Violet Egg: N107'
+    - Cat Chief
+    rarity: 2
+  699:
+    name:
+    - Thunder Jack
+    - Bloody Jack
+    - Lightning Jack
+    rarity: 4
+  700:
+    name:
+    - Rabbit Satoru
+    - Rabbit Champion Satoru
+    rarity: 4
+  701:
+    name:
+    - 'Ancient Egg: N005'
+    - 'Mystic Egg: N005'
+    - Hitman Cat
+    rarity: 1
+  706:
+    name:
+    - King of Doom Phono
+    - King of Extinction Phono
+    rarity: 4
+  707:
+    name:
+    - 'Ancient Egg: N108'
+    - 'Teal Egg: N108'
+    - Soap Cat
+    rarity: 3
+  708:
+    name:
+    - 'Ancient Egg: N109'
+    - 'Dark Egg: N109'
+    - Barrel Cat
+    rarity: 2
+  709:
+    name:
+    - Jetpack Cat
+    - Kinjirou Cat
+    rarity: 2
+  710:
+    name:
+    - One-Eyed Asuka
+    - Blue-Eyed Asuka
+    rarity: 4
+  711:
+    name:
+    - EVA Unit-13
+    - EVA Unit-13 & Cat
+    rarity: 4
+  712:
+    name:
+    - Betrothed Balaluga
+    - Betrothed Pasalan
+    rarity: 4
+  713:
+    name:
+    - Kaoluga
+    - Kaolan Pasalan
+    - Kaolan Tatalan
+    rarity: 4
+  714:
+    name:
+    - 'Ancient Egg: N203'
+    - 'Violet Egg: N203'
+    - Clown Cat
+    rarity: 1
+  715:
+    name:
+    - Coastal Explorer Kanna
+    - Deep-Diver Kanna
+    rarity: 4
+  716:
+    name:
+    - Mighty Sphinx Korps
+    - Attack Battalion Convoys
+    - Hyper Battalion Convoys
+    rarity: 4
+  717:
+    name:
+    - 'Ancient Egg: N111'
+    - 'Mystic Egg: N111'
+    - Cop Cat
+    rarity: 3
+  718:
+    name:
+    - 'Ancient Egg: N110'
+    - 'Amber Egg: N110'
+    - Farmboy Cat
+    rarity: 2
+  719:
+    name:
+    - Maize Cat
+    - Cone Cat
+    rarity: 2
+  720:
+    name:
+    - Tekachi
+    - Tetsukachi
+    - Adamankachi
+    rarity: 4
+  721:
+    name:
+    - 'Ancient Egg: N006'
+    - 'Devil Egg: N006'
+    - Fallen Bear Cat
+    rarity: 1
+  722:
+    name:
+    - High School Kingpin Riki
+    - Dodgeball Riki
+    rarity: 4
+  723:
+    name:
+    - Hatsune Miku XVI
+    - Hatsune Miku XVI CC
+    rarity: 4
+  724:
+    name:
+    - Lightmother Aset
+    - Nefer Aset
+    - Almighty Aset
+    rarity: 4
+  725:
+    name:
+    - 'Ancient Egg: N112'
+    - 'Mystic Egg: N112'
+    - Cat Egg Pod
+    rarity: 2
+  726:
+    name:
+    - Ninja Girl Tomoe
+    - Gourmand Ninja Girl Tomoe
+    - Sugar Rush Shinobi Tomoe
+    rarity: 4
+  727:
+    name:
+    - Medal King
+    - Medal Emperor
+    rarity: 1
+  728:
+    name:
+    - SOL DAE ROKKER
+    - SOL DAE ROKKER CC
+    rarity: 4
+  729:
+    name:
+    - Master of Mind Soractes
+    - Master of Mind Catcrates
+    rarity: 1
+  730:
+    name:
+    - '730_1'
+    rarity: 1
+  731:
+    name:
+    - 'Ancient Egg: N204'
+    - 'Cinnabar Egg: N204'
+    - Lion Dancer Cat
+    rarity: 1
+  732:
+    name:
+    - Daybreaker Izanagi
+    - Dawnbringer Izanagi
+    rarity: 5
+  733:
+    name:
+    - '733_1'
+    rarity: 5
+  734:
+    name:
+    - Pegasa
+    - "Pegasa, type \u03BD"
+    - "Divine Pegasa \u03BD"
+    rarity: 4
+  735:
+    name:
+    - '735_1'
+    rarity: 4
+  736:
+    name:
+    - Principal Cat
+    - Midlife Crisis Cat
+    rarity: 1
+  737:
+    name:
+    - Frozen Rose Cat
+    - Arctic Bloom Cat
+    rarity: 4
+  738:
+    name:
+    - Floral Kalisa
+    - "Floral Kalisa, type \u03C7"
+    rarity: 4
+  739:
+    name:
+    - Izanami of Dusk
+    - Izanami of Eventide
+    rarity: 5
+  740:
+    name:
+    - '740_1'
+    rarity: 5
+  741:
+    name:
+    - Trash Cat
+    - Mimic Cat
+    rarity: 1
+  742:
+    name:
+    - Voluptuous Peony - Daji
+    - Daji & Cat
+    rarity: 4
+  743:
+    name:
+    - Mollyanna Cat
+    - Mesmerizing Tune - Mollyanna
+    rarity: 2
+  744:
+    name:
+    - Madhead
+    - Madhead Cat
+    rarity: 2
+  745:
+    name:
+    - Felix the Cat Duke Cat
+    - Mercenary Leader Felix Cat
+    rarity: 1
+  746:
+    name:
+    - Dotty Cat
+    - Birthday Dotty Cat
+    rarity: 1
+  747:
+    name:
+    - Kenshin Himura
+    - Kenshin Himura CC
+    rarity: 4
+  748:
+    name:
+    - Sanosuke Sagara
+    - Sanosuke Sagara CC
+    rarity: 4
+  749:
+    name:
+    - Aoshi Shinomori
+    - Aoshi Shinomori CC
+    rarity: 4
+  750:
+    name:
+    - Hajime Saito
+    - Hajime Saito CC
+    rarity: 4
+  751:
+    name:
+    - Li'l Kaoru
+    - Li'l Kaoru CC
+    rarity: 3
+  752:
+    name:
+    - Li'l Yahiko
+    - Li'l Yahiko CC
+    rarity: 3
+  753:
+    name:
+    - Kenshin Cat
+    - Battosai Cat
+    rarity: 2
+  754:
+    name:
+    - Kaoru Cat
+    - Swordscat Kaoru
+    rarity: 1
+  755:
+    name:
+    - Akechi Mitsuhide
+    - Wargod Mitsuhide
+    rarity: 4
+  756:
+    name:
+    - '756_1'
+    rarity: 4
+  757:
+    name:
+    - Cake Machine
+    - Wedding Cake Machine
+    rarity: 4
+  758:
+    name:
+    - 'Ancient Egg: N205'
+    - 'Violet Egg: N205'
+    - Bride Cat
+    rarity: 1
+  759:
+    name:
+    - Trixi the Merc
+    - Trixi the Revenant
+    rarity: 4
+  760:
+    name:
+    - Music Fest Thundia
+    - "Music Fest Thundia, type \u03B2"
+    rarity: 4
+  761:
+    name:
+    - Gunduros
+    - Ballistic Dragon Gunduros
+    rarity: 4
+  762:
+    name:
+    - '762_1'
+    rarity: 4
+  764:
+    name:
+    - Dynasaurus Cat
+    - Mecha Dynasaurus Cat
+    rarity: 4
+  765:
+    name:
+    - '765_1'
+    rarity: 4
+  766:
+    name:
+    - 'Ancient Egg: N206'
+    - 'Cinnabar Egg: N206'
+    - Clam Cat
+    rarity: 1
+  767:
+    name:
+    - Sardine
+    - Sardine CC
+    rarity: 1
+  768:
+    name:
+    - Squid
+    - Squid CC
+    rarity: 1
+  769:
+    name:
+    - Taitenki
+    - Taitenki CC
+    rarity: 4
+  770:
+    name:
+    - Hanasaka Cat
+    - Ravenous Cherry
+    rarity: 4
+  771:
+    name:
+    - 771-1
+    rarity: 4
+  772:
+    name:
+    - Master of Life Dr. Nova
+    - Master of Life Catnova
+    rarity: 1
+  773:
+    name:
+    - Pumpkin Sodom
+    - Sodom-o'-Lantern
+    rarity: 4
+  774:
+    name:
+    - Mummy Sumo
+    - Mama Mummy Sumo
+    rarity: 3
+  775:
+    name:
+    - Mech Patrol Axel
+    - Steel Sergeant Axel
+    rarity: 4
+  776:
+    name:
+    - 776-1
+    rarity: 4
+  777:
+    name:
+    - Lieutenant Cat
+    - Commander Cat
+    rarity: 1
+  778:
+    name:
+    - Winter General Kaihime
+    - Winter Commander Kaihime
+    rarity: 4
+  779:
+    name:
+    - Madoka Cat & Homura
+    - "Magical Cat\u2606 Magica"
+    rarity: 4
+  780:
+    name:
+    - Celestial Child Luna
+    - Salvation's Daughter Lunacia
+    rarity: 4
+  781:
+    name:
+    - Bowler Cat
+    - Dodgeballer Cat
+    rarity: 2
+  782:
+    name:
+    - Mamoluga
+    - Mamolan Pasalan
+    rarity: 4
+  783:
+    name:
+    - 783-1
+    rarity: 4
+  784:
+    name:
+    - Koneko
+    - Superstar Koneko
+    rarity: 4
+  786:
+    name:
+    - Killer Gross Cat
+    - True Killer Gross Cat
+    rarity: 2
+  787:
+    name:
+    - The Amazing Catman
+    - Illusionist Catman
+    rarity: 4
+  788:
+    name:
+    - Netherworld Nymph Lunacia
+    - Death's Daughter Lunacia
+    rarity: 4
+  790:
+    name:
+    - Baki Hanma
+    - Baki Hanma CC
+    rarity: 4
+  791:
+    name:
+    - Retsu Kaioh
+    - Retsu Kaioh CC
+    rarity: 4
+  792:
+    name:
+    - Kaoru Hanayama
+    - Kaoru Hanayama CC
+    rarity: 4
+  793:
+    name:
+    - Katsumi Orochi
+    - Katsumi Orochi CC
+    rarity: 4
+  794:
+    name:
+    - Jack Hammer
+    - Jack Hammer CC
+    rarity: 4
+  795:
+    name:
+    - Ogre Cat
+    - Ogre Cat Face
+    rarity: 3
+  796:
+    name:
+    - Li'l Baki
+    - Li'l Baki CC
+    rarity: 1
+  797:
+    name:
+    - Baki Cat
+    - Baki Cat CC
+    rarity: 1
+  798:
+    name:
+    - Kaioh Cat
+    - Kaioh Cat CC
+    rarity: 1
+  799:
+    name:
+    - Doppo Cat
+    - Doppo Cat CC
+    rarity: 1
+  800:
+    name:
+    - Mighty Morta-Loncha
+    - Grandiose Gunhauzer
+    rarity: 4
+  801:
+    name:
+    - 801-1
+    rarity: 4
+  802:
+    name:
+    - Master of Logic Newtone
+    - Master of Logic Mewtone
+    rarity: 1
+  803:
+    name:
+    - 802-1
+    rarity: 1
+  804:
+    name:
+    - Sonic
+    - Sonic & Cat
+    rarity: 4
+  805:
+    name:
+    - Tails
+    - Tails & Cat
+    rarity: 4
+  806:
+    name:
+    - Knuckles
+    - Knuckles & Cat
+    rarity: 4
+  807:
+    name:
+    - Shadow
+    - Shadow & Cat
+    rarity: 4
+  808:
+    name:
+    - Sonic Cat
+    - Sonic Cat CC
+    rarity: 2
+  809:
+    name:
+    - Tails Cat
+    - Tails Cat CC
+    rarity: 1
+  810:
+    name:
+    - Shadow Cat
+    - Shadow Cat CC
+    rarity: 2
+  811:
+    name:
+    - Agent Staal
+    - Edgemaster Staal
+    rarity: 4
+  812:
+    name:
+    - Victorious Skanda
+    - Zeta Skanda
+    rarity: 4
+  813:
+    name:
+    - 812-1
+    rarity: 4
+  814:
+    name:
+    - Tasmanian Giant Crab
+    - Tasmanian Giant Crab CC
+    rarity: 1
+  815:
+    name:
+    - Mass Production EVA
+    - Mass Production EVA-Cat
+    rarity: 4
+  816:
+    name:
+    - Moonshade Kaworu
+    - Moon Disciple Kaworu
+    rarity: 5
+  817:
+    name:
+    - 817-1
+    rarity: 5
+  818:
+    name:
+    - Komori
+    - Moririn
+    rarity: 4
+  819:
+    name:
+    - 819-1
+    rarity: 4
+  820:
+    name:
+    - Carpenter Cat
+    - Rapper Cat
+    rarity: 2
+  821:
+    name:
+    - Seaside Pegasa
+    - Seaside Pegasa, type v
+    rarity: 4
+  822:
+    name:
+    - '822_1'
+    rarity: 4
+  823:
+    name:
+    - Consultant Cat
+    - Business Partner Cat
+    rarity: 1
+  825:
+    name:
+    - Sorceress Sidmi
+    - Flame Mage Sidmi
+    rarity: 4
+  826:
+    name:
+    - 826-1
+    rarity: 4
+  827:
+    name:
+    - Cammy
+    - Cammy CC
+    rarity: 4
+  828:
+    name:
+    - Juri
+    - Juri CC
+    rarity: 4
+  829:
+    name:
+    - Zangief Cat
+    - Zangief Cat CC
+    rarity: 3
+  830:
+    name:
+    - Jamie Cat
+    - Jamie Cat CC
+    rarity: 3
+  831:
+    name:
+    - Raclesa
+    - "Raclesa, type \u03A3"
+    rarity: 4
+  832:
+    name:
+    - Scarf Cat
+    - Red Nyanko Ranger
+    rarity: 1
+  833:
+    name:
+    - Fedora Cat
+    - Blue Nyanko Ranger
+    rarity: 1
+  834:
+    name:
+    - Helmet Cat
+    - Yellow Nyanko Ranger
+    rarity: 1
+  835:
+    name:
+    - Goggles Cat
+    - Green Nyanko Ranger
+    rarity: 1
+  836:
+    name:
+    - Ribbon Cat
+    - Pink Nyanko Ranger
+    rarity: 1
+  837:
+    name:
+    - Giga-Nyan Rex
+    - Giga-Nyan Prime DX
+    rarity: 4
+  838:
+    name:
+    - Squire Luno
+    - Lunos the Luminous
+    rarity: 4
+  839:
+    name:
+    - 839-1
+    rarity: 4
+  840:
+    name:
+    - 840-1
+    rarity: 4
+  841:
+    name:
+    - Tanjiro Kamado
+    - Tanjiro Kamado CC
+    rarity: 4
+  842:
+    name:
+    - Nezuko Kamado
+    - Nezuko Kamado CC
+    rarity: 4
+  843:
+    name:
+    - Zenitsu Agatsuma
+    - Zenitsu Agatsuma CC
+    rarity: 4
+  844:
+    name:
+    - Inosuke Hashibira
+    - Inosuke Hashibira CC
+    rarity: 4
+  845:
+    name:
+    - Giyu Tomioka
+    - Giyu Tomioka CC
+    rarity: 4
+  846:
+    name:
+    - Shinobu Kocho
+    - Shinobu Kocho CC
+    rarity: 4
+  847:
+    name:
+    - Kyojuro Rengoku
+    - Kyojuro Rengoku CC
+    rarity: 4
+  848:
+    name:
+    - Li'l Sakonji Urokodaki
+    - Li'l Sakonji Urokodaki CC
+    rarity: 3
+  849:
+    name:
+    - Tanjiro Cat
+    - Tanjiro Cat CC
+    rarity: 2
+  850:
+    name:
+    - Nezuko Cat
+    - Nezuko Cat CC
+    rarity: 1
+  851:
+    name:
+    - Fuma Kotaro
+    - Wargod Kotaro
+    rarity: 4
+  852:
+    name:
+    - Paperboy Cat
+    - Bargain Cat
+    rarity: 2
+  853:
+    name:
+    - Killer Cowbird Cat
+    - True Killer Cowbird Cat
+    rarity: 2
+  854:
+    name:
+    - Occultist Cat
+    - Gyaru Cat
+    rarity: 1
+  855:
+    name:
+    - Master of Selection Darvin
+    - Master of Selection Clawvin
+    rarity: 1
+  856:
+    name:
+    - '856_1'
+    rarity: 1
+  860:
+    name:
+    - Lone Moon Lunos
+    - Lunos the Eclipsed
+    rarity: 4
+  861:
+    name:
+    - '861_1'
+    rarity: 4
+  862:
+    name:
+    - Vornado
+    - Tempest King Vornado
+    rarity: 4
+  863:
+    name:
+    - Hanzo the Betrothed
+    - Hanzo the Groom
+    rarity: 4
+  864:
+    name:
+    - The Invisible Cat
+    - Groom Cat
+    rarity: 1
+  865:
+    name:
+    - Shirou Emiya
+    - Shirou Emiya CC
+    rarity: 4
+  866:
+    name:
+    - True Assassin
+    - True Assassin CC
+    rarity: 4
+  870:
+    name:
+    - Akane Tounji
+    - Let's Go! Akane
+    rarity: 4
+  871:
+    name:
+    - 'Ancient Egg: N207'
+    - 'Onyx Egg: N207'
+    - Tycoon Cat
+    rarity: 1
+  872:
+    name:
+    - 'Ancient Egg: N208'
+    - 'Green Egg: N208'
+    - Combat Crawfish Cat
+    rarity: 1
+  873:
+    name:
+    - Jungle Gourmet Tomoe
+    - Canopy Queen Tomoe
+    rarity: 4
+  874:
+    name:
+    - Metal Maiden Koneko
+    - Sonic Siren Koneko
+    rarity: 4
+  876:
+    name:
+    - '735_1'
+    rarity: 4
+events:
+  2026-06-01_945:
+    end_on: 2026-06-03
+    id: 945
+    legend: 30
+    name: Conjure spirits with new hero Gunduros! Tap banner for info!
+    rare: 6970
+    start_on: 2026-06-01
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-01_946:
+    end_on: 2026-06-03
+    id: 946
+    legend: 30
+    name: "Hanasaka Cat with Conjurer evolved form joins! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-01
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-01_991:
+    end_on: 2026-06-03
+    id: 991
+    legend: 30
+    name: "The Almighties, supreme beings of Catkind! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-01
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-03_1004:
+    end_on: 2026-06-05
+    id: 1004
+    legend: 30
+    name: "Conjurer hero Komori joins the fight! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-06-03
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-03_1043:
+    end_on: 2026-06-05
+    id: 1043
+    legend: 30
+    name: New unit Fuma Kotaro added! Masters of battle join the Cat cause!
+    rare: 6970
+    start_on: 2026-06-03
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-03_942:
+    end_on: 2026-06-05
+    id: 942
+    legend: 30
+    name: "Conjurer Dynasaurus Cat joins the fight! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-03
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-05_945:
+    end_on: 2026-06-08
+    guaranteed: true
+    id: 945
+    legend: 30
+    name: Conjure spirits with new hero Gunduros! Tap banner for info!
+    rare: 6970
+    start_on: 2026-06-05
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-05_979:
+    end_on: 2026-06-08
+    guaranteed: true
+    id: 979
+    legend: 30
+    name: "New Conjurer Unit Mighty Morta-Loncha, with Explosive attacks! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-06-05
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-05_986:
+    end_on: 2026-06-08
+    guaranteed: true
+    id: 986
+    legend: 30
+    name: "Mystery creature Mamoluga awaits your summoning! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-05
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-08_1015:
+    end_on: 2026-06-10
+    id: 1015
+    legend: 30
+    name: New unit Sorceress Sidmi added! Spooky beauties from beyond!
+    rare: 6970
+    start_on: 2026-06-08
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-08_1021:
+    end_on: 2026-06-10
+    id: 1021
+    legend: 30
+    name: New unit Raclesa the Lioness  added! Cosmic cuties, here to crush your enemies!
+    rare: 6970
+    start_on: 2026-06-08
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-08_974:
+    end_on: 2026-06-19
+    id: 974
+    name: "A chance to earn special units! \u2605Tap for details!"
+    rare: 6800
+    start_on: 2026-06-08
+    supa: 2500
+    uber: 700
+    version: '150300'
+  2026-06-10_1043:
+    end_on: 2026-06-12
+    id: 1043
+    legend: 30
+    name: New unit Fuma Kotaro added! Masters of battle join the Cat cause!
+    rare: 6970
+    start_on: 2026-06-10
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-10_946:
+    end_on: 2026-06-12
+    id: 946
+    legend: 30
+    name: "Hanasaka Cat with Conjurer evolved form joins! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-10
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-11_974:
+    end_on: 2026-06-19
+    id: 974
+    name: "A chance to earn special units! \u2605Tap for details!"
+    rare: 6800
+    start_on: 2026-06-11
+    supa: 2500
+    uber: 700
+    version: '150401'
+  2026-06-12_942:
+    end_on: 2026-06-15
+    id: 942
+    legend: 30
+    name: "Conjurer Dynasaurus Cat joins the fight! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-12
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-12_991:
+    end_on: 2026-06-15
+    id: 991
+    legend: 30
+    name: "The Almighties, supreme beings of Catkind! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-12
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-15_1004:
+    end_on: 2026-06-17
+    id: 1004
+    legend: 30
+    name: "Conjurer hero Komori joins the fight! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-06-15
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-15_947:
+    end_on: 2026-06-17
+    id: 947
+    legend: 30
+    name: "Command mighty Conjurer Mech Patrol Axel! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-15
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-17_979:
+    end_on: 2026-06-19
+    id: 979
+    legend: 30
+    name: "New Conjurer Unit Mighty Morta-Loncha, with Explosive attacks! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-06-17
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-17_986:
+    end_on: 2026-06-19
+    id: 986
+    legend: 30
+    name: "Mystery creature Mamoluga awaits your summoning! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-17
+    supa: 2500
+    uber: 500
+    version: '150300'
+  2026-06-19_1015:
+    end_on: 2026-06-22
+    id: 1015
+    legend: 30
+    name: New unit Sorceress Sidmi added! Spooky beauties from beyond!
+    rare: 6970
+    start_on: 2026-06-19
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-06-19_1046:
+    end_on: 2026-06-22
+    id: 1046
+    legend: 30
+    name: "Limited unit Netherworld Nymph Lunacia added! \u2605Tap for details!"
+    rare: 6470
+    start_on: 2026-06-19
+    supa: 2600
+    uber: 900
+    version: '150400'
+  2026-06-19_945:
+    end_on: 2026-06-22
+    id: 945
+    legend: 30
+    name: Conjure spirits with new hero Gunduros! Tap banner for info!
+    rare: 6970
+    start_on: 2026-06-19
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-06-22_1021:
+    end_on: 2026-06-24
+    id: 1021
+    legend: 30
+    name: New unit Raclesa the Lioness  added! Cosmic cuties, here to crush your enemies!
+    rare: 6970
+    start_on: 2026-06-22
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-06-22_1028:
+    end_on: 2026-06-26
+    id: 1028
+    legend: 30
+    name: "13 Year Celebration: Ultra Selection! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-22
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-06-22_1043:
+    end_on: 2026-06-24
+    id: 1043
+    legend: 30
+    name: New unit Fuma Kotaro added! Masters of battle join the Cat cause!
+    rare: 6970
+    start_on: 2026-06-22
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-06-24_942:
+    end_on: 2026-06-26
+    id: 942
+    legend: 30
+    name: "Conjurer Dynasaurus Cat joins the fight! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-24
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-06-24_946:
+    end_on: 2026-06-26
+    id: 946
+    legend: 30
+    name: "Hanasaka Cat with Conjurer evolved form joins! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-24
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-06-26_1052:
+    end_on: 2026-07-03
+    id: 1052
+    name: "Trixi joins the 13th anniversary Capsules! \u2605Check banner for details!"
+    rare: 7000
+    start_on: 2026-06-26
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-06-26_1053:
+    end_on: 2026-07-03
+    id: 1053
+    name: "Agent Staal joins the 13th anniversary Capsules! \u2605Check banner for details!"
+    rare: 7000
+    start_on: 2026-06-26
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-06-26_991:
+    end_on: 2026-06-30
+    id: 991
+    legend: 30
+    name: "The Almighties, supreme beings of Catkind! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-06-26
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-06-30_1004:
+    end_on: 2026-07-03
+    id: 1004
+    legend: 30
+    name: "Conjurer hero Komori joins the fight! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-06-30
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-03_1045:
+    end_on: 2026-07-06
+    id: 1045
+    legend: 30
+    name: "New unit Squire Luno added! \u2605Uber Rare drop rate UP!"
+    rare: 6470
+    start_on: 2026-07-03
+    supa: 2600
+    uber: 900
+    version: '150400'
+  2026-07-03_979:
+    end_on: 2026-07-07
+    id: 979
+    legend: 30
+    name: "New Conjurer Unit Mighty Morta-Loncha, with Explosive attacks! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-07-03
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-03_986:
+    end_on: 2026-07-07
+    id: 986
+    legend: 30
+    name: "Mystery creature Mamoluga awaits your summoning! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-07-03
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-06_1054:
+    end_on: 2026-07-11
+    id: 1054
+    legend: 30
+    name: "13 Year Celebration: Miracle Selection! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-07-06
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-07_1015:
+    end_on: 2026-07-10
+    id: 1015
+    legend: 30
+    name: Sorceress Sidmi added! Spooky beauties from beyond!
+    rare: 6970
+    start_on: 2026-07-07
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-07_945:
+    end_on: 2026-07-10
+    id: 945
+    legend: 30
+    name: Conjure spirits with new hero Gunduros! Tap banner for info!
+    rare: 6970
+    start_on: 2026-07-07
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-10_1021:
+    end_on: 2026-07-13
+    id: 1021
+    legend: 30
+    name: Raclesa added! Cosmic cuties, here to crush your enemies!
+    rare: 6970
+    start_on: 2026-07-10
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-10_1065:
+    end_on: 2026-07-29
+    id: 1065
+    name: "New units added to June Bride Capsules \u2605 Tap banner for info!"
+    rare: 7000
+    start_on: 2026-07-10
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-11_1051:
+    end_on: 2026-07-20
+    id: 1051
+    legend: 30
+    name: New unit Lone Moon Lunos added! Special Capsules featuring powerful limited units!
+    rare: 6470
+    start_on: 2026-07-11
+    supa: 2500
+    uber: 1000
+    version: '150400'
+  2026-07-11_1057:
+    end_on: 2030-01-01
+    id: 1057
+    name: Get an Uber Rare Cat!! 100% Uber drop Rate in the PLATINUM CAPSULES!
+    platinum: platinum
+    rare: 0
+    start_on: 2026-07-11
+    supa: 0
+    uber: 10000
+    version: '150400'
+  2026-07-11_1058:
+    end_on: 2030-01-01
+    id: 1058
+    legend: 500
+    name: Get a Guaranteed Uber or Legend Rare from the Legend Capsules!
+    platinum: legend
+    rare: 0
+    start_on: 2026-07-11
+    supa: 0
+    uber: 9500
+    version: '150400'
+  2026-07-13_1043:
+    end_on: 2026-07-15
+    id: 1043
+    legend: 30
+    name: Fuma Kotaro added! Masters of battle join the Cat cause!
+    rare: 6970
+    start_on: 2026-07-13
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-15_946:
+    end_on: 2026-07-17
+    id: 946
+    legend: 30
+    name: "Hanasaka Cat with Conjurer evolved form joins! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-07-15
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-17_947:
+    end_on: 2026-07-20
+    id: 947
+    legend: 30
+    name: "Command mighty Conjurer Mech Patrol Axel! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-07-17
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-20_1030:
+    end_on: 2026-07-24
+    id: 1030
+    legend: 30
+    name: "13 Year Celebration: Ultra Selection! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-07-20
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-20_939:
+    end_on: 2026-07-24
+    id: 939
+    name: "Units from Busters sets join forces! \u2605 Uber Rare drop rates UP!"
+    rare: 6800
+    start_on: 2026-07-20
+    supa: 2500
+    uber: 700
+    version: '150400'
+  2026-07-24_1060:
+    end_on: 2026-07-27
+    guaranteed: true
+    id: 1060
+    legend: 30
+    name: New unit Vornado added! Dragon kings of overwhelming power!
+    rare: 6970
+    start_on: 2026-07-24
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-24_1063:
+    end_on: 2030-01-01
+    id: 1063
+    name: Get an Uber Rare Cat!! 100% Uber drop Rate in the PLATINUM CAPSULES!
+    platinum: platinum
+    rare: 0
+    start_on: 2026-07-24
+    supa: 0
+    uber: 10000
+    version: '150400'
+  2026-07-24_1064:
+    end_on: 2030-01-01
+    id: 1064
+    legend: 500
+    name: Get a Guaranteed Uber or Legend Rare from the Legend Capsules!
+    platinum: legend
+    rare: 0
+    start_on: 2026-07-24
+    supa: 0
+    uber: 9500
+    version: '150400'
+  2026-07-24_1065:
+    end_on: 2026-07-29
+    guaranteed: true
+    id: 1065
+    name: "New units added to June Bride Capsules \u2605 Tap banner for info!"
+    rare: 7000
+    start_on: 2026-07-24
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-24_991:
+    end_on: 2026-07-27
+    guaranteed: true
+    id: 991
+    legend: 30
+    name: "The Almighties, supreme beings of Catkind! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-07-24
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-27_1004:
+    end_on: 2026-07-29
+    guaranteed: true
+    id: 1004
+    legend: 30
+    name: "Conjurer hero Komori joins the fight! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-07-27
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-27_1065:
+    end_on: 2026-07-29
+    guaranteed: true
+    id: 1065
+    name: "New units added to June Bride Capsules \u2605 Tap banner for info!"
+    rare: 7000
+    start_on: 2026-07-27
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-27_942:
+    end_on: 2026-07-29
+    guaranteed: true
+    id: 942
+    legend: 30
+    name: "Conjurer Dynasaurus Cat joins the fight! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-07-27
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-29_1061:
+    end_on: 2026-08-03
+    id: 1061
+    legend: 30
+    name: Squire Luno added! Special Capsules featuring powerful limited units!
+    rare: 6470
+    start_on: 2026-07-29
+    supa: 2600
+    uber: 900
+    version: '150400'
+  2026-07-29_979:
+    end_on: 2026-08-01
+    id: 979
+    legend: 30
+    name: "New Conjurer Unit Mighty Morta-Loncha, with Explosive attacks! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-07-29
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-07-29_986:
+    end_on: 2026-08-01
+    id: 986
+    legend: 30
+    name: "Mystery creature Mamoluga awaits your summoning! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-07-29
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-08-01_1015:
+    end_on: 2026-08-03
+    id: 1015
+    legend: 30
+    name: Sorceress Sidmi added! Spooky beauties from beyond!
+    rare: 6970
+    start_on: 2026-08-01
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-08-01_1021:
+    end_on: 2026-08-03
+    id: 1021
+    legend: 30
+    name: Raclesa added! Cosmic cuties, here to crush your enemies!
+    rare: 6970
+    start_on: 2026-08-01
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-08-03_1043:
+    end_on: 2026-08-05
+    id: 1043
+    legend: 30
+    name: Fuma Kotaro added! Masters of battle join the Cat cause!
+    rare: 6970
+    start_on: 2026-08-03
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-08-03_946:
+    end_on: 2026-08-05
+    id: 946
+    legend: 30
+    name: "Hanasaka Cat with Conjurer evolved form joins! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-08-03
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-08-03_947:
+    end_on: 2026-08-05
+    id: 947
+    legend: 30
+    name: "Command mighty Conjurer Mech Patrol Axel! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-08-03
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-08-05_1059:
+    end_on: 2026-08-07
+    id: 1059
+    legend: 30
+    name: Vornado added! Dragon kings of overwhelming power!
+    rare: 6970
+    start_on: 2026-08-05
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-08-05_942:
+    end_on: 2026-08-07
+    id: 942
+    legend: 30
+    name: "Conjurer Dynasaurus Cat joins the fight! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-08-05
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-08-05_991:
+    end_on: 2026-08-07
+    id: 991
+    legend: 30
+    name: "The Almighties, supreme beings of Catkind! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-08-05
+    supa: 2500
+    uber: 500
+    version: '150400'
+  2026-08-07_1004:
+    end_on: 2026-08-10
+    id: 1004
+    legend: 30
+    name: "Conjurer hero Komori joins the fight! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-08-07
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-07_1075:
+    end_on: 2026-08-28
+    id: 1075
+    name: Limited Summer capsules with a exciting hero! Tap banner for info!
+    rare: 7000
+    start_on: 2026-08-07
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-07_986:
+    end_on: 2026-08-10
+    id: 986
+    legend: 30
+    name: Mamoluga added! Unstoppable Eldritch Cats(?)!
+    rare: 6970
+    start_on: 2026-08-07
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-10_1021:
+    end_on: 2026-08-12
+    id: 1021
+    legend: 30
+    name: Raclesa added! Cosmic cuties, here to crush your enemies!
+    rare: 6970
+    start_on: 2026-08-10
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-10_979:
+    end_on: 2026-08-12
+    id: 979
+    legend: 30
+    name: Mighty Morta-Loncha added! Ultimate anti-Zombie firepower!
+    rare: 6970
+    start_on: 2026-08-10
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-12_1015:
+    end_on: 2026-08-14
+    id: 1015
+    legend: 30
+    name: Sorceress Sidmi added! Spooky beauties from beyond!
+    rare: 6970
+    start_on: 2026-08-12
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-12_1043:
+    end_on: 2026-08-14
+    id: 1043
+    legend: 30
+    name: Fuma Kotaro added! Masters of battle join the Cat cause!
+    rare: 6970
+    start_on: 2026-08-12
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-14_1062:
+    end_on: 2026-08-21
+    id: 1062
+    legend: 30
+    name: Lone Moon Lunos added! Special Capsules featuring powerful limited units!
+    rare: 6470
+    start_on: 2026-08-14
+    supa: 2600
+    uber: 900
+    version: '150500'
+  2026-08-14_1075:
+    end_on: 2026-08-28
+    id: 1075
+    name: Limited Summer capsules with a exciting hero! Tap banner for info!
+    rare: 7000
+    start_on: 2026-08-14
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-14_946:
+    end_on: 2026-08-17
+    id: 946
+    legend: 30
+    name: "Hanasaka Cat with Conjurer evolved form joins! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-08-14
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-17_1059:
+    end_on: 2026-08-19
+    id: 1059
+    legend: 30
+    name: Vornado added! Dragon kings of overwhelming power!
+    rare: 6970
+    start_on: 2026-08-17
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-19_991:
+    end_on: 2026-08-21
+    id: 991
+    legend: 30
+    name: "The Almighties, supreme beings of Catkind! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-08-19
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-21_1075:
+    end_on: 2026-08-28
+    guaranteed: true
+    id: 1075
+    name: Limited Summer capsules with a exciting hero! Tap banner for info!
+    rare: 7000
+    start_on: 2026-08-21
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-21_979:
+    end_on: 2026-08-24
+    guaranteed: true
+    id: 979
+    legend: 30
+    name: Mighty Morta-Loncha added! Ultimate anti-Zombie firepower!
+    rare: 6970
+    start_on: 2026-08-21
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-21_986:
+    end_on: 2026-08-24
+    guaranteed: true
+    id: 986
+    legend: 30
+    name: Mamoluga added! Unstoppable Eldritch Cats(?)!
+    rare: 6970
+    start_on: 2026-08-21
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-24_1015:
+    end_on: 2026-08-26
+    guaranteed: true
+    id: 1015
+    legend: 30
+    name: Sorceress Sidmi added! Spooky beauties from beyond!
+    rare: 6970
+    start_on: 2026-08-24
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-24_1021:
+    end_on: 2026-08-26
+    guaranteed: true
+    id: 1021
+    legend: 30
+    name: Raclesa added! Cosmic cuties, here to crush your enemies!
+    rare: 6970
+    start_on: 2026-08-24
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-26_1043:
+    end_on: 2026-08-28
+    guaranteed: true
+    id: 1043
+    legend: 30
+    name: Fuma Kotaro added! Masters of battle join the Cat cause!
+    rare: 6970
+    start_on: 2026-08-26
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-26_946:
+    end_on: 2026-08-28
+    guaranteed: true
+    id: 946
+    legend: 30
+    name: Hanasaka Cat added! Mythical fantasy Cat heroes!
+    rare: 6970
+    start_on: 2026-08-26
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-28_1002:
+    end_on: 2026-09-18
+    id: 1002
+    name: "Survive! Mola Mola! Collab Capsules! \u2605 Tap the banner for info!"
+    rare: 7000
+    start_on: 2026-08-28
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-28_1004:
+    end_on: 2026-08-31
+    id: 1004
+    legend: 30
+    name: "Conjurer hero Komori joins the fight! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-08-28
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-28_1076:
+    end_on: 2026-09-18
+    id: 1076
+    name: Limited Summer capsules with a new hero! Tap banner for info!
+    rare: 7000
+    start_on: 2026-08-28
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-08-31_947:
+    end_on: 2026-09-02
+    id: 947
+    legend: 30
+    name: "Command mighty Conjurer Mech Patrol Axel! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-08-31
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-09-02_942:
+    end_on: 2026-09-04
+    id: 942
+    legend: 30
+    name: "Conjurer Dynasaurus Cat joins the fight! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-09-02
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-09-04_1002:
+    end_on: 2026-09-18
+    id: 1002
+    name: "Survive! Mola Mola! Collab Capsules! \u2605 Tap the banner for info!"
+    rare: 7000
+    start_on: 2026-09-04
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-09-04_1061:
+    end_on: 2026-09-11
+    id: 1061
+    legend: 30
+    name: Squire Luno added! Special Capsules featuring powerful limited units!
+    rare: 6470
+    start_on: 2026-09-04
+    supa: 2600
+    uber: 900
+    version: '150500'
+  2026-09-04_1076:
+    end_on: 2026-09-18
+    id: 1076
+    name: Limited Summer capsules with a new hero! Tap banner for info!
+    rare: 7000
+    start_on: 2026-09-04
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-09-11_1002:
+    end_on: 2026-09-18
+    guaranteed: true
+    id: 1002
+    name: "Survive! Mola Mola! Collab Capsules! \u2605 Tap the banner for info!"
+    rare: 7000
+    start_on: 2026-09-11
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-09-11_1059:
+    end_on: 2026-09-14
+    guaranteed: true
+    id: 1059
+    legend: 30
+    name: Vornado added! Dragon kings of overwhelming power!
+    rare: 6970
+    start_on: 2026-09-11
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-09-11_1076:
+    end_on: 2026-09-18
+    guaranteed: true
+    id: 1076
+    name: Limited Summer capsules with a new hero! Tap banner for info!
+    rare: 7000
+    start_on: 2026-09-11
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-09-14_991:
+    end_on: 2026-09-18
+    guaranteed: true
+    id: 991
+    legend: 30
+    name: "The Almighties, supreme beings of Catkind! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-09-14
+    supa: 2500
+    uber: 500
+    version: '150500'
+  2026-09-18_1062:
+    end_on: 2026-09-21
+    id: 1062
+    legend: 30
+    name: Lone Moon Lunos added! Special Capsules featuring powerful limited units!
+    rare: 6470
+    start_on: 2026-09-18
+    supa: 2600
+    uber: 900
+    version: '150600'
+  2026-09-18_1081:
+    end_on: 2026-10-05
+    id: 1081
+    name: "NEW Uber Rare heroes Shirou Emiya and True Assassin! \u2605 Tap the banner for more info on this collab capsule set!"
+    rare: 7000
+    start_on: 2026-09-18
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-09-18_986:
+    end_on: 2026-09-21
+    id: 986
+    legend: 30
+    name: Mamoluga added! Unstoppable Eldritch Cats(?)!
+    rare: 6970
+    start_on: 2026-09-18
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-09-21_1021:
+    end_on: 2026-09-25
+    id: 1021
+    legend: 30
+    name: Raclesa added! Cosmic cuties, here to crush your enemies!
+    rare: 6970
+    start_on: 2026-09-21
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-09-21_1081:
+    end_on: 2026-10-05
+    id: 1081
+    name: "NEW Uber Rare heroes Shirou Emiya and True Assassin! \u2605 Tap the banner for more info on this collab capsule set!"
+    rare: 7000
+    start_on: 2026-09-21
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-09-21_979:
+    end_on: 2026-09-25
+    id: 979
+    legend: 30
+    name: Mighty Morta-Loncha added! Ultimate anti-Zombie firepower!
+    rare: 6970
+    start_on: 2026-09-21
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-09-25_523:
+    end_on: 2026-09-28
+    id: 523
+    name: "Defend your Cats with the Wave Busters! \u2605 With Increasing Capsules!"
+    rare: 7000
+    start_on: 2026-09-25
+    step_up: true
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-09-25_772:
+    end_on: 2026-09-28
+    id: 772
+    name: Capsules featuring Colossus Slayer units!  With Increasing Capsules!
+    rare: 7000
+    start_on: 2026-09-25
+    step_up: true
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-09-28_1004:
+    end_on: 2026-09-30
+    guaranteed: true
+    id: 1004
+    legend: 30
+    name: "Conjurer hero Komori joins the fight! \u2605Tap for details!"
+    rare: 6970
+    start_on: 2026-09-28
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-09-28_1081:
+    end_on: 2026-10-05
+    guaranteed: true
+    id: 1081
+    name: "NEW Uber Rare heroes Shirou Emiya and True Assassin! \u2605 Tap the banner for more info on this collab capsule set!"
+    rare: 7000
+    start_on: 2026-09-28
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-09-30_947:
+    end_on: 2026-10-02
+    guaranteed: true
+    id: 947
+    legend: 30
+    name: "Command mighty Conjurer Mech Patrol Axel! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-09-30
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-02_1015:
+    end_on: 2026-10-05
+    guaranteed: true
+    id: 1015
+    legend: 30
+    name: Sorceress Sidmi added! Spooky beauties from beyond!
+    rare: 6970
+    start_on: 2026-10-02
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-05_1061:
+    end_on: 2026-10-09
+    id: 1061
+    legend: 30
+    name: Squire Luno added! Special Capsules featuring powerful limited units!
+    rare: 6470
+    start_on: 2026-10-05
+    supa: 2600
+    uber: 900
+    version: '150600'
+  2026-10-05_1077:
+    end_on: 2026-10-16
+    id: 1077
+    legend: 70
+    name: Limited Uber Rare unit Metal Maiden Koneko added! 120M DL Special Capsules!
+    rare: 6930
+    start_on: 2026-10-05
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-05_942:
+    end_on: 2026-10-09
+    id: 942
+    legend: 30
+    name: "Conjurer Dynasaurus Cat joins the fight! \u2605Tap banner for info!"
+    rare: 6970
+    start_on: 2026-10-05
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-09_1043:
+    end_on: 2026-10-11
+    id: 1043
+    legend: 30
+    name: Fuma Kotaro added! Masters of battle join the Cat cause!
+    rare: 6970
+    start_on: 2026-10-09
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-09_1077:
+    end_on: 2026-10-16
+    id: 1077
+    legend: 70
+    name: Limited Uber Rare unit Metal Maiden Koneko added! 120M DL Special Capsules!
+    rare: 6930
+    start_on: 2026-10-09
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-09_1078:
+    end_on: 2026-10-13
+    id: 1078
+    legend: 30
+    name: Joining forces from Seasonal sets, with higher drop rates!
+    rare: 6770
+    start_on: 2026-10-09
+    supa: 2500
+    uber: 700
+    version: '150600'
+  2026-10-11_946:
+    end_on: 2026-10-13
+    id: 946
+    legend: 30
+    name: Hanasaka Cat added! Mythical fantasy Cat heroes!
+    rare: 6970
+    start_on: 2026-10-11
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-13_1059:
+    end_on: 2026-10-16
+    id: 1059
+    legend: 30
+    name: Vornado added! Dragon kings of overwhelming power!
+    rare: 6970
+    start_on: 2026-10-13
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-13_991:
+    end_on: 2026-10-16
+    id: 991
+    legend: 30
+    name: "The Almighties, supreme beings of Catkind! \u2605 Tap banner for info!"
+    rare: 6970
+    start_on: 2026-10-13
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-16_1068:
+    end_on: 2026-10-20
+    guaranteed: true
+    id: 1068
+    legend: 30
+    name: New unit Akane Tounji added! An awesome variety pack of crazy Cats!
+    rare: 6970
+    start_on: 2026-10-16
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-16_1071:
+    end_on: 2030-01-01
+    id: 1071
+    name: Get an Uber Rare Cat!! 100% Uber drop Rate in the PLATINUM CAPSULES!
+    platinum: platinum
+    rare: 0
+    start_on: 2026-10-16
+    supa: 0
+    uber: 10000
+    version: '150600'
+  2026-10-16_1072:
+    end_on: 2030-01-01
+    id: 1072
+    legend: 500
+    name: Get a Guaranteed Uber or Legend Rare from the Legend Capsules!
+    platinum: legend
+    rare: 0
+    start_on: 2026-10-16
+    supa: 0
+    uber: 9500
+    version: '150600'
+  2026-10-16_979:
+    end_on: 2026-10-18
+    guaranteed: true
+    id: 979
+    legend: 30
+    name: Mighty Morta-Loncha added! Ultimate anti-Zombie firepower!
+    rare: 6970
+    start_on: 2026-10-16
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-16_986:
+    end_on: 2026-10-18
+    guaranteed: true
+    id: 986
+    legend: 30
+    name: Mamoluga added! Unstoppable Eldritch Cats(?)!
+    rare: 6970
+    start_on: 2026-10-16
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-18_1021:
+    end_on: 2026-10-20
+    guaranteed: true
+    id: 1021
+    legend: 30
+    name: Raclesa added! Cosmic cuties, here to crush your enemies!
+    rare: 6970
+    start_on: 2026-10-18
+    supa: 2500
+    uber: 500
+    version: '150600'
+  2026-10-18_1043:
+    end_on: 2026-10-20
+    guaranteed: true
+    id: 1043
+    legend: 30
+    name: Fuma Kotaro added! Masters of battle join the Cat cause!
+    rare: 6970
+    start_on: 2026-10-18
+    supa: 2500
+    uber: 500
+    version: '150600'
+gacha:
+  523:
+    cats:
+    - 560
+    - 520
+    - 437
+    - 259
+    - 241
+    - 195
+    - 73
+    - 44
+    - 240
+    - 239
+    - 238
+    - 201
+    - 145
+    - 132
+    - 130
+    - 31
+    - 32
+    - 33
+    - 34
+    - 36
+    - 37
+    - 40
+    - 41
+    - 62
+    - 151
+    - 152
+    - 153
+    - 154
+    - 200
+    - 308
+    - 378
+    - 523
+    - 38
+    - 39
+    - 42
+    - 47
+    - 48
+    - 49
+    - 50
+    - 51
+    - 52
+    - 53
+    - 56
+    - 57
+    - 59
+    - 146
+    - 147
+    - 148
+    - 149
+    - 150
+    - 198
+    - 199
+    - 309
+    - 326
+    - 377
+    - 496
+    - 524
+    name: "Defend your Cats with the Wave Busters! \u2605 With Increasing Capsules!"
+    rate: no_legend
+    series_id: 45
+  772:
+    cats:
+    - 687
+    - 669
+    - 650
+    - 648
+    - 661
+    - 675
+    - 683
+    - 656
+    - 130
+    - 132
+    - 145
+    - 201
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: New Capsules featuring Colossus Slayer units!  With Increasing Capsules!
+    rate: no_legend
+    series_id: 56
+  939:
+    cats:
+    - 60
+    - 76
+    - 84
+    - 85
+    - 107
+    - 108
+    - 136
+    - 144
+    - 197
+    - 287
+    - 44
+    - 73
+    - 195
+    - 241
+    - 259
+    - 437
+    - 520
+    - 560
+    - 43
+    - 77
+    - 87
+    - 88
+    - 106
+    - 125
+    - 137
+    - 213
+    - 284
+    - 306
+    - 534
+    - 621
+    - 58
+    - 139
+    - 171
+    - 262
+    - 317
+    - 359
+    - 398
+    - 716
+    - 648
+    - 650
+    - 656
+    - 661
+    - 669
+    - 675
+    - 683
+    - 687
+    - 130
+    - 132
+    - 145
+    - 201
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "Units from Busters sets join forces! \u2605 Uber Rare drop rates UP!"
+    series_id: 59
+  942:
+    cats:
+    - 764
+    - 669
+    - 618
+    - 520
+    - 456
+    - 428
+    - 144
+    - 60
+    - 58
+    - 45
+    - 44
+    - 43
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "Conjurer Dynasaurus Cat joins the fight! \u2605Tap banner for info!"
+    rate: regular
+    series_id: 1
+  945:
+    cats:
+    - 761
+    - 661
+    - 621
+    - 506
+    - 451
+    - 397
+    - 178
+    - 88
+    - 87
+    - 86
+    - 85
+    - 84
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: Conjure spirits with new hero Gunduros! Tap banner for info!
+    rate: regular
+    series_id: 4
+  946:
+    cats:
+    - 770
+    - 693
+    - 634
+    - 526
+    - 452
+    - 323
+    - 204
+    - 139
+    - 138
+    - 137
+    - 136
+    - 135
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "Hanasaka Cat with Conjurer evolved form joins! \u2605Tap banner for info!"
+    rate: regular
+    series_id: 6
+  947:
+    cats:
+    - 775
+    - 699
+    - 635
+    - 534
+    - 482
+    - 432
+    - 262
+    - 227
+    - 213
+    - 197
+    - 196
+    - 195
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "Command mighty Conjurer Mech Patrol Axel! \u2605Tap banner for info!"
+    rate: regular
+    series_id: 7
+  974:
+    cats:
+    - 230
+    - 231
+    - 242
+    - 243
+    - 244
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "NEW! A chance to earn special units! \u2605Tap for details!"
+    series_id: 71
+  979:
+    cats:
+    - 800
+    - 716
+    - 675
+    - 633
+    - 595
+    - 524
+    - 523
+    - 496
+    - 464
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 418
+    - 378
+    - 377
+    - 356
+    - 326
+    - 307
+    - 306
+    - 305
+    - 308
+    - 309
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "New Conjurer Unit Mighty Morta-Loncha, with Explosive attacks! \u2605Tap for details!"
+    rate: regular
+    series_id: 24
+  986:
+    cats:
+    - 782
+    - 713
+    - 626
+    - 547
+    - 462
+    - 437
+    - 241
+    - 172
+    - 171
+    - 170
+    - 169
+    - 35
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "Mystery creature Mamoluga awaits your summoning! \u2605 Tap banner for info!"
+    rate: regular
+    series_id: 0
+  991:
+    cats:
+    - 812
+    - 724
+    - 643
+    - 535
+    - 494
+    - 440
+    - 317
+    - 273
+    - 272
+    - 260
+    - 259
+    - 258
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "The Almighties, supreme beings of Catkind! \u2605 Tap banner for info!"
+    rate: regular
+    series_id: 18
+  1002:
+    cats:
+    - 175
+    - 174
+    - 238
+    - 239
+    - 240
+    - 130
+    - 132
+    - 145
+    - 201
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "Survive! Mola Mola! Collab Capsules! \u2605 Tap the banner for info!"
+    rate: no_legend
+    series_id: 14
+  1004:
+    cats:
+    - 818
+    - 720
+    - 656
+    - 479
+    - 360
+    - 361
+    - 362
+    - 402
+    - 570
+    - 632
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "Conjurer hero Komori joins the fight! \u2605Tap for details!"
+    rate: regular
+    series_id: 33
+  1015:
+    cats:
+    - 825
+    - 726
+    - 683
+    - 608
+    - 545
+    - 524
+    - 523
+    - 496
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 378
+    - 377
+    - 359
+    - 358
+    - 337
+    - 336
+    - 335
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: New unit "Sorceress Sidmi" added! Spooky beauties from beyond!
+    rate: regular
+    series_id: 28
+  1021:
+    cats:
+    - 831
+    - 734
+    - 648
+    - 620
+    - 450
+    - 503
+    - 352
+    - 160
+    - 108
+    - 107
+    - 106
+    - 77
+    - 76
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: New unit Raclesa the Lioness  added! Cosmic cuties, here to crush your enemies!
+    rate: regular
+    series_id: 3
+  1028:
+    cats:
+    - 450
+    - 452
+    - 479
+    - 545
+    - 520
+    - 73
+    - 106
+    - 432
+    - 630
+    - 637
+    - 663
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: Lunar New Year Capsules full of appreciation! Tap the banner for details!
+    rate: regular
+    series_id: 66
+  1030:
+    cats:
+    - 451
+    - 456
+    - 462
+    - 45
+    - 135
+    - 306
+    - 358
+    - 646
+    - 668
+    - 685
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: Lunar New Year Capsules full of appreciation! Tap the banner for details!
+    rate: regular
+    series_id: 68
+  1043:
+    cats:
+    - 851
+    - 755
+    - 650
+    - 619
+    - 449
+    - 497
+    - 339
+    - 159
+    - 126
+    - 125
+    - 74
+    - 73
+    - 72
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: New unit Fuma Kotaro added! Masters of battle join the Cat cause!
+    rate: regular
+    series_id: 2
+  1045:
+    cats:
+    - 851
+    - 838
+    - 831
+    - 818
+    - 812
+    - 800
+    - 782
+    - 780
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 734
+    - 732
+    - 724
+    - 720
+    - 716
+    - 713
+    - 699
+    - 693
+    - 691
+    - 675
+    - 669
+    - 661
+    - 656
+    - 650
+    - 648
+    - 643
+    - 642
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 595
+    - 586
+    - 570
+    - 547
+    - 535
+    - 534
+    - 530
+    - 526
+    - 524
+    - 523
+    - 496
+    - 520
+    - 506
+    - 503
+    - 497
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 397
+    - 381
+    - 378
+    - 377
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 326
+    - 323
+    - 319
+    - 317
+    - 307
+    - 306
+    - 305
+    - 308
+    - 309
+    - 273
+    - 272
+    - 270
+    - 35
+    - 43
+    - 44
+    - 45
+    - 58
+    - 60
+    - 72
+    - 73
+    - 74
+    - 76
+    - 77
+    - 84
+    - 85
+    - 86
+    - 87
+    - 88
+    - 106
+    - 107
+    - 108
+    - 125
+    - 126
+    - 135
+    - 136
+    - 137
+    - 138
+    - 139
+    - 144
+    - 159
+    - 160
+    - 169
+    - 170
+    - 171
+    - 172
+    - 178
+    - 195
+    - 196
+    - 197
+    - 204
+    - 213
+    - 227
+    - 262
+    - 241
+    - 258
+    - 259
+    - 260
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "New unit Squire Luno added! \u2605Uber Rare drop rate UP!"
+    rate: uberfest_legend
+    series_id: 19
+  1046:
+    cats:
+    - 851
+    - 831
+    - 818
+    - 812
+    - 800
+    - 788
+    - 782
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 739
+    - 734
+    - 724
+    - 720
+    - 716
+    - 713
+    - 706
+    - 699
+    - 693
+    - 675
+    - 669
+    - 661
+    - 658
+    - 656
+    - 650
+    - 648
+    - 643
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 610
+    - 595
+    - 570
+    - 547
+    - 544
+    - 535
+    - 534
+    - 526
+    - 524
+    - 523
+    - 496
+    - 520
+    - 506
+    - 503
+    - 497
+    - 442
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 397
+    - 379
+    - 378
+    - 377
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 334
+    - 326
+    - 323
+    - 317
+    - 307
+    - 306
+    - 305
+    - 308
+    - 309
+    - 273
+    - 272
+    - 35
+    - 43
+    - 44
+    - 45
+    - 58
+    - 60
+    - 72
+    - 73
+    - 74
+    - 76
+    - 77
+    - 84
+    - 85
+    - 86
+    - 87
+    - 88
+    - 106
+    - 107
+    - 108
+    - 125
+    - 126
+    - 135
+    - 136
+    - 137
+    - 138
+    - 139
+    - 144
+    - 159
+    - 160
+    - 169
+    - 170
+    - 171
+    - 172
+    - 178
+    - 195
+    - 196
+    - 197
+    - 204
+    - 213
+    - 227
+    - 262
+    - 241
+    - 258
+    - 259
+    - 260
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "Limited unit Netherworld Nymph Lunacia added! \u2605Tap for details!"
+    rate: uberfest_legend
+    series_id: 27
+  1051:
+    cats:
+    - 860
+    - 851
+    - 838
+    - 831
+    - 818
+    - 812
+    - 800
+    - 788
+    - 782
+    - 780
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 739
+    - 734
+    - 732
+    - 724
+    - 720
+    - 716
+    - 713
+    - 706
+    - 699
+    - 693
+    - 691
+    - 675
+    - 669
+    - 661
+    - 658
+    - 656
+    - 650
+    - 648
+    - 643
+    - 642
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 610
+    - 595
+    - 586
+    - 570
+    - 547
+    - 544
+    - 535
+    - 534
+    - 530
+    - 526
+    - 520
+    - 506
+    - 503
+    - 497
+    - 442
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 397
+    - 381
+    - 379
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 334
+    - 323
+    - 319
+    - 317
+    - 307
+    - 306
+    - 305
+    - 273
+    - 272
+    - 270
+    - 262
+    - 260
+    - 259
+    - 258
+    - 241
+    - 227
+    - 213
+    - 204
+    - 197
+    - 196
+    - 195
+    - 178
+    - 172
+    - 171
+    - 170
+    - 169
+    - 160
+    - 159
+    - 144
+    - 139
+    - 138
+    - 137
+    - 136
+    - 135
+    - 126
+    - 125
+    - 108
+    - 107
+    - 106
+    - 88
+    - 87
+    - 86
+    - 85
+    - 84
+    - 77
+    - 76
+    - 74
+    - 73
+    - 72
+    - 60
+    - 58
+    - 45
+    - 44
+    - 43
+    - 35
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: New unit Lone Moon Lunos added! Special Capsules featuring powerful limited units!
+    rate: superfest_legend
+    series_id: 42
+  1052:
+    cats:
+    - 125
+    - 626
+    - 503
+    - 361
+    - 60
+    - 87
+    - 323
+    - 227
+    - 724
+    - 307
+    - 608
+    - 759
+    - 436
+    - 521
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "Trixi joins the 13th anniversary Capsules! \u2605Check banner for details!"
+    rate: no_legend
+    series_id: 35
+  1053:
+    cats:
+    - 159
+    - 241
+    - 352
+    - 656
+    - 618
+    - 84
+    - 526
+    - 635
+    - 440
+    - 595
+    - 831
+    - 811
+    - 485
+    - 521
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "Agent Staal joins the 13th anniversary Capsules! \u2605Check banner for details!"
+    rate: no_legend
+    series_id: 39
+  1054:
+    cats:
+    - 449
+    - 464
+    - 482
+    - 494
+    - 138
+    - 360
+    - 650
+    - 775
+    - 655
+    - 689
+    - 695
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "13 Year Celebration: Miracle Selection! \u2605 Tap banner for info!"
+    rate: regular
+    series_id: 67
+  1057:
+    cats:
+    - 860
+    - 851
+    - 838
+    - 831
+    - 818
+    - 812
+    - 800
+    - 788
+    - 782
+    - 780
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 734
+    - 724
+    - 720
+    - 716
+    - 713
+    - 706
+    - 699
+    - 693
+    - 691
+    - 687
+    - 675
+    - 669
+    - 661
+    - 658
+    - 656
+    - 650
+    - 648
+    - 643
+    - 642
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 613
+    - 610
+    - 595
+    - 586
+    - 570
+    - 560
+    - 547
+    - 544
+    - 535
+    - 534
+    - 530
+    - 526
+    - 520
+    - 506
+    - 503
+    - 497
+    - 442
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 398
+    - 397
+    - 381
+    - 379
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 334
+    - 323
+    - 319
+    - 317
+    - 307
+    - 306
+    - 305
+    - 287
+    - 284
+    - 270
+    - 35
+    - 169
+    - 170
+    - 171
+    - 172
+    - 241
+    - 43
+    - 44
+    - 45
+    - 58
+    - 60
+    - 144
+    - 72
+    - 73
+    - 74
+    - 125
+    - 126
+    - 159
+    - 76
+    - 77
+    - 106
+    - 107
+    - 108
+    - 160
+    - 84
+    - 85
+    - 86
+    - 87
+    - 88
+    - 178
+    - 135
+    - 136
+    - 137
+    - 138
+    - 139
+    - 204
+    - 195
+    - 196
+    - 197
+    - 213
+    - 227
+    - 262
+    - 258
+    - 259
+    - 260
+    - 272
+    - 273
+    name: Get an Uber Rare Cat!! 100% Uber drop Rate in the PLATINUM CAPSULES!
+    rate: platinum
+    series_id: 21
+  1058:
+    cats:
+    - 860
+    - 851
+    - 838
+    - 831
+    - 818
+    - 812
+    - 800
+    - 788
+    - 782
+    - 780
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 739
+    - 734
+    - 732
+    - 724
+    - 720
+    - 716
+    - 713
+    - 706
+    - 699
+    - 693
+    - 691
+    - 687
+    - 675
+    - 669
+    - 661
+    - 658
+    - 656
+    - 650
+    - 648
+    - 643
+    - 642
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 613
+    - 610
+    - 595
+    - 587
+    - 586
+    - 494
+    - 482
+    - 479
+    - 464
+    - 462
+    - 456
+    - 452
+    - 451
+    - 450
+    - 449
+    - 570
+    - 560
+    - 547
+    - 544
+    - 535
+    - 534
+    - 530
+    - 526
+    - 520
+    - 506
+    - 503
+    - 497
+    - 442
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 398
+    - 397
+    - 381
+    - 379
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 334
+    - 323
+    - 319
+    - 317
+    - 307
+    - 306
+    - 305
+    - 287
+    - 284
+    - 270
+    - 35
+    - 169
+    - 170
+    - 171
+    - 172
+    - 241
+    - 43
+    - 44
+    - 45
+    - 58
+    - 60
+    - 144
+    - 72
+    - 73
+    - 74
+    - 125
+    - 126
+    - 159
+    - 76
+    - 77
+    - 106
+    - 107
+    - 108
+    - 160
+    - 84
+    - 85
+    - 86
+    - 87
+    - 88
+    - 178
+    - 135
+    - 136
+    - 137
+    - 138
+    - 139
+    - 204
+    - 195
+    - 196
+    - 197
+    - 213
+    - 227
+    - 262
+    - 258
+    - 259
+    - 260
+    - 272
+    - 273
+    name: Get a Guaranteed Uber or Legend Rare from the Legend Capsules!
+    rate: legend
+    series_id: 46
+  1059:
+    cats:
+    - 862
+    - 761
+    - 661
+    - 621
+    - 506
+    - 451
+    - 397
+    - 178
+    - 88
+    - 87
+    - 86
+    - 85
+    - 84
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: Vornado added! Dragon kings of overwhelming power!
+    rate: regular
+    series_id: 4
+  1060:
+    cats:
+    - 862
+    - 761
+    - 661
+    - 621
+    - 506
+    - 451
+    - 397
+    - 178
+    - 88
+    - 87
+    - 86
+    - 85
+    - 84
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: New unit Vornado added! Dragon kings of overwhelming power!
+    rate: regular
+    series_id: 4
+  1061:
+    cats:
+    - 862
+    - 851
+    - 838
+    - 831
+    - 818
+    - 812
+    - 800
+    - 782
+    - 780
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 734
+    - 732
+    - 724
+    - 720
+    - 716
+    - 713
+    - 699
+    - 693
+    - 691
+    - 675
+    - 669
+    - 661
+    - 656
+    - 650
+    - 648
+    - 643
+    - 642
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 595
+    - 586
+    - 570
+    - 547
+    - 535
+    - 534
+    - 530
+    - 526
+    - 524
+    - 523
+    - 496
+    - 520
+    - 506
+    - 503
+    - 497
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 397
+    - 381
+    - 378
+    - 377
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 326
+    - 323
+    - 319
+    - 317
+    - 307
+    - 306
+    - 305
+    - 308
+    - 309
+    - 273
+    - 272
+    - 270
+    - 35
+    - 43
+    - 44
+    - 45
+    - 58
+    - 60
+    - 72
+    - 73
+    - 74
+    - 76
+    - 77
+    - 84
+    - 85
+    - 86
+    - 87
+    - 88
+    - 106
+    - 107
+    - 108
+    - 125
+    - 126
+    - 135
+    - 136
+    - 137
+    - 138
+    - 139
+    - 144
+    - 159
+    - 160
+    - 169
+    - 170
+    - 171
+    - 172
+    - 178
+    - 195
+    - 196
+    - 197
+    - 204
+    - 213
+    - 227
+    - 262
+    - 241
+    - 258
+    - 259
+    - 260
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: Squire Luno added! Special Capsules featuring powerful limited units!
+    rate: uberfest_legend
+    series_id: 19
+  1062:
+    cats:
+    - 862
+    - 860
+    - 851
+    - 831
+    - 818
+    - 812
+    - 800
+    - 788
+    - 782
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 739
+    - 734
+    - 724
+    - 720
+    - 716
+    - 713
+    - 706
+    - 699
+    - 693
+    - 675
+    - 669
+    - 661
+    - 658
+    - 656
+    - 650
+    - 648
+    - 643
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 610
+    - 595
+    - 570
+    - 547
+    - 544
+    - 535
+    - 534
+    - 526
+    - 524
+    - 523
+    - 496
+    - 520
+    - 506
+    - 503
+    - 497
+    - 442
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 397
+    - 379
+    - 378
+    - 377
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 334
+    - 326
+    - 323
+    - 317
+    - 307
+    - 306
+    - 305
+    - 308
+    - 309
+    - 273
+    - 272
+    - 35
+    - 43
+    - 44
+    - 45
+    - 58
+    - 60
+    - 72
+    - 73
+    - 74
+    - 76
+    - 77
+    - 84
+    - 85
+    - 86
+    - 87
+    - 88
+    - 106
+    - 107
+    - 108
+    - 125
+    - 126
+    - 135
+    - 136
+    - 137
+    - 138
+    - 139
+    - 144
+    - 159
+    - 160
+    - 169
+    - 170
+    - 171
+    - 172
+    - 178
+    - 195
+    - 196
+    - 197
+    - 204
+    - 213
+    - 227
+    - 262
+    - 241
+    - 258
+    - 259
+    - 260
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: Lone Moon Lunos added! Special Capsules featuring powerful limited units!
+    rate: uberfest_legend
+    series_id: 27
+  1063:
+    cats:
+    - 862
+    - 860
+    - 851
+    - 838
+    - 831
+    - 818
+    - 812
+    - 800
+    - 788
+    - 782
+    - 780
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 734
+    - 724
+    - 720
+    - 716
+    - 713
+    - 706
+    - 699
+    - 693
+    - 691
+    - 687
+    - 675
+    - 669
+    - 661
+    - 658
+    - 656
+    - 650
+    - 648
+    - 643
+    - 642
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 613
+    - 610
+    - 595
+    - 586
+    - 570
+    - 560
+    - 547
+    - 544
+    - 535
+    - 534
+    - 530
+    - 526
+    - 520
+    - 506
+    - 503
+    - 497
+    - 442
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 398
+    - 397
+    - 381
+    - 379
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 334
+    - 323
+    - 319
+    - 317
+    - 307
+    - 306
+    - 305
+    - 287
+    - 284
+    - 270
+    - 35
+    - 169
+    - 170
+    - 171
+    - 172
+    - 241
+    - 43
+    - 44
+    - 45
+    - 58
+    - 60
+    - 144
+    - 72
+    - 73
+    - 74
+    - 125
+    - 126
+    - 159
+    - 76
+    - 77
+    - 106
+    - 107
+    - 108
+    - 160
+    - 84
+    - 85
+    - 86
+    - 87
+    - 88
+    - 178
+    - 135
+    - 136
+    - 137
+    - 138
+    - 139
+    - 204
+    - 195
+    - 196
+    - 197
+    - 213
+    - 227
+    - 262
+    - 258
+    - 259
+    - 260
+    - 272
+    - 273
+    name: Get an Uber Rare Cat!! 100% Uber drop Rate in the PLATINUM CAPSULES!
+    rate: platinum
+    series_id: 21
+  1064:
+    cats:
+    - 862
+    - 860
+    - 851
+    - 838
+    - 831
+    - 818
+    - 812
+    - 800
+    - 788
+    - 782
+    - 780
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 739
+    - 734
+    - 732
+    - 724
+    - 720
+    - 716
+    - 713
+    - 706
+    - 699
+    - 693
+    - 691
+    - 687
+    - 675
+    - 669
+    - 661
+    - 658
+    - 656
+    - 650
+    - 648
+    - 643
+    - 642
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 613
+    - 610
+    - 595
+    - 587
+    - 586
+    - 494
+    - 482
+    - 479
+    - 464
+    - 462
+    - 456
+    - 452
+    - 451
+    - 450
+    - 449
+    - 570
+    - 560
+    - 547
+    - 544
+    - 535
+    - 534
+    - 530
+    - 526
+    - 520
+    - 506
+    - 503
+    - 497
+    - 442
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 398
+    - 397
+    - 381
+    - 379
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 334
+    - 323
+    - 319
+    - 317
+    - 307
+    - 306
+    - 305
+    - 287
+    - 284
+    - 270
+    - 35
+    - 169
+    - 170
+    - 171
+    - 172
+    - 241
+    - 43
+    - 44
+    - 45
+    - 58
+    - 60
+    - 144
+    - 72
+    - 73
+    - 74
+    - 125
+    - 126
+    - 159
+    - 76
+    - 77
+    - 106
+    - 107
+    - 108
+    - 160
+    - 84
+    - 85
+    - 86
+    - 87
+    - 88
+    - 178
+    - 135
+    - 136
+    - 137
+    - 138
+    - 139
+    - 204
+    - 195
+    - 196
+    - 197
+    - 213
+    - 227
+    - 262
+    - 258
+    - 259
+    - 260
+    - 272
+    - 273
+    name: Get a Guaranteed Uber or Legend Rare from the Legend Capsules!
+    rate: legend
+    series_id: 46
+  1065:
+    cats:
+    - 863
+    - 757
+    - 712
+    - 662
+    - 661
+    - 359
+    - 73
+    - 630
+    - 637
+    - 663
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: "New units added to June Bride Capsules \u2605 Tap banner for info!"
+    rate: no_legend
+    series_id: 53
+  1068:
+    cats:
+    - 870
+    - 764
+    - 669
+    - 618
+    - 520
+    - 456
+    - 428
+    - 144
+    - 60
+    - 58
+    - 45
+    - 44
+    - 43
+    - 448
+    - 447
+    - 446
+    - 445
+    - 444
+    - 201
+    - 145
+    - 132
+    - 130
+    - 238
+    - 239
+    - 240
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: New unit Akane Tounji added! An awesome variety pack of crazy Cats!
+    rate: regular
+    series_id: 1
+  1071:
+    cats:
+    - 870
+    - 862
+    - 860
+    - 851
+    - 838
+    - 831
+    - 818
+    - 812
+    - 800
+    - 788
+    - 782
+    - 780
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 734
+    - 724
+    - 720
+    - 716
+    - 713
+    - 706
+    - 699
+    - 693
+    - 691
+    - 687
+    - 675
+    - 669
+    - 661
+    - 658
+    - 656
+    - 650
+    - 648
+    - 643
+    - 642
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 613
+    - 610
+    - 595
+    - 586
+    - 570
+    - 560
+    - 547
+    - 544
+    - 535
+    - 534
+    - 530
+    - 526
+    - 520
+    - 506
+    - 503
+    - 497
+    - 442
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 398
+    - 397
+    - 381
+    - 379
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 334
+    - 323
+    - 319
+    - 317
+    - 307
+    - 306
+    - 305
+    - 287
+    - 284
+    - 270
+    - 35
+    - 169
+    - 170
+    - 171
+    - 172
+    - 241
+    - 43
+    - 44
+    - 45
+    - 58
+    - 60
+    - 144
+    - 72
+    - 73
+    - 74
+    - 125
+    - 126
+    - 159
+    - 76
+    - 77
+    - 106
+    - 107
+    - 108
+    - 160
+    - 84
+    - 85
+    - 86
+    - 87
+    - 88
+    - 178
+    - 135
+    - 136
+    - 137
+    - 138
+    - 139
+    - 204
+    - 195
+    - 196
+    - 197
+    - 213
+    - 227
+    - 262
+    - 258
+    - 259
+    - 260
+    - 272
+    - 273
+    name: Get an Uber Rare Cat!! 100% Uber drop Rate in the PLATINUM CAPSULES!
+    rate: platinum
+    series_id: 21
+  1072:
+    cats:
+    - 870
+    - 862
+    - 860
+    - 851
+    - 838
+    - 831
+    - 818
+    - 812
+    - 800
+    - 788
+    - 782
+    - 780
+    - 775
+    - 770
+    - 764
+    - 761
+    - 755
+    - 739
+    - 734
+    - 732
+    - 724
+    - 720
+    - 716
+    - 713
+    - 706
+    - 699
+    - 693
+    - 691
+    - 687
+    - 675
+    - 669
+    - 661
+    - 658
+    - 656
+    - 650
+    - 648
+    - 643
+    - 642
+    - 635
+    - 634
+    - 633
+    - 632
+    - 626
+    - 621
+    - 620
+    - 619
+    - 618
+    - 613
+    - 610
+    - 595
+    - 587
+    - 586
+    - 494
+    - 482
+    - 479
+    - 464
+    - 462
+    - 456
+    - 452
+    - 451
+    - 450
+    - 449
+    - 570
+    - 560
+    - 547
+    - 544
+    - 535
+    - 534
+    - 530
+    - 526
+    - 520
+    - 506
+    - 503
+    - 497
+    - 442
+    - 440
+    - 437
+    - 432
+    - 428
+    - 418
+    - 402
+    - 398
+    - 397
+    - 381
+    - 379
+    - 362
+    - 361
+    - 360
+    - 356
+    - 352
+    - 339
+    - 334
+    - 323
+    - 319
+    - 317
+    - 307
+    - 306
+    - 305
+    - 287
+    - 284
+    - 270
+    - 35
+    - 169
+    - 170
+    - 171
+    - 172
+    - 241
+    - 43
+    - 44
+    - 45
+    - 58
+    - 60
+    - 144
+    - 72
+    - 73
+    - 74
+    - 125
+    - 126
+    - 159
+    - 76
+    - 77
+    - 106
+    - 107
+    - 108
+    - 160
+    - 84
+    - 85
+    - 86
+    - 87
+    - 88
+    - 178
+    - 135
+    - 136
+    - 137
+    - 138
+    - 139
+    - 204
+    - 195
+    - 196
+    - 197
+    - 213
+    - 227
+    - 262
+    - 258
+    - 259
+    - 260
+    - 272
+    - 273
+    name: Get a Guaranteed Uber or Legend Rare from the Legend Capsules!
+    rate: legend
+    series_id: 46
+  1075:
+    cats:
+    - 276
+    - 355
+    - 439
+    - 564
+    - 667
+    - 821
+    - 646
+    - 668
+    - 685
+    - 277
+    - 566
+    - 567
+    - 523
+    - 378
+    - 308
+    - 200
+    - 154
+    - 153
+    - 152
+    - 151
+    - 62
+    - 41
+    - 40
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    - 524
+    - 496
+    - 377
+    - 326
+    - 309
+    - 199
+    - 198
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 39
+    - 38
+    name: Limited Summer capsules with a exciting hero! Tap banner for info!
+    rate: no_legend
+    series_id: 64
+  1076:
+    cats:
+    - 873
+    - 495
+    - 760
+    - 715
+    - 615
+    - 565
+    - 275
+    - 655
+    - 689
+    - 695
+    - 277
+    - 566
+    - 567
+    - 523
+    - 378
+    - 308
+    - 200
+    - 154
+    - 153
+    - 152
+    - 151
+    - 62
+    - 41
+    - 40
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    - 524
+    - 496
+    - 377
+    - 326
+    - 309
+    - 199
+    - 198
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 39
+    - 38
+    name: Limited Summer capsules with a new hero! Tap banner for info!
+    rate: no_legend
+    series_id: 65
+  1077:
+    cats:
+    - 449
+    - 450
+    - 451
+    - 452
+    - 456
+    - 462
+    - 464
+    - 479
+    - 482
+    - 494
+    - 545
+    - 874
+    - 74
+    - 35
+    - 734
+    - 77
+    - 361
+    - 60
+    - 144
+    - 88
+    - 136
+    - 197
+    - 812
+    - 608
+    - 418
+    - 675
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: Limited Uber Rare unit Metal Maiden Koneko added! 120M DL Special Capsules!
+    rate: dl_special
+    series_id: 70
+  1078:
+    cats:
+    - 873
+    - 863
+    - 821
+    - 787
+    - 778
+    - 774
+    - 773
+    - 760
+    - 757
+    - 738
+    - 737
+    - 715
+    - 712
+    - 700
+    - 694
+    - 688
+    - 684
+    - 667
+    - 662
+    - 649
+    - 645
+    - 615
+    - 596
+    - 590
+    - 589
+    - 588
+    - 587
+    - 585
+    - 571
+    - 567
+    - 566
+    - 565
+    - 564
+    - 527
+    - 495
+    - 439
+    - 355
+    - 333
+    - 332
+    - 331
+    - 315
+    - 311
+    - 303
+    - 277
+    - 276
+    - 275
+    - 244
+    - 243
+    - 242
+    - 231
+    - 230
+    - 229
+    - 524
+    - 523
+    - 496
+    - 378
+    - 377
+    - 326
+    - 308
+    - 309
+    - 200
+    - 199
+    - 198
+    - 154
+    - 153
+    - 152
+    - 151
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 62
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 41
+    - 40
+    - 39
+    - 38
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    name: Joining forces from Seasonal sets, with higher drop rates!
+    rate: dynastyfest
+    series_id: 47
+  1081:
+    cats:
+    - 865
+    - 866
+    - 363
+    - 364
+    - 365
+    - 366
+    - 367
+    - 368
+    - 369
+    - 457
+    - 461
+    - 371
+    - 372
+    - 373
+    - 459
+    - 460
+    - 523
+    - 378
+    - 308
+    - 200
+    - 154
+    - 153
+    - 152
+    - 151
+    - 62
+    - 41
+    - 40
+    - 37
+    - 36
+    - 34
+    - 33
+    - 32
+    - 31
+    - 524
+    - 496
+    - 377
+    - 326
+    - 309
+    - 199
+    - 198
+    - 150
+    - 149
+    - 148
+    - 147
+    - 146
+    - 59
+    - 57
+    - 56
+    - 53
+    - 52
+    - 51
+    - 50
+    - 49
+    - 48
+    - 47
+    - 42
+    - 39
+    - 38
+    name: "NEW Uber Rare heroes Shirou Emiya and True Assassin! \u2605 Tap the banner for more info on this collab capsule set!"
+    rate: no_legend
+    series_id: 34
