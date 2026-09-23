@@ -114,10 +114,22 @@ def stage_graph(ctx: Context, reload) -> None:
                           screens=len(ctx.graph.screens), transitions=len(ctx.graph.transitions)))
 
 
+def storage_count(texts) -> tuple[int, int] | None:
+    """Storage's "used/capacity" in its bottom-right corner; OCR reads the
+    slash as a T ("60T128")."""
+    for t in texts:
+        if t.centre[0] > 0.8 and 0.78 < t.centre[1] < 0.88:
+            m = re.fullmatch(r"\s*(\d{1,3})\s*[/T|Il1]?\s*(\d{2,3})\s*", t.text)
+            if m and int(m.group(2)) in (64, 128) and int(m.group(1)) <= int(m.group(2)):
+                return int(m.group(1)), int(m.group(2))
+    return None
+
+
 def drain_storage(ctx: Context) -> bool:
     """Press Use all on Cat Storage -- the only control ever pressed there --
-    and confirm its question only once it reads as that question."""
-    from .perception import perceive
+    and confirm its question only once it reads as that question. True only
+    once Storage is seen emptied; ctx.storage_left is then what it holds."""
+    from .perception import perceive, read_texts
 
     nav = ctx.navigator()
     if not nav.goto("storage", log=ctx.log):
@@ -125,20 +137,33 @@ def drain_storage(ctx: Context) -> bool:
         return False
     frame = ctx.session.screenshot()
     percept = perceive(frame, ctx.ocr)
+    before = storage_count(percept.texts)
     use_all = percept.find("Use all")
     if use_all is None:
         ctx.log("  no Use all on the Storage screen: nothing to redeem")
+        ctx.storage_left = before[0] if before else 0
         return True
-    ctx.log("  Cat Storage: Use all")
+    ctx.log(f"  Cat Storage{f' {before[0]}/{before[1]}' if before else ''}: Use all")
     nav._tap(*use_all.tap, 1.5)
-    from .perception import read_texts
 
-    quiet, answered = 0, False
+    def said_above(texts, y):
+        # Only the dialog's own words count: the Storage screen always shows
+        # "Exchange all for NP/XP" along its bottom, beside Use all.
+        return " ".join(t.text for t in texts if 0.08 < t.centre[1] < y - 0.02
+                        and 0.12 < t.centre[0] < 0.88).lower()
+
+    quiet, answered, confirms = 0, False, 0
     asked_by = time.time() + ASK_WAIT
-    for _ in range(16):
+    for _ in range(24):
         texts = read_texts(ctx.session.screenshot(), ctx.ocr)
         answer = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("yes", "ok")), None)
-        if answer is None:
+        no = next((t for t in texts if t.text.strip().lower() in ("no", "cancel")), None)
+        point = answer.centre if answer else None
+        if answer is None and no is not None and "?" in said_above(texts, no.centre[1]):
+            # OCR reads the No beside it but not the Yes: the dialog is
+            # centred, so its Yes is the No's mirror image.
+            point = (1.0 - no.centre[0], no.centre[1])
+        if point is None:
             # The question can take seconds to come up; once answered,
             # activating takes a moment before its closing notice appears.
             if not answered:
@@ -152,21 +177,27 @@ def drain_storage(ctx: Context) -> bool:
             time.sleep(1.0)
             continue
         quiet, answered = 0, True
-        # Only the dialog's own words count: the Storage screen always shows
-        # "Exchange all for NP/XP" along its bottom, beside Use all.
-        question = [t for t in texts if 0.08 < t.centre[1] < answer.centre[1] - 0.02
-                    and 0.12 < t.centre[0] < 0.88]
-        said = " ".join(t.text for t in question).lower()
+        said = said_above(texts, point[1])
         reward = "unlocked" in said and "you got" in said     # Cat Food received, not spent
         if not reward and re.search(r"cat food|exchange|\bnp\b|\bxp\b", said):
             ctx.log(f"  refusing a Storage question that mentions spending: {said[:100]!r}")
-            no = next((t for t in texts if t.text.strip().lower() in ("no", "cancel")), None)
             if no:
                 nav._tap(*no.centre, 1.2)
             return False
+        confirms += 1
+        if confirms > 6:
+            ctx.log("  Storage keeps asking: stopping")
+            return False
         ctx.log(f"  confirming: {said[:100]!r}")
-        nav._tap(*answer.centre, 2.0)
-    ctx.put("storage", dict(drained_at=dt.datetime.now().isoformat(timespec="seconds")))
+        nav._tap(*point, 2.0)
+    after = storage_count(read_texts(ctx.session.screenshot(), ctx.ocr))
+    if after is None or after[0] > after[1] - 2 * STORAGE_MARGIN or \
+            (before and after[0] >= before[0] and before[0] > 0):
+        ctx.log(f"  Use all did not empty Storage (read {after}): stopping rather than overfill it")
+        return False
+    ctx.storage_left = after[0]
+    ctx.log(f"  Cat Storage now {after[0]}/{after[1]}")
+    ctx.put("storage", dict(drained_at=dt.datetime.now().isoformat(timespec="seconds"), left=after[0]))
     return True
 
 
@@ -651,7 +682,7 @@ class GoalRun:
                     if not drain_storage(ctx):
                         s.reason = "could not empty Cat Storage"
                         break
-                    self.account.storage_used = 0
+                    self.account.storage_used = getattr(ctx, "storage_left", 0)
                     self.account.save()
                 reason = self.roll_once(step)
                 self._publish_state()

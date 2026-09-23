@@ -223,7 +223,7 @@ class CapsuleRun:
         self.ctx.log("  Cat Storage nearly full: Use all")
         if not drain_storage(self.ctx):
             return False
-        self.stored = 0
+        self.stored = getattr(self.ctx, "storage_left", 0)
         self._save_storage()
         return True
 
