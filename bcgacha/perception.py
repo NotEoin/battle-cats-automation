@@ -67,6 +67,11 @@ class Percept:
     controls: list[Control] = field(default_factory=list)
     title: Text | None = None
     groups: list[Text] = field(default_factory=list)       # texts joined across lines
+    rows: list[Text] = field(default_factory=list)         # words joined along a line
+
+    def readings(self) -> list[Text]:
+        """Every way the text on screen reads: pieces, stacked lines, whole rows."""
+        return self.texts + self.groups + self.rows
 
     def text(self) -> str:
         return " ".join(t.text for t in self.texts)
@@ -126,6 +131,26 @@ def group_lines(texts: list[Text]) -> list[Text]:
                max(t.box[2] for t in g), max(t.box[3] for t in g))
         out.append(Text(" ".join(t.text for t in g), box, min(t.conf for t in g)))
     return out
+
+
+def join_rows(texts: list[Text]) -> list[Text]:
+    """Join words OCR read apart along one line: "Meow" and "Medals"."""
+    rows: list[list[Text]] = []
+    for t in sorted(texts, key=lambda t: t.box[0]):
+        for row in rows:
+            last = row[-1]
+            level = abs(t.centre[1] - last.centre[1]) <= 0.4 * last.height
+            close = 0 <= t.box[0] - last.box[2] <= 1.2 * last.height
+            if level and close and abs(t.height - last.height) < 0.5 * last.height:
+                row.append(t)
+                break
+        else:
+            rows.append([t])
+    return [Text(" ".join(t.text for t in r),
+                 (min(t.box[0] for t in r), min(t.box[1] for t in r),
+                  max(t.box[2] for t in r), max(t.box[3] for t in r)),
+                 min(t.conf for t in r))
+            for r in rows if len(r) > 1]
 
 
 def find_title(texts: list[Text]) -> Text | None:
@@ -212,6 +237,7 @@ def perceive(frame: np.ndarray, ocr) -> Percept:
         shapes.append((box, (b.x, b.y), "round" if round_ else "button", b.w * b.h))
 
     percept.groups = group_lines(texts)
+    percept.rows = join_rows(texts)
     groups = [g for g in percept.groups
               if percept.title is None or not _inside(g.centre, percept.title.box)]
     # A gold shape holding several labels is a panel of controls, not one.

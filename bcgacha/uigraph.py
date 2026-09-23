@@ -412,7 +412,7 @@ class UIGraph:
                         return True
             if percept is not None:
                 return any(title_match(mark, t.text, within=True) >= TITLE_MATCH
-                           for t in percept.texts + percept.groups)
+                           for t in percept.readings())
             # Not where it was learned. For a mark this screen must show, that
             # settles it only if it was learned on this screen: the same word
             # elsewhere sits elsewhere. A mark that must be absent is absent
@@ -461,6 +461,12 @@ class UIGraph:
                         continue
             for mark in screen.marks:
                 seen = mark_seen(mark, screen.name)
+                if seen is False and percept is not None:
+                    # OCR misses words far more often than it invents them:
+                    # a mark not read on a full look adds nothing, but does
+                    # not rule the screen out the way a mark read where it
+                    # must be absent does.
+                    continue
                 if seen is False:
                     ruled_out = True
                     break
@@ -705,8 +711,7 @@ class Navigator:
                     if log:
                         log("  lost: backing out is not reaching a known screen")
                     return False
-                back = find_back_arrow(frame) or GENERIC_BACK
-                self._tap(*back, 1.6)
+                self._tap(*self._way_out(frame), 1.6)
                 continue
 
             lost = 0
@@ -749,6 +754,20 @@ class Navigator:
                 if log:
                     log(f"    {step.label!r} changed nothing; trying another way")
         return False
+
+    @staticmethod
+    def _way_out(frame: np.ndarray) -> tuple[float, float]:
+        """Where to press to leave a screen the map does not know: its back
+        arrow, else the X of a panel standing over everything, else where the
+        back arrow usually is."""
+        back = find_back_arrow(frame)
+        if back:
+            return back
+        from .perception import CLOSE_SCORE, close_glyph_score, find_discs
+
+        scored = [(close_glyph_score(frame, box), centre) for box, centre in find_discs(frame)]
+        best = max(scored, default=None)
+        return best[1] if best and best[0] >= CLOSE_SCORE else GENERIC_BACK
 
     def _unmoved(self, here: str, before: np.ndarray, wait: float = 1.5) -> bool:
         """Whether a tap left the game exactly as it was, on `here`.
