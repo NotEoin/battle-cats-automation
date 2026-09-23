@@ -54,6 +54,28 @@ Opening a Cat Guide entry that still carries a NEW! badge raises a Cat Food
 reward popup **over** the description panel, so "is the panel visible" is not a
 sufficient test for being on the detail view. Look for the popup's own button.
 
+## Any iPhone, and no captured images shipped
+
+Navigation ships no pictures of the game. `data/ui_graph.json` says what each
+screen reads and what each transition presses -- "Rare Capsule", the back
+arrow, the X -- and the bot learns where those are on whichever phone is
+attached.
+
+The first time a screen is met it is read in full: OCR of the whole frame, and
+the game's gold pills and X discs found by shape (`perception`). What that
+finds is kept per resolution under `state/devices/WxH/` (`profile`): the box
+screen names are printed in, and a small template of each control the map
+uses. After that the screen is recognised from those templates and one read
+of the title box. Only what the map names is learned, never timers or
+counters, so going over the same screens again leaves the profile untouched.
+
+Each chapter's Cat Base stands in front of its own door, and the door names
+the chapter (`bases`). Doors are learned per device as well: on a phone that
+has not seen them, the bot steps into each chapter once. The save's sagas and
+chapters are scanned into `state/carousels.json` once per save.
+
+Delete `state/devices/WxH/` to make a phone learn from scratch.
+
 ## What banner switching can and cannot do
 
 Rarity is decided by the seed, not by the banner: the rarity draw is
@@ -169,6 +191,11 @@ bc.godfat.org output saved under `tests/fixtures`.
 | `timing` | jittered, human-looking delays |
 | `roller` | a single draw, bracketed by checks |
 | `runner` | the loop: plan, roll, drain storage, stop |
+| `uigraph` | the screen map, recognition, and the navigator |
+| `perception` | reading a screen with no templates: OCR and gold shapes |
+| `profile` | what one device has learned: title box, controls, Cat Base doors |
+| `bases` | which chapter a Cat Base belongs to, from its door |
+| `carousel` | the save's sagas and chapters, scanned into the map |
 
 ## When the position drifts
 
