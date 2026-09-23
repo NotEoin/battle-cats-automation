@@ -76,6 +76,30 @@ chapters are scanned into `state/carousels.json` once per save.
 
 Delete `state/devices/WxH/` to make a phone learn from scratch.
 
+## Running the whole pipeline
+
+    .venv/bin/python scripts/debug_ui.py
+
+The debug page (http://127.0.0.1:8765) is the one process that drives the
+phone, and shows every stage live. On a fresh start it scans the save's sagas
+and chapters and learns the device; **Run setup** then reads the Cat Guide
+(owned cats), checks each live event on the device, finds the seed and
+position, and plans and simulates the run. **Start goal run** rolls: Legends of
+the live events (the event named under Prefer first), every unowned event Uber,
+and the best unowned Platinum Ubers by tier with the Platinum Tickets, until
+the goal is met or the rare tickets run out.
+
+- Each live event is a screen of the map: `goto("event:979")` selects Iron
+  Legion from anywhere, in one call.
+- The seed is found from the saved result screens in `captures/`, with no
+  tickets spent. Keep that folder: without it, finding the seed costs draws.
+- Every draw is refused unless the button shows a ticket and a cost of 1, and
+  the position is saved the moment a draw is tapped.
+- Stop takes effect between draws; a run resumes from `state/account.json`.
+
+The older `cli run` and `cli goal` loops still check screens against captured
+templates, which no longer ship; the debug page's pipeline replaces them.
+
 ## What banner switching can and cannot do
 
 Rarity is decided by the seed, not by the banner: the rarity draw is
@@ -196,6 +220,11 @@ bc.godfat.org output saved under `tests/fixtures`.
 | `profile` | what one device has learned: title box, controls, Cat Base doors |
 | `bases` | which chapter a Cat Base belongs to, from its door |
 | `carousel` | the save's sagas and chapters, scanned into the map |
+| `events` | the live gacha events, each a screen of the map |
+| `seedpos` | seed and position from saved result screens |
+| `results` | the cat on a result screen, or "unsure" |
+| `draw` | whether the draw button spends a ticket or Cat Food |
+| `pipeline` | the stages and the goal run, reported live |
 
 ## When the position drifts
 
