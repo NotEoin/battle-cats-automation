@@ -31,6 +31,13 @@
    "note": ""
   },
   {
+   "name": "cat_base_select",
+   "title": "Cat Base Select",
+   "forbidden": false,
+   "reactive": true,
+   "note": "Flat strip of chapter cards (sagas, Legend Stages, Catclaw Dojo); the centred card enters its Cat Base"
+  },
+  {
    "name": "cat_capsules",
    "title": "Cat Capsules",
    "marks": [
@@ -980,6 +987,26 @@
    "settle": 1.0,
    "action": null,
    "target": "Ok"
+  },
+  {
+   "src": "cat_base_select",
+   "dst": "cat_base",
+   "x": 0.498,
+   "y": 0.463,
+   "label": "enter centred card",
+   "settle": 3.0,
+   "action": null,
+   "target": "@card"
+  },
+  {
+   "src": "cat_base_select",
+   "dst": "title",
+   "x": 0.091,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.2,
+   "action": null,
+   "target": "@back"
   }
  ]
 }

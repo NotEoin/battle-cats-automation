@@ -349,7 +349,11 @@ class UIGraph:
             # carousel card's name, is not where screen names are printed.
             if (screen.title and not screen.title_box and percept.title is not None
                     and title_match(screen.title, percept.title.text) >= TITLE_MATCH):
-                profile.learn_title(percept.title.box)
+                old_box = profile.title_box
+                if profile.learn_title(percept.title.box) and old_box in reads:
+                    # The full look read the whole title: it stands for the
+                    # widened box too, so it is remembered there.
+                    reads[profile.title_box] = reads[old_box]
             profile.learn(best.name, frame, percept.controls, wanted=self.wanted(best.name))
             if best.verified:
                 self._remember_titles(frame, best.name, reads)
@@ -513,19 +517,26 @@ class UIGraph:
                     # Titles differ by a word: "Cat Capsules" reads 80 as
                     # "Rare Capsules". A reading that names another screen's
                     # title better is that screen's.
+                    # A tie goes to the title the whole reading is closer to:
+                    # "Cat Base" lies inside "Cat Base Select" and reads 100 too.
                     if match >= TITLE_MATCH and not screen.title_box and any(
-                            title_match(t, read) > match for t in top_titles if t != screen.title):
+                            (title_match(t, read), fuzz.ratio(t.lower(), read.lower()))
+                            > (match, fuzz.ratio(screen.title.lower(), read.lower()))
+                            for t in top_titles if t != screen.title):
                         continue
                     if match >= TITLE_MATCH:
                         score += match
                         read_any = True
-                        # The title box read loses a lone last letter: "Lucky
-                        # Capsules G" comes back "Lucky Capsules". A reading
-                        # that fits another title too is left to a full look,
-                        # which reads the whole frame and gets it.
+                        # The title box read loses the end of a longer title:
+                        # "Lucky Capsules G" comes back "Lucky Capsules", "Cat
+                        # Base Select" as "Cat ! Base". A reading that fits
+                        # another title too, or whose title begins another,
+                        # is left to a full look, which reads the whole frame.
                         via_ocr = texts.get(screen.title_box or title_box, (None, True))[1]
                         if percept is None and via_ocr and not screen.title_box and any(
-                                title_match(t, read) >= TITLE_MATCH for t in top_titles if t != screen.title):
+                                title_match(t, read) >= TITLE_MATCH
+                                or t.lower().startswith(screen.title.lower() + " ")
+                                for t in top_titles if t != screen.title):
                             verified = False
                     elif percept is None and not screen.title_box and not named_other(read):
                         # A quick read through the learned box that misses,
