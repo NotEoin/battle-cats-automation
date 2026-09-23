@@ -40,6 +40,9 @@ CAT_FOOD_PER_DRAW = 150
 # How long a reveal may take: Uber and Legend animations run long.
 REVEAL_TIMEOUT = 45.0
 PLAN_ROLLS = 40
+# A desync is placed at most this far past the saved position: draws made
+# by hand between runs.
+RECOVER_AHEAD = 40
 # Empty storage this many draws before it would fill.
 STORAGE_MARGIN = 3
 
@@ -428,18 +431,22 @@ class GoalRun:
         self.account.last_cat_id = cat_id
         self.account.storage_used += 1
 
-    def _recover(self, observed_cat) -> bool:
-        """Place the cat just seen near the saved position; True if unique."""
+    def _recover(self, observed_cat, event) -> bool:
+        """Place the cat just seen near the saved position; True if unique.
+
+        Only the banner just drawn on can have produced it: a common Rare sits
+        at some nearby position of nearly every banner, so searching them all
+        leaves the answer ambiguous when the drawn one alone settles it."""
         from .gacha import Gacha
 
         found = set()
-        for index in range(max(1, self.account.index - 3), self.account.index + 25):
+        gacha = Gacha(event.banner, self.account.seed, self.ctx.dataset)
+        for index in range(max(1, self.account.index - 3), self.account.index + RECOVER_AHEAD):
             for track in (0, 1):
-                for e in self.events:
-                    roll = Gacha(e.banner, self.account.seed, self.ctx.dataset).cell(index, track)
-                    if roll.cat_id == observed_cat:
-                        d, t = next_position(track, roll.reroll_steps)
-                        found.add((index + d, t))
+                roll = gacha.cell(index, track)
+                if roll.cat_id == observed_cat:
+                    d, t = next_position(track, roll.reroll_steps)
+                    found.add((index + d, t))
         if len(found) != 1:
             return False
         index, track = found.pop()
@@ -528,7 +535,7 @@ class GoalRun:
         finally:
             if verdict == "no draw":
                 pass
-            elif verdict == "desync" and self._recover(seen):
+            elif verdict == "desync" and self._recover(seen, event):
                 verdict = "recovered"
             else:
                 self._advance(step.cat_id if verdict != "desync" else seen, step.reroll_steps)
