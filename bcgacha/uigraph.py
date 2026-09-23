@@ -808,6 +808,24 @@ class Navigator:
             return step.x, step.y
         return None
 
+    def _tap_tab(self, wanted, log=None) -> bool:
+        """Select an event by tapping its tab, found by its remembered picture.
+        False if it is not remembered, not found, or the tap did not take."""
+        from .bannerpick import TAB_STRIP
+
+        frame = self.session.screenshot()
+        spot = self.graph.profile_for(frame).find_image(f"tab {wanted.key}", frame, TAB_STRIP)
+        if spot is None:
+            return False
+        here = self.graph.recognise(frame, slow=False, ocr=False).here
+        self._press(*spot)
+        landed, _ = self._settle(here, 1.5)
+        if landed == wanted.screen:
+            return True
+        if log:
+            log(f"    the {wanted.label} tab did not select it ({landed}); stepping through the tabs")
+        return False
+
     def _run_action(self, step: Transition, log=None) -> bool:
         """Carry out a transition that needs a routine rather than a tap."""
         kind, _, argument = (step.action or "").partition(":")
@@ -832,8 +850,16 @@ class Navigator:
                 if log:
                     log(f"  {argument!r} is not a live event")
                 return False
+            if self._tap_tab(wanted, log):
+                return True
             picker = BannerPicker(self.session, load(), ocr=self.graph.ocr)
-            if not picker.select(wanted.banner, [e.banner for e in self.graph.events]):
+            chosen = picker.select(wanted.banner, [e.banner for e in self.graph.events])
+            # Remember every tab the picker saw, so the next switch is one tap.
+            from .bannerpick import tab_box
+
+            for key, ((x, y), frame) in picker.seen_tabs.items():
+                self.graph.profile_for(frame).learn_image(f"tab {key}", frame, tab_box(x, y))
+            if not chosen:
                 return False
             # The new banner fades in: give the screen a few looks to read as
             # the event before calling the switch done.

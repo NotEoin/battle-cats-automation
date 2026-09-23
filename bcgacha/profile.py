@@ -328,6 +328,43 @@ class Profile:
         self._told(f"remembered {text!r} as it looks")
         return True
 
+    # -- pictures looked for anywhere in a region -----------------------------------
+
+    def learn_image(self, name: str, frame: np.ndarray, box) -> bool:
+        """Keep a grey picture of `box` as `name`, to be found again anywhere in
+        a region: an event's tab, wherever the strip has scrolled it."""
+        crop = _crop(frame, box)
+        if crop.size == 0 or float(crop.std()) < 4:
+            return False
+        path = self.root / "images" / f"{_slug(name)}.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(path), cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY))
+        with self._lock:
+            self._templates.pop(str(path) + ":grey", None)
+            self.data.setdefault("images", {})[name] = dict(
+                template=str(path.relative_to(self.root)), box=[round(v, 4) for v in box])
+            self.save()
+        self._told(f"remembered {name!r} as it looks")
+        return True
+
+    def find_image(self, name: str, frame: np.ndarray, region, match: float = 0.85):
+        """Where the picture `name` is centred in `region` of `frame`, or None."""
+        with self._lock:
+            entry = copy.deepcopy(self.data.get("images", {}).get(name))
+        if not entry:
+            return None
+        template = self._template(entry, grey=True)
+        window = _crop(frame, region)
+        if template is None or window.shape[0] < template.shape[0] or window.shape[1] < template.shape[1]:
+            return None
+        result = cv2.matchTemplate(cv2.cvtColor(window, cv2.COLOR_BGR2GRAY), template, cv2.TM_CCOEFF_NORMED)
+        _, score, _, (lx, ly) = cv2.minMaxLoc(result)
+        if score < match:
+            return None
+        h, w = frame.shape[:2]
+        th, tw = template.shape[:2]
+        return (max(0.0, region[0]) + (lx + tw / 2) / w, max(0.0, region[1]) + (ly + th / 2) / h)
+
     # -- Cat Base backgrounds ------------------------------------------------------
 
     def bases(self) -> dict:

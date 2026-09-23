@@ -269,3 +269,24 @@ def test_reading_while_another_thread_learns(tmp_path):
 
     assert not errors, errors
     assert len(profile.screen_names()) == 50
+
+
+# -- pictures found anywhere in a region -----------------------------------------
+
+def test_a_remembered_tab_is_found_where_the_strip_has_moved_it(tmp_path):
+    """An event's tab, learned at one place, is found again shifted along the strip."""
+    profile = Profile(*SIZE, root=tmp_path)
+    frame = _frame(7)
+    tab = (0.30, 0.10, 0.40, 0.16)
+    assert profile.learn_image("tab 2026-09-21_979", frame, tab)
+
+    shifted = _frame(8)
+    w, h = SIZE
+    x0, y0, x1, y1 = (int(tab[0] * w), int(tab[1] * h), int(tab[2] * w), int(tab[3] * h))
+    dx = int(0.2 * w)
+    shifted[y0:y1, x0 + dx:x1 + dx] = frame[y0:y1, x0:x1]
+    spot = profile.find_image("tab 2026-09-21_979", shifted, (0.0, 0.05, 1.0, 0.2))
+    assert spot is not None
+    assert abs(spot[0] - ((tab[0] + tab[2]) / 2 + 0.2)) < 0.01
+    assert profile.find_image("tab 2026-09-21_979", _frame(9), (0.0, 0.05, 1.0, 0.2)) is None
+    assert profile.find_image("tab never seen", shifted, (0.0, 0.05, 1.0, 0.2)) is None

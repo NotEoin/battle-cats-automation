@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 from rapidfuzz import fuzz, process
@@ -29,6 +29,14 @@ SUBTITLE_BOX = (0.16, 0.545, 0.84, 0.610)
 # not, so switching is done by tapping a tab and confirming the subtitle.
 CAROUSEL_Y = 0.120
 TAB_POSITIONS = [(x, CAROUSEL_Y) for x in (0.168, 0.295, 0.459, 0.605)]
+# A tab's art, inside the border that lights up on the selected one, and the
+# strip a remembered tab is looked for in.
+TAB_HALF = (0.055, 0.028)
+TAB_STRIP = (0.03, 0.07, 0.75, 0.19)
+
+
+def tab_box(x: float, y: float = CAROUSEL_Y) -> tuple[float, float, float, float]:
+    return x - TAB_HALF[0], y - TAB_HALF[1] + 0.005, x + TAB_HALF[0], y + TAB_HALF[1] + 0.005
 
 
 def _squash(text: str) -> str:
@@ -41,6 +49,7 @@ class BannerPicker:
     session: DeviceSession
     dataset: Dataset
     ocr: object | None = None
+    seen_tabs: dict = field(default_factory=dict)
 
     def _engine(self):
         if self.ocr is None:
@@ -108,7 +117,12 @@ class BannerPicker:
             for tab in TAB_POSITIONS:
                 self.session.tap(*landscape_to_hid(*tab))
                 time.sleep(1.5)
-                current = self.identify(self.session.screenshot(), candidates)
+                frame = self.session.screenshot()
+                current = self.identify(frame, candidates)
+                if current is not None:
+                    # Which tab showed which event, for the caller to
+                    # remember and tap straight away next time.
+                    self.seen_tabs[current.key] = (tab, frame)
                 if current is not None and current.key == wanted.key:
                     return True
             self.step(forward=True)
