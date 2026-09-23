@@ -454,9 +454,23 @@ def read_plate(frame: np.ndarray, ocr) -> str:
     return clean_name(" ".join(str(r[1]) for r in pieces))
 
 
+def at_end(frame: np.ndarray) -> bool:
+    """Whether this is the Guide's last entry: its left arrow shows, and the
+    right one, which leads on to the next entry, is gone."""
+    h, w = frame.shape[:2]
+
+    def arrow(x0, x1):
+        crop = frame[int(0.36 * h): int(0.56 * h), int(x0 * w): int(x1 * w)]
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        return float((cv2.inRange(hsv, (22, 70, 60), (45, 255, 210)) > 0).mean())
+
+    return arrow(0.06, 0.14) >= 0.05 and arrow(0.86, 0.94) < 0.02
+
+
 def match_cat(raw: str, table: dict[str, int]) -> tuple[int | None, float, float]:
     """(cat id, score, margin) for a plate reading, strictly."""
-    raw = raw.strip().lower()
+    # OCR reads the apostrophe out of "Li'l": "Li Gross Cat", "Lii cat".
+    raw = re.sub(r"^(lil|lii|li)\s+", "li'l ", raw.strip().lower())
     if len(raw) < 3:
         return None, 0.0, 0.0
     best: dict[int, float] = {}
@@ -601,6 +615,8 @@ def scan(session, graph, dataset, ocr, log=print, on_entry=None, should_stop=Non
             else:
                 index.unresolved.append(raw)
                 status = "unresolved"
+        if at_end(frame):
+            index.complete = True
         if on_entry:
             on_entry(dict(step=step, raw=raw, cat_id=cat, name=dataset.cat_name(cat) if cat is not None else None,
                           score=round(score, 1), margin=round(margin, 1), status=status,
@@ -608,6 +624,9 @@ def scan(session, graph, dataset, ocr, log=print, on_entry=None, should_stop=Non
         if step % 25 == 0:
             index.save(PARTIAL_FILE)
             log(f"  {step:>4} {raw[:34]:<34} owned={len(index.owned)} locked={index.locked_seen}")
+        if index.complete:
+            log(f"  last entry of the Guide reached at step {step}")
+            break
         indexer.advance()
     if not index.complete:
         index.save(PARTIAL_FILE)
