@@ -395,7 +395,7 @@ class GoalRun:
         """(frame, read, moved): the result screen once its name plate reads --
         or the last frame seen -- and whether the screen ever left `before`."""
         from .results import read_result
-        from .uigraph import frame_changed
+        from .uigraph import RESULT_SCREENS, frame_changed, result_ok
 
         import random
 
@@ -414,10 +414,14 @@ class GoalRun:
                 # has opened; the top bar takes the tap and presses nothing.
                 self.ctx.session.tap(*self.nav.human.jitter_point(*landscape_to_hid(*SKIP_POINT)))
                 next_skip = time.time() + SKIP_EVERY * random.uniform(0.7, 1.3)
-            # The whole-frame fallback costs a second: only once the reveal
-            # has had time to finish, not through the animation.
-            read = read_result(frame, self.ctx.ocr, self.ctx.dataset, pool,
-                               whole=time.time() - started > 6.0)
+            # Only a finished result is read: mid-reveal an Uber's banner
+            # letters read as a name ("Uber" came back Saber). The result
+            # is up once its Ok pill shows.
+            if result_ok(self.ctx.graph, frame) is None and \
+                    self.ctx.graph.recognise(frame, slow=False, ocr=False).here not in RESULT_SCREENS:
+                last = (frame, None, moved)
+                continue
+            read = read_result(frame, self.ctx.ocr, self.ctx.dataset, pool, whole=True)
             if read.cat_id is not None:
                 return frame, read, True
             last = (frame, read, moved)
@@ -529,7 +533,7 @@ class GoalRun:
                 ctx.log(f"    result read {time.time() - tapped:.1f}s after the tap")
                 stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
                 cv2.imwrite(str(ctx.captures / f"roll_{stamp}_{step.position}.png"), result_frame)
-                seen = read.cat_id
+                seen = read.cat_id if read is not None else None
                 verdict = ("match" if seen == step.cat_id else
                            "unverified" if seen is None else "desync")
         finally:
