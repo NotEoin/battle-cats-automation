@@ -265,3 +265,19 @@ def perceive(frame: np.ndarray, ocr) -> Percept:
     if best and best[0] >= CLOSE_SCORE:
         percept.controls.append(Control("close", "close", best[1], best[2]))
     return percept
+
+
+def reward_ok(frame: np.ndarray, ocr) -> tuple[float, float] | None:
+    """Where to press OK on a "<cat> unlocked! You got N Cat Food!" popup,
+    only once its text says that is what it is; None otherwise.
+
+    The popup leaves the screen behind it readable, so the screen still reads
+    as whatever it was -- it is found by its words. Its OK sits right above
+    other text, so the OK is taken as its own piece, not as a joined line.
+    """
+    texts = read_texts(frame, ocr)
+    said = " ".join(t.text for t in texts).lower()
+    if "unlocked" not in said or "cat food" not in said:
+        return None
+    ok = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("ok", "0k")), None)
+    return ok.centre if ok else None

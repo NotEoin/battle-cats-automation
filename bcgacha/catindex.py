@@ -496,21 +496,9 @@ def still_frame(session, frame: np.ndarray | None = None, tries: int = 8) -> np.
 
 
 def _reward_popup(frame: np.ndarray, ocr):
-    """Where to press OK on the "<cat> unlocked! You got N Cat Food!" popup,
-    only once its text says that is what it is; None otherwise.
+    from .perception import reward_ok
 
-    The popup leaves the name panel readable beneath it, so it cannot be told
-    from the panel being hidden. Its OK sits right above the description, so
-    the OK is taken as its own piece of text, not as a line joined to that.
-    """
-    from .perception import read_texts
-
-    texts = read_texts(frame, ocr)
-    said = " ".join(t.text for t in texts).lower()
-    if "unlocked" not in said or "cat food" not in said:
-        return None
-    ok = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("ok", "0k")), None)
-    return ok.centre if ok else None
+    return reward_ok(frame, ocr)
 
 
 def scan(session, graph, dataset, ocr, log=print, on_entry=None, should_stop=None, human=None,

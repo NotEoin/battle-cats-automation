@@ -797,6 +797,15 @@ class Navigator:
                 continue
             self._tap(*point, step.settle)
             if self._unmoved(here, frame):
+                # An unlock reward popup holds every tap until its OK.
+                from .perception import reward_ok
+
+                ok = reward_ok(self.session.screenshot(), self.graph.ocr)
+                if ok is not None:
+                    if log:
+                        log("    unlock reward popup in the way: OK")
+                    self._tap(*ok, 1.0)
+                    continue
                 barren.add(key)
                 if log:
                     log(f"    {step.label!r} changed nothing; trying another way")
