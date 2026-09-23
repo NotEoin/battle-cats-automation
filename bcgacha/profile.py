@@ -37,7 +37,9 @@ LABEL_MATCH = 85
 # where it was read, give or take TEXT_PAD, and at the same brightness: a
 # screen fading in or out matches in shape at any level, and is not yet the
 # screen. OCR of a title costs most of a second; this costs a millisecond.
-TEXT_MATCH = 0.90
+# The same title on the same phone scores 1.000; "Lucky Capsules" scores 0.931
+# against "Lucky Capsules G", the one letter more.
+TEXT_MATCH = 0.97
 TEXT_PAD = 0.006
 TEXT_LEVEL = 18
 

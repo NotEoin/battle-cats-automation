@@ -304,7 +304,8 @@ class UIGraph:
         """Name the screen in `frame`, or None if it is not in the map."""
         return self.recognise(frame, title=title).here
 
-    def recognise(self, frame: np.ndarray, title: str | None = None, slow: bool = True):
+    def recognise(self, frame: np.ndarray, title: str | None = None, slow: bool = True,
+                  ocr: bool = True):
         """Identify the screen, learning about this device when that takes a full look.
 
         The fast path uses only what the device profile already knows: the
@@ -313,11 +314,15 @@ class UIGraph:
         time a screen is met on a device -- the frame is read in full (OCR and
         shape segmentation), identified from that, and the screen's controls
         and title box are learned so the next look is fast.
+
+        `ocr` False reads nothing: a title not remembered as it looks is
+        unknown. That is the look for watching a screen change, many times a
+        second; `slow` must be False with it.
         """
         from .perception import perceive
 
         reads: dict = {}
-        found = self._evaluate(frame, None, title, reads)
+        found = self._evaluate(frame, None, title, reads, ocr=ocr)
         sure = [c for c in found if c.verified]
         best_sure = max((c.score for c in sure), default=None)
         # Answer fast only if no unverified screen, with evidence already in
@@ -390,7 +395,8 @@ class UIGraph:
         """Every screen the frame could be, scored. `identify` takes the best."""
         return [(c.score, c.name) for c in self._evaluate(frame, percept, title)]
 
-    def _evaluate(self, frame: np.ndarray, percept, title: str | None, reads: dict | None = None):
+    def _evaluate(self, frame: np.ndarray, percept, title: str | None, reads: dict | None = None,
+                  ocr: bool = True):
         """Weigh each screen's evidence: title, marks, and shapes.
 
         Evidence is True, False or unknown. False rules a screen out; unknown
@@ -420,6 +426,8 @@ class UIGraph:
                 return None
             if box not in texts:
                 known = profile.known_text(frame, box)
+                if known is None and not ocr:
+                    return None
                 texts[box] = ((known, False) if known is not None else
                               (self.read_title(frame, box, largest=box == title_box), True))
             return texts[box][0]
@@ -506,6 +514,14 @@ class UIGraph:
                     if match >= TITLE_MATCH:
                         score += match
                         read_any = True
+                        # The title box read loses a lone last letter: "Lucky
+                        # Capsules G" comes back "Lucky Capsules". A reading
+                        # that fits another title too is left to a full look,
+                        # which reads the whole frame and gets it.
+                        via_ocr = texts.get(screen.title_box or title_box, (None, True))[1]
+                        if percept is None and via_ocr and not screen.title_box and any(
+                                title_match(t, read) >= TITLE_MATCH for t in top_titles if t != screen.title):
+                            verified = False
                     elif percept is None and not screen.title_box and not named_other(read):
                         # A quick read through the learned box that misses,
                         # and names no other screen either, may be an OCR
@@ -646,6 +662,19 @@ def frame_changed(a: np.ndarray, b: np.ndarray, fraction: float = 0.08) -> bool:
 
 # Targets whose lettering OCR cannot read, so the recorded spot is all there is.
 BLIND_TARGETS = {"Ok"}
+# Controls never pressed, whatever a map says: they spend Cat Food or money,
+# give a cat away, start a battle, or play an advert.
+NEVER_PRESS = ("Store", "Buy", "Attack!", "Draw for Free!", "Trade for Ticket",
+               "Change to XP", "Exchange", "Exchange all", "Cat Food")
+# A person takes this long, jittered, to find the button on a new screen.
+REACTION = 0.35
+# After a tap the screen is watched for up to WATCH times the step's settle.
+WATCH = 2.0
+MIN_WATCH = 2.5
+
+
+def never_press(label: str) -> bool:
+    return any(title_match(n, label, within=False) >= 85 for n in NEVER_PRESS)
 
 
 class Navigator:
@@ -673,6 +702,35 @@ class Navigator:
         self.session.tap(*self.human.jitter_point(*landscape_to_hid(x, y)))
         self.human.sleep(settle)
 
+    def _press(self, x: float, y: float) -> None:
+        """Look, then tap: a person takes a moment to find a button. What
+        follows is watched for, not slept through (see _settle)."""
+        from .layout import landscape_to_hid
+
+        self.human.sleep(REACTION)
+        self.session.tap(*self.human.jitter_point(*landscape_to_hid(x, y)))
+
+    def _settle(self, here: str, settle: float):
+        """Watch the screen after a tap until it rests somewhere else.
+
+        Returns (screen, frame) once it does: the same screen read on two
+        still frames running. One frame is not enough: the top bar stays put
+        while the body fades, so a Cat Base title over a half-gone Cat Base
+        reads as the Legend Stages list. Returns (None, last frame) if it has
+        not left `here` in time -- a slow screen, a popup, or a tap that did
+        nothing.
+        """
+        deadline = time.monotonic() + max(MIN_WATCH, WATCH * settle)
+        last = frame = None
+        while time.monotonic() < deadline:
+            frame = self.session.screenshot()
+            name = self.graph.recognise(frame, slow=False, ocr=False).here
+            if name is not None and name != here and last is not None and last[0] == name \
+                    and not frame_changed(last[1], frame):
+                return name, frame
+            last = (name, frame)
+        return None, frame
+
     def _answer_dialog(self, frame: np.ndarray, percept=None, log=None) -> bool:
         """Say No to a question standing in the way -- above all "use Cat
         Food?". Found by reading it, not by a captured picture of one."""
@@ -690,6 +748,10 @@ class Navigator:
 
     def _resolve(self, here: str, step: Transition, frame: np.ndarray, log=None):
         """Where to press for this step on this device, or None if it is not there."""
+        if never_press(step.target or step.label):
+            if log:
+                log(f"    refusing to press {step.target or step.label!r}")
+            return None
         if not step.target or step.target == "@card":
             return step.x, step.y           # the centred card sits mid-screen on any iPhone
         profile = self.graph.profile_for(frame)
@@ -703,7 +765,7 @@ class Navigator:
         percept = perceive(frame, self.graph.ocr)
         profile.learn(here, frame, percept.controls, wanted=self.graph.wanted(here))
         control = percept.find(step.target)
-        if control is not None:
+        if control is not None and not never_press(control.label):
             return control.tap
         # A label that can be read but was not is not on this screen: pressing
         # where it sat on some other screen is how a stage gets opened. Only
@@ -784,8 +846,10 @@ class Navigator:
         # reach its screen in the game's present state, so stop trying it.
         tries: dict[tuple, int] = {}
         forgiven = False
+        settled = None                  # the frame a tap was watched settling on
         for _ in range(max_steps):
-            frame = self.session.screenshot()
+            frame = settled if settled is not None else self.session.screenshot()
+            settled = None
             rec = self.graph.recognise(frame)
             here = rec.here
             if here == destination or (
@@ -844,8 +908,13 @@ class Navigator:
                 if log:
                     log(f"    no {step.target!r} on screen; trying another way")
                 continue
-            self._tap(*point, step.settle)
-            if self._unmoved(here, frame):
+            self._press(*point)
+            landed, after = self._settle(here, step.settle)
+            if landed is not None:
+                settled = after
+                continue
+            # Watched and never left: a last, closer look before the tap is blamed.
+            if self._unmoved(here, frame, wait=0.5):
                 # An unlock reward popup holds every tap until its OK.
                 from .perception import reward_ok
 
