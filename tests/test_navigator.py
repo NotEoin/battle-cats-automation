@@ -91,3 +91,45 @@ def test_a_screen_slow_to_answer_is_not_unmoved(tmp_path):
     nav._tap(0.5, 0.5, 1.0)
 
     assert not nav._unmoved("upgrade", before)
+
+
+# -- watching a tap land -------------------------------------------------------------
+
+class Named:
+    """A graph whose screens are named by the frame's grey level."""
+
+    def __init__(self, tmp_path, names):
+        self.names = names
+        self.graph = UIGraph(profile_root=tmp_path)
+        self.graph.recognise = lambda frame, **kw: type("R", (), dict(
+            here=names.get(int(frame[0, 0, 0])), candidates=[]))()
+
+
+def _grey(level):
+    return np.full((296, 640, 3), level, np.uint8)
+
+
+def test_a_tap_lands_once_two_still_frames_name_another_screen(tmp_path):
+    """A fading frame that names somewhere new is not arrival; the steady one after it is."""
+    named = Named(tmp_path, {70: "cat_base", 40: "legend_stage_select", 120: "rare_capsules"})
+    session = FakeSession(_grey(70), _grey(40), _grey(120), _grey(120), _grey(120))
+    nav = Navigator(session, named.graph, humaniser=StillHuman())
+    nav._press(0.5, 0.5)
+
+    landed, frame = nav._settle("cat_base", 1.0)
+    assert landed == "rare_capsules"
+    assert session.looks == 3, "the fading frame, then the new screen twice"
+
+
+def test_a_tap_that_never_leaves_is_reported_after_the_watch(tmp_path, monkeypatch):
+    import bcgacha.uigraph as ui
+
+    monkeypatch.setattr(ui, "MIN_WATCH", 0.05)
+    monkeypatch.setattr(ui, "WATCH", 0.0)
+    named = Named(tmp_path, {70: "cat_base"})
+    session = FakeSession(_grey(70), _grey(70))
+    nav = Navigator(session, named.graph, humaniser=StillHuman())
+    nav._press(0.5, 0.5)
+
+    landed, frame = nav._settle("cat_base", 1.0)
+    assert landed is None and frame is not None
