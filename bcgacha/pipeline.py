@@ -32,6 +32,8 @@ CAPTURES = ROOT / "captures"
 # draw button's own face is what guards a draw (see draw.py).
 TICKETS_BOX = (0.635, 0.865, 0.745, 0.950)
 CAT_FOOD_BOX = (0.845, 0.865, 0.955, 0.950)
+# Tier-list picks reserved per platinum ticket held.
+PLATINUM_CHOICE = 2
 # A draw paid in Cat Food costs exactly this much.
 CAT_FOOD_PER_DRAW = 150
 # How long a reveal may take: Uber and Legend animations run long.
@@ -214,8 +216,11 @@ def build_plan(ctx: Context, account, owned: set[int], events, platinum_tickets:
         tiers = None
     normal = [e.banner for e in events if not e.platinum]
     platinum = next((e.banner for e in events if e.platinum), None)
+    # Twice as many tier-list picks as tickets are reserved: the very top few
+    # may never come up on the route, and a ticket kept for one that never
+    # does is a ticket wasted. The planner still spends only what is held.
     goal = goals.build(ctx.dataset, tiers, owned, normal, platinum,
-                       platinum_tickets=platinum_tickets,
+                       platinum_tickets=PLATINUM_CHOICE * platinum_tickets,
                        preferred_banner=prefer.key if prefer else None)
     scorer = Scorer(owned=set(owned), tiers=tiers, priority=goal.priority)
     planner = Planner(ctx.dataset, normal, scorer, platinum_banner=platinum,
