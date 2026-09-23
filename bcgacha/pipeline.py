@@ -490,6 +490,8 @@ class GoalRun:
                 self._advance(step.cat_id if verdict != "desync" else seen, step.reroll_steps)
             if verdict == "match":
                 self.account.confirmed = True
+            # What is left travels with the position, so a resumed run knows.
+            self.account.tickets, self.account.platinum_tickets = s.rare_left, s.platinum_left
             if verdict != "no draw":
                 self.account.save()
         if verdict == "no draw":

@@ -540,7 +540,10 @@ class Debugger:
                     account = account or P.stage_seed(ctx)
                     events = ctx.graph.events
                     prefer = live.find(events, options.get("prefer", "Iron Legion"))
-                    rare, platinum = int(options.get("rare", 0)), int(options.get("platinum", 0))
+                    # Counts given with the request win; else what the last run left.
+                    rare = int(options.get("rare") or account.tickets or 0)
+                    platinum = int(options.get("platinum") if options.get("platinum") is not None
+                                   else account.platinum_tickets or 0)
                     if not rare:
                         raise RuntimeError("the rare ticket count is needed (options.rare)")
                     self.publish("tickets", dict(rare=rare, platinum=platinum, source="given"))
