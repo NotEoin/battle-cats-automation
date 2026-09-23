@@ -18,6 +18,7 @@ import json
 import os
 import re
 import threading
+import time
 from pathlib import Path
 
 import cv2
@@ -44,6 +45,9 @@ TEXT_PAD = 0.006
 # A match this close to the text last seen in a box settles it: no rival
 # can match better than a copy of the same pixels.
 TEXT_SURE = 0.995
+# A remembered picture that stops matching is replaced no sooner than this,
+# in seconds.
+TEXT_KEEP = 600
 TEXT_LEVEL = 18
 
 
@@ -267,6 +271,13 @@ class Profile:
                        f"({', '.join(sorted(known)[:6])}{'...' if len(known) > 6 else ''})")
         return changed
 
+    def _flat(self, rel: str, template: np.ndarray) -> bool:
+        with self._lock:
+            flat = self._templates.get(rel + ":flat")
+            if flat is None:
+                flat = self._templates[rel + ":flat"] = float(template.std()) < 4
+            return flat
+
     def _small_template(self, entry) -> np.ndarray | None:
         path = str(self.root / entry["template"]) + ":small"
         with self._lock:
@@ -386,7 +397,7 @@ class Profile:
             template = self._template(dict(template=rel), grey=True)
             if template is None or grey.shape[0] < template.shape[0] or grey.shape[1] < template.shape[1]:
                 continue
-            if float(template.std()) < 4:
+            if self._flat(rel, template):
                 continue            # a flat picture correlates with anything
             result = cv2.matchTemplate(grey, template, cv2.TM_CCOEFF_NORMED)
             _, score, _, (lx, ly) = cv2.minMaxLoc(result)
@@ -408,7 +419,10 @@ class Profile:
 
         Only a reading that has just named its screen is kept. One already kept
         that still matches is left alone, so going over the same screens again
-        rewrites nothing.
+        rewrites nothing. One that does not match is replaced only once it is
+        TEXT_KEEP old: a pulsing outline or a scrolling subtitle would have it
+        rewritten -- the whole profile with it -- on every look, while a
+        picture taken badly still gives way to a good one in time.
         """
         if self.known_text(frame, box) == text:
             return False
@@ -417,11 +431,16 @@ class Profile:
             return False
         key = self._box_key(box)
         path = self.root / "texts" / _slug(key) / f"{_slug(text)}.png"
+        with self._lock:
+            kept = text in self.data["texts"].get(key, {})
+        if kept and path.exists() and time.time() - path.stat().st_mtime < TEXT_KEEP:
+            return False
         path.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(path), cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY))
         rel = str(path.relative_to(self.root))
         with self._lock:
             self._templates.pop(str(path) + ":grey", None)
+            self._templates.pop(rel + ":flat", None)
             self.data["texts"].setdefault(key, {})[text] = rel
             self.save()
         self._told(f"remembered {text!r} as it looks")

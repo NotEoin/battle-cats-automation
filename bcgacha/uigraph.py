@@ -436,14 +436,15 @@ class UIGraph:
             if box not in texts:
                 known = profile.known_text(frame, box)
                 if known is None and not ocr:
-                    return None
-                texts[box] = ((known, False) if known is not None else
-                              (self.read_title(frame, box, largest=box == title_box), True))
+                    texts[box] = (None, False)      # unknown, and not to be asked again
+                else:
+                    texts[box] = ((known, False) if known is not None else
+                                  (self.read_title(frame, box, largest=box == title_box), True))
             return texts[box][0]
 
         shapes: dict[str, bool] = {}
 
-        def shape_seen(kind: str, screen: Screen) -> bool:
+        def shape_seen(kind: str, screen: Screen) -> bool | None:
             # Once this screen (or the carousel it is a card of) has learned
             # where its X sits, the X must be there: a gold X somewhere else
             # belongs to some other panel.
@@ -451,6 +452,10 @@ class UIGraph:
             homes = [n for n in (screen.name, screen.parent) if n and key in profile.controls(n)]
             if homes and percept is None:
                 return any(profile.find(frame, n, key) for n in homes)
+            if percept is None and not ocr:
+                # The look that reads nothing does not search the frame for
+                # shapes either: an X not yet learned here is unknown.
+                return None
             if kind not in shapes:
                 if kind == "close":
                     # Found on a half-size frame: a quarter of the pixels, and
@@ -497,7 +502,9 @@ class UIGraph:
         # it belongs to is still possible, which spares an OCR on most frames.
         ordered = sorted(self.screens.values(), key=lambda s: s.parent is not None)
         for screen in ordered:
-            if screen.parent and not any(c.name == screen.parent for c, _ in out):
+            # Without OCR, a parent that nothing was seen of stays possible
+            # but can confirm nothing: its cards are not worth a look either.
+            if screen.parent and not any(c.name == screen.parent and (ocr or c.read) for c, _ in out):
                 continue
             # Forbidden screens are still identified. Refusing to recognise one
             # would leave the bot blind exactly where it most needs to know
@@ -507,7 +514,11 @@ class UIGraph:
                 continue
             score, verified, ruled_out, read_any = 0.0, True, False, False
             for kind in screen.shapes:
-                if not shape_seen(kind, screen):
+                seen = shape_seen(kind, screen)
+                if seen is None:
+                    verified = False
+                    continue
+                if not seen:
                     ruled_out = True
                     break
                 score += 40.0

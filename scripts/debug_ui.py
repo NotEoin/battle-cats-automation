@@ -359,8 +359,8 @@ class Debugger:
                               how=how, x=point[0] if point else None, y=point[1] if point else None,
                               forbidden=graph.screens[t.dst].forbidden))
         dialog = safety.inspect_dialog(frame)
-        # Drawn on the page, not acted on: found on a half-size frame.
-        buttons = find_buttons(cv2.resize(frame, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA))
+        # Drawn on the page, not acted on: found on a quarter-size frame.
+        buttons = find_buttons(cv2.resize(frame, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA))
 
         chapter = rec.chapter
         return dict(

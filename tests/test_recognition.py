@@ -250,3 +250,21 @@ def test_a_title_one_word_off_another_is_that_other_screen(tmp_path):
     frame = _textured(5)
     found = [c.name for c in graph._evaluate(frame, None, "Cat Capsules")]
     assert found == ["cat_capsules"]
+
+
+def test_a_remembered_title_that_stops_matching_is_kept_until_it_is_old(tmp_path, monkeypatch):
+    """A pulsing outline must not rewrite the picture on every look; a stale one gives way."""
+    import os
+    import time
+
+    from bcgacha import profile as profile_mod
+
+    profile = Profile(*SIZE, root=tmp_path)
+    box = (0.02, 0.01, 0.30, 0.08)
+    assert profile.learn_text(_textured(10), box, "Ok")
+    assert not profile.learn_text(_textured(11), box, "Ok"), "rewritten while fresh"
+    path = next((tmp_path / profile.key / "texts").rglob("ok.png"))
+    old = time.time() - profile_mod.TEXT_KEEP - 5
+    os.utime(path, (old, old))
+    assert profile.learn_text(_textured(11), box, "Ok"), "a stale picture gives way"
+    assert profile.known_text(_textured(11), box) == "Ok"
