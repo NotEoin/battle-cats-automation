@@ -34,8 +34,20 @@ button {
 button:disabled { opacity: 0.45; cursor: default; }
 button.stop { border-color: var(--critical); }
 
-.main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
-@media (max-width: 1000px) { .main { grid-template-columns: minmax(0, 1fr); } }
+/* The stream and the pipeline share the left column; the side panel runs down
+   the right beside both, so a tall panel never pushes the pipeline below it. */
+.main {
+  display: grid; gap: 16px; align-items: start;
+  grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto 1fr;
+  grid-template-areas: "stream side" "pipe side";
+}
+.main > .screen { grid-area: stream; }
+.main > .side { grid-area: side; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+.main > .pipe { grid-area: pipe; margin-top: 0; }
+@media (max-width: 1000px) {
+  .main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "stream" "side" "pipe"; }
+  .main > .side { position: static; max-height: none; overflow: visible; }
+}
 .card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; }
 .screen { padding: 10px; }
 .stage { position: relative; background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 2532 / 1170; }
@@ -158,37 +170,35 @@ button.stop { border-color: var(--critical); }
         <pre class="log" id="log"></pre>
       </section>
     </div>
-  </div>
-
-
-  <div class="card pipe" id="pipe">
-    <h2>Pipeline</h2>
-    <div class="controls">
-      <button id="p-setup" type="button" title="Map, owned cats, events, seed and plan -- no rolling">Run setup</button>
-      <label>Rare tickets <input id="p-rare" type="number" min="0" value="0"></label>
-      <label>Platinum <input id="p-plat" type="number" min="0" value="0"></label>
-      <label>Prefer <input id="p-prefer" type="text" value="Iron Legion"></label>
-      <label title="Comma-separated live events whose units are wanted; blank for all">Goal events <input id="p-events" type="text" value="Galaxy Gals, Iron Legion"></label>
-      <label><input id="p-legends" type="checkbox"> Legends too</label>
-      <label><input id="p-arm" type="checkbox"> I have checked the plan</label>
-      <button id="p-run" type="button" disabled>Start goal run</button>
+    <div class="card pipe" id="pipe">
+      <h2>Pipeline</h2>
+      <div class="controls">
+        <button id="p-setup" type="button" title="Map, owned cats, events, seed and plan -- no rolling">Run setup</button>
+        <label>Rare tickets <input id="p-rare" type="number" min="0" value="0"></label>
+        <label>Platinum <input id="p-plat" type="number" min="0" value="0"></label>
+        <label>Prefer <input id="p-prefer" type="text" value="Iron Legion"></label>
+        <label title="Comma-separated live events whose units are wanted; blank for all">Goal events <input id="p-events" type="text" value="Galaxy Gals, Iron Legion"></label>
+        <label><input id="p-legends" type="checkbox"> Legends too</label>
+        <label><input id="p-arm" type="checkbox"> I have checked the plan</label>
+        <button id="p-run" type="button" disabled>Start goal run</button>
+      </div>
+      <div class="chips" id="p-stages"></div>
+      <div class="pgrid">
+        <div><h3>Account</h3><dl class="kv" id="p-account"></dl></div>
+        <div><h3>Run</h3><dl class="kv" id="p-run-kv"></dl></div>
+        <div><h3>Last draw check</h3><dl class="kv" id="p-gate"></dl></div>
+        <div><h3>Owned cats</h3><dl class="kv" id="p-owned"></dl></div>
+      </div>
+      <div class="pgrid" style="margin-top:14px">
+        <div><h3>Events</h3><div class="ptable" id="p-events"></div></div>
+        <div><h3>Goal</h3><div class="ptable" id="p-goal"></div></div>
+      </div>
+      <div class="pgrid" style="margin-top:14px">
+        <div><h3>Next draws planned</h3><div class="ptable" id="p-plan"></div></div>
+        <div><h3>Simulation of the whole run</h3><div class="ptable" id="p-sim"></div></div>
+      </div>
+      <div style="margin-top:14px"><h3>Draws made</h3><div class="ptable" id="p-rolls"></div></div>
     </div>
-    <div class="chips" id="p-stages"></div>
-    <div class="pgrid">
-      <div><h3>Account</h3><dl class="kv" id="p-account"></dl></div>
-      <div><h3>Run</h3><dl class="kv" id="p-run-kv"></dl></div>
-      <div><h3>Last draw check</h3><dl class="kv" id="p-gate"></dl></div>
-      <div><h3>Owned cats</h3><dl class="kv" id="p-owned"></dl></div>
-    </div>
-    <div class="pgrid" style="margin-top:14px">
-      <div><h3>Events</h3><div class="ptable" id="p-events"></div></div>
-      <div><h3>Goal</h3><div class="ptable" id="p-goal"></div></div>
-    </div>
-    <div class="pgrid" style="margin-top:14px">
-      <div><h3>Next draws planned</h3><div class="ptable" id="p-plan"></div></div>
-      <div><h3>Simulation of the whole run</h3><div class="ptable" id="p-sim"></div></div>
-    </div>
-    <div style="margin-top:14px"><h3>Draws made</h3><div class="ptable" id="p-rolls"></div></div>
   </div>
   <div class="card mapcard">
     <div class="maphead">
