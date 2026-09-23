@@ -27,7 +27,6 @@ COST = {SINGLE: 1, MULTI: 10}
 # The button must look this much as it did when learned. A pulse or glow
 # costs a few hundredths; another icon or count costs far more.
 FACE_MATCH = 0.93
-RESULT_SCREENS = ("roll_result", "normal_result")
 # Where a skip tap goes, and how long after a press the capsule starts to
 # take one: taps while it is still being lowered are ignored.
 SKIP_POINT = (0.5, 0.035)
@@ -35,8 +34,8 @@ SKIP_AFTER = 3.5
 SKIP_EVERY = 0.7
 # After an Ok the next capsule of a batch opens straight away.
 SKIP_AFTER_OK = 0.8
-# A draw button's height, as a share of the frame; a learned box shorter than
-# this holds only the label, and the icon and cost sit below it.
+# A draw button's height, as a share of the frame; a learned box much shorter
+# than this holds only the label.
 FACE_HEIGHT = 0.117
 # The Cat Food can sits in the lower part of the face, with the cost; the
 # label above it prints the 10 of "Try 10 times!" in red.
@@ -118,17 +117,45 @@ class CapsuleRun:
             return None, f"no {name!r} on screen"
         if found["score"] < FACE_MATCH:
             return None, f"{name!r} does not look as it did when learned ({found['score']:.2f})"
-        x0, y0, x1, y1 = found["box"]
-        face = draw._crop(frame, (x0, y0, x1, max(y1, y0 + FACE_HEIGHT)))
-        digits = draw.cost_digits(face)
-        if digits != len(str(COST[name])):
-            return None, f"{name!r} shows a {digits}-digit cost, not {COST[name]}"
-        # The Cat Tickets are silver: red by the cost is the Cat Food can.
-        # Lucky Tickets are red themselves, so there only the look counts.
-        lower = face[int(face.shape[0] * FACE_LOWER):]
-        if self.screen == "cat_capsules" and draw.red_share(lower) > draw.RED_LIMIT:
-            return None, f"red on {name!r}: the Cat Food can"
-        return found, None
+        box = self._face_box(profile, name, found["box"])
+        if box is None:
+            return None, f"only the label of {name!r} is known, not the whole button"
+        face = draw._crop(frame, box)
+        # Its whole face -- label, ticket and cost -- as it looked the first
+        # time it passed, must be what is there now.
+        key = f"{self.screen}: {name}"
+        known = profile.known_text(frame, box)
+        if known is not None and known != key:
+            return None, f"{name!r} looks like {known!r}"
+        if known is None:
+            if profile.data["texts"].get(profile._box_key(box), {}).get(key):
+                return None, f"{name!r} does not look as it did when it last drew"
+            digits = draw.cost_digits(face)
+            if digits != len(str(COST[name])):
+                return None, f"{name!r} shows a {digits}-digit cost, not {COST[name]}"
+            # The Cat Tickets are silver: red by the cost is the Cat Food can.
+            # Lucky Tickets are red themselves, so there only the look counts.
+            lower = face[int(face.shape[0] * FACE_LOWER):]
+            if self.screen == "cat_capsules" and draw.red_share(lower) > draw.RED_LIMIT:
+                return None, f"red on {name!r}: the Cat Food can"
+            profile.learn_text(frame, box, key)
+        return dict(found, box=box), None
+
+    def _face_box(self, profile, name: str, box):
+        """The whole button. On a gold background the button's shape is lost
+        and only its label is learned; the three machines are tabs of one
+        screen with their buttons in one place, so take it from a tab where the
+        whole button was found."""
+        if box[3] - box[1] >= 0.8 * FACE_HEIGHT:
+            return tuple(box)
+        for screen in MACHINES.values():
+            entry = profile.controls(screen).get(name)
+            if entry and entry["box"][3] - entry["box"][1] >= 0.8 * FACE_HEIGHT:
+                x0, y0, x1, y1 = entry["box"]
+                # Only if the label sits inside that button.
+                if x0 <= (box[0] + box[2]) / 2 <= x1 and y0 - 0.03 <= box[1] <= y1:
+                    return tuple(entry["box"])
+        return None
 
     # -- one press ---------------------------------------------------------------
 
@@ -137,7 +164,7 @@ class CapsuleRun:
         on Sent to Cat Storage, until the machine is back. Returns how many
         results were seen, or None if the press did not draw."""
         from .results import NAME_BOX, NAME_SCALE, _read
-        from .uigraph import frame_changed
+        from .uigraph import RESULT_SCREENS, frame_changed, result_ok
 
         ctx, graph, human = self.ctx, self.ctx.graph, self.nav.human
         started = time.monotonic()
@@ -159,20 +186,22 @@ class CapsuleRun:
             name = graph.recognise(frame, slow=False, ocr=False).here
             still = last is not None and last[0] == name and not frame_changed(last[1], frame)
             last = (name, frame)
-            left = left or name not in RESULT_SCREENS
+            left = left or (name not in RESULT_SCREENS and result_ok(graph, frame) is None)
             if name == self.screen and still:
                 return seen
-            if name in RESULT_SCREENS and still:
+            if name is None and still and result_ok(graph, frame) is not None:
+                name = "reward_result"       # an XP reward: only its Ok is known
+            if name in RESULT_SCREENS + ("reward_result",) and still:
                 if not left:
                     if now - pressed_at > OK_AGAIN:
-                        self.nav._press(*self._ok_point(name))
+                        self.nav._press(*(result_ok(graph, frame) or self._ok_point(name)))
                         pressed_at, last = time.monotonic(), None
                     continue
                 seen += 1
                 raw = _read(frame, NAME_BOX, ctx.ocr, NAME_SCALE)
                 self.state.names.append(raw)
                 ctx.put("capsule", dict(n=self.state.capsules + seen, name=raw, screen=name))
-                self.nav._press(*self._ok_point(name))
+                self.nav._press(*(result_ok(graph, frame) or self._ok_point(name)))
                 pressed_at, left, last = time.monotonic(), False, None
                 next_skip = pressed_at + SKIP_AFTER_OK
                 continue
@@ -180,7 +209,7 @@ class CapsuleRun:
                 self.nav._press(*self._ok_point("sent_to_storage"))
                 last = None
                 continue
-            if name not in RESULT_SCREENS and name != "sent_to_storage" and now >= next_skip:
+            if name not in RESULT_SCREENS + ("reward_result", "sent_to_storage") and now >= next_skip:
                 from .layout import landscape_to_hid
 
                 ctx.session.tap(*human.jitter_point(*landscape_to_hid(*SKIP_POINT)))

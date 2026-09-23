@@ -356,6 +356,11 @@ class UIGraph:
         return self._with_chapter(frame, Recognition(best.name if best else None, found, percept))
 
     def _remember_titles(self, frame: np.ndarray, name: str, reads: dict) -> None:
+        if name in RESULT_SCREENS:
+            self.profile_for(frame).learn_text(frame, RESULT_OK_BOX, RESULT_OK)
+        self._remember_title_reads(frame, name, reads)
+
+    def _remember_title_reads(self, frame: np.ndarray, name: str, reads: dict) -> None:
         """Keep a picture of each title OCR has just read on a screen now named,
         and on the screen it is a card or event of, so the next look is a
         template match. Only a reading that matched its title is kept."""
@@ -662,6 +667,21 @@ def frame_changed(a: np.ndarray, b: np.ndarray, fraction: float = 0.08) -> bool:
 
 # Targets whose lettering OCR cannot read, so the recorded spot is all there is.
 BLIND_TARGETS = {"Ok"}
+# Every capsule result -- a cat, an item, an XP reward -- puts its Ok pill
+# here, and the glyph inside it is the same on all of them (1.000 apart). The
+# XP reward carries nothing else the map can read, so it is known by this
+# glyph alone, as learned from results the map does name.
+RESULT_SCREENS = ("roll_result", "normal_result")
+RESULT_OK_BOX = (0.717, 0.765, 0.753, 0.825)
+RESULT_OK = "result Ok"
+
+
+def result_ok(graph: "UIGraph", frame: np.ndarray) -> tuple[float, float] | None:
+    """Where to press Ok if `frame` shows a capsule result's Ok pill."""
+    if graph.profile_for(frame).known_text(frame, RESULT_OK_BOX) != RESULT_OK:
+        return None
+    x0, y0, x1, y1 = RESULT_OK_BOX
+    return (x0 + x1) / 2, (y0 + y1) / 2
 # Controls never pressed, whatever a map says: they spend Cat Food or money,
 # give a cat away, start a battle, or play an advert.
 NEVER_PRESS = ("Store", "Buy", "Attack!", "Draw for Free!", "Trade for Ticket",
@@ -859,6 +879,15 @@ class Navigator:
                 self.arrival = (here, frame)
                 return True
             if here is None:
+                ok = result_ok(self.graph, frame)
+                if ok is not None:
+                    # A capsule result the map cannot name: an XP reward.
+                    if log:
+                        log("    a capsule result: Ok")
+                    self._press(*ok)
+                    landed, after = self._settle(None, 1.0)
+                    settled = after if landed is not None else None
+                    continue
                 if self._answer_dialog(frame, rec.percept, log):
                     continue
                 # Not on the map. Backing out is almost always right: nearly
