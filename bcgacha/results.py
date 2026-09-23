@@ -73,7 +73,8 @@ def match(raw: str, dataset, candidates: Iterable[int]) -> tuple[int | None, flo
     scored.sort(reverse=True)
     best, cat = scored[0]
     margin = best - (scored[1][0] if len(scored) > 1 else 0.0)
-    if best < MATCH or margin < MARGIN:
+    exact = best >= 99.5 and margin > 0
+    if not exact and (best < MATCH or margin < MARGIN):
         return None, best, margin
     return cat, best, margin
 

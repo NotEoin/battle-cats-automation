@@ -470,21 +470,47 @@ def match_cat(raw: str, table: dict[str, int]) -> tuple[int | None, float, float
         return None, 0.0, 0.0
     score, cat = ranked[0]
     margin = score - (ranked[1][0] if len(ranked) > 1 else 0.0)
-    if score < NAME_MATCH or margin < NAME_MARGIN:
+    # An exact reading no other cat also matches exactly is the cat, however
+    # close its twins are: "Ancient Egg: N202" beside N201, Evil beside Devil.
+    exact = score >= 99.5 and margin > 0
+    if not exact and (score < NAME_MATCH or margin < NAME_MARGIN):
         return None, score, margin
     return cat, score, margin
 
 
-def _reward_popup(frame: np.ndarray, ocr):
-    """The "<cat> unlocked! You got N Cat Food" popup's OK, only once its text
-    says that is what it is; None otherwise."""
-    from .perception import perceive
+# The name plate must be the same in this many frames in a row before it is
+# read: a flick is still sliding the panel for a moment after it lands, and a
+# half-arrived plate reads "vil Cat" for Evil Cat.
+STILL_FRAMES = 2
 
-    percept = perceive(frame, ocr)
-    text = " ".join(t.text for t in percept.readings()).lower()
-    if "unlock" not in text and "got" not in text:
+
+def still_frame(session, frame: np.ndarray | None = None, tries: int = 8) -> np.ndarray:
+    """A frame taken once the name plate has stopped moving."""
+    frame = frame if frame is not None else session.screenshot()
+    for _ in range(tries):
+        nxt = session.screenshot()
+        if _frames_match(_crop(frame, NAME_BOX), _crop(nxt, NAME_BOX)):
+            return nxt
+        frame = nxt
+    return frame
+
+
+def _reward_popup(frame: np.ndarray, ocr):
+    """Where to press OK on the "<cat> unlocked! You got N Cat Food!" popup,
+    only once its text says that is what it is; None otherwise.
+
+    The popup leaves the name panel readable beneath it, so it cannot be told
+    from the panel being hidden. Its OK sits right above the description, so
+    the OK is taken as its own piece of text, not as a line joined to that.
+    """
+    from .perception import read_texts
+
+    texts = read_texts(frame, ocr)
+    said = " ".join(t.text for t in texts).lower()
+    if "unlocked" not in said or "cat food" not in said:
         return None
-    return percept.find("OK")
+    ok = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("ok", "0k")), None)
+    return ok.centre if ok else None
 
 
 def scan(session, graph, dataset, ocr, log=print, on_entry=None, should_stop=None, human=None,
@@ -527,16 +553,29 @@ def scan(session, graph, dataset, ocr, log=print, on_entry=None, should_stop=Non
     index = OwnedIndex(scanned_rarities=sorted({BASIC, EX, RARE, SUPER_RARE, 4, LEGEND}))
     indexer = CatIndexer(session, dataset, ocr)
     limit = limit or len(dataset.cats) + 80
-    previous, stuck, misses = None, 0, 0
+    def dismissed(frame) -> bool:
+        ok = _reward_popup(frame, ocr)
+        if ok is None:
+            return False
+        log("  unlock reward: OK")
+        nav._tap(*ok, 1.0)
+        return True
+
+    previous, stuck, misses, last_raw = None, 0, 0, None
     for step in range(limit):
         if should_stop and should_stop():
             index.save(PARTIAL_FILE)
             raise RuntimeError("owned scan stopped part way; partial list kept aside")
-        frame = session.screenshot()
+        frame = still_frame(session)
         signature = (_crop(frame, PANEL_BOX), _crop(frame, FORMS_BOX))
         if previous is not None and all(_frames_match(a, b) for a, b in zip(previous, signature)):
             stuck += 1
             if stuck >= END_OF_LIST_FRAMES:
+                # A static screen is the end of the Guide only if nothing is
+                # standing in front of it holding the flicks back.
+                if dismissed(frame):
+                    stuck, previous = 0, None
+                    continue
                 index.complete = True
                 break
         else:
@@ -544,9 +583,7 @@ def scan(session, graph, dataset, ocr, log=print, on_entry=None, should_stop=Non
         previous = signature
         panel = _crop(frame, PANEL_BOX)
         if not panel.size or float(panel.mean()) >= 90:
-            ok = _reward_popup(frame, ocr)
-            if ok is not None:
-                nav._tap(*ok.tap, 0.9)
+            if dismissed(frame):
                 continue
             misses += 1
             if misses >= 8:
@@ -556,6 +593,14 @@ def scan(session, graph, dataset, ocr, log=print, on_entry=None, should_stop=Non
             continue
         misses = 0
         raw = read_plate(frame, ocr)
+        if raw and raw == last_raw:
+            # The flick did not move on: an unlock popup is in the way, or
+            # this is the last entry. Clear the popup and look again.
+            if dismissed(frame):
+                continue
+            indexer.advance()
+            continue
+        last_raw = raw
         index.entries_walked += 1
         if not raw or LOCKED_RE.search(raw):
             index.locked_seen += 1
