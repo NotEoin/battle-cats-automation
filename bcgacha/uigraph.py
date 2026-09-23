@@ -459,13 +459,18 @@ class UIGraph:
                         verified = False
                     else:
                         continue
+            missed = 0
             for mark in screen.marks:
                 seen = mark_seen(mark, screen.name)
                 if seen is False and percept is not None:
-                    # OCR misses words far more often than it invents them:
-                    # a mark not read on a full look adds nothing, but does
-                    # not rule the screen out the way a mark read where it
-                    # must be absent does.
+                    # OCR misses the odd word, so on a full look one missed
+                    # mark is forgiven -- but most of a screen's marks must
+                    # read. The Legend Stages stage list keeps the Cat Base
+                    # title with neither Start!! nor Equip on it.
+                    missed += 1
+                    if 2 * missed > len(screen.marks):
+                        ruled_out = True
+                        break
                     continue
                 if seen is False:
                     ruled_out = True
@@ -580,6 +585,10 @@ def frame_changed(a: np.ndarray, b: np.ndarray, fraction: float = 0.08) -> bool:
     return float((cv2.absdiff(ga, gb) > 30).mean()) > fraction
 
 
+# Targets whose lettering OCR cannot read, so the recorded spot is all there is.
+BLIND_TARGETS = {"Ok"}
+
+
 class Navigator:
     """Walks the graph to a destination, from wherever the game happens to be.
 
@@ -636,9 +645,12 @@ class Navigator:
         control = percept.find(step.target)
         if control is not None:
             return control.tap
-        if step.x or step.y:
+        # A label that can be read but was not is not on this screen: pressing
+        # where it sat on some other screen is how a stage gets opened. Only
+        # the Ok pill, whose lettering OCR cannot read, falls back to its spot.
+        if step.target in BLIND_TARGETS and (step.x or step.y):
             if log:
-                log(f"    {step.target!r} not found; using the recorded position")
+                log(f"    {step.target!r} not read; using the recorded position")
             return step.x, step.y
         return None
 

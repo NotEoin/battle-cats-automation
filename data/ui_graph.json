@@ -89,6 +89,16 @@
    "note": "Expedition log replaying. The back arrow is dimmed and inert while it plays; pressing Rewards skips the playback and is the only way out."
   },
   {
+   "name": "legend_stage_select",
+   "title": "Cat Base",
+   "absent_marks": [
+    "Start!!"
+   ],
+   "forbidden": false,
+   "reactive": false,
+   "note": "Legend Stages: Start!! opens the event and legend stage list, still titled Cat Base. Its stages lead to Attack!, so nothing but Back is ever pressed here."
+  },
+  {
    "name": "menu",
    "title": "Cat Base",
    "marks": [
@@ -730,6 +740,26 @@
    "settle": 2.2,
    "action": null,
    "target": "@back"
+  },
+  {
+   "src": "legend_stage_select",
+   "dst": "cat_base",
+   "x": 0.089,
+   "y": 0.872,
+   "label": "Back",
+   "settle": 2.0,
+   "action": null,
+   "target": "@back"
+  },
+  {
+   "src": "cat_base",
+   "dst": "legend_stage_select",
+   "x": 0.2,
+   "y": 0.275,
+   "label": "Start!! (Legend Stages)",
+   "settle": 2.5,
+   "action": null,
+   "target": "Start!!"
   }
  ]
 }
