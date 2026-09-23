@@ -47,19 +47,26 @@ LAYOUT = {
     "menu": (C4, 100), "cat_guide": (C5, 100),
     "upgrade": (C4, 176), "organize_cats": (C4, 252), "catnip_challenges": (C4, 328),
     "gamatoto": (C4, 440), "gamatoto_report": (C5, 440), "gamatoto_ongoing": (C4, 516),
-    "rare_capsules": (C5, 640), "storage": (C4, 716), "platinum_capsules": (C5, 792),
-    "roll_result": (C4, 912), "sent_to_storage": (C5, 912),
+    "rare_capsules": (C5, 640), "storage": (C4, 716), "platinum_capsules": (C5, 840),
+    "cat_capsules": (C4, 800), "lucky_capsules": (C4, 884), "lucky_capsules_g": (C4, 968),
+    "roll_result": (C4, 1060), "normal_result": (C4, 1136), "sent_to_storage": (C5, 1098),
+    "legend_stage_select": (C2, 158), "cat_base_select": (C1, 462),
 }
+# Screens drawn smaller than a full box, to fit between their neighbours.
+SMALL = {"legend_stage_select": (NW, 40), "cat_base_select": (NW, 44)}
+# The live events are cards of Rare Capsules, stacked under it.
+EVENT_TOP, EVENT_STEP, EVENT_H, EVENT_SPAN = 692, 38, 30, 114
 HUB = "cat_base"
 
 ZONES = [
     (740, 386, 416, 171, "GAMATOTO · three states"),
-    (740, 583, 440, 374, "Capsule machines"),
+    (740, 583, 440, 594, "Capsule machines"),
 ]
 
 # How each reactive screen shows up. Annotations, not map edges.
 STUBS = [
-    ("roll_result", [(704, 912), (752, 912)], "after a draw", (698, 916), "end"),
+    ("roll_result", [(704, 1060), (752, 1060)], "a cat drawn", (698, 1064), "end"),
+    ("normal_result", [(704, 1136), (752, 1136)], "an item drawn", (698, 1140), "end"),
     ("gamatoto_report", [(1070, 376), (1070, 411)], "log replays", (1070, 368), "middle"),
 ]
 
@@ -67,7 +74,9 @@ STUBS = [
 ORDER = ["opening", "title", "settings", "saga_select", "base_select", "cat_base", "stage_select",
          "menu", "cat_guide", "upgrade", "organize_cats", "catnip_challenges",
          "gamatoto", "gamatoto_ongoing", "gamatoto_report", "storage", "rare_capsules",
-         "platinum_capsules", "roll_result", "sent_to_storage", "purchase_offer"]
+         "platinum_capsules", "cat_capsules", "lucky_capsules", "lucky_capsules_g",
+         "roll_result", "normal_result", "sent_to_storage", "legend_stage_select",
+         "cat_base_select", "purchase_offer"]
 
 
 @dataclass
@@ -147,26 +156,75 @@ def _layout_edges(find) -> list[Edge]:
     add(find("gamatoto_report", "gamatoto"), [(996, 440), (900, 440)], label="Rewards",
         at=(948, 430), zone=True)
 
-    # Capsule machines
+    # The Legend Stages list: Start!! on a Legend Stages Cat Base
+    add(find("cat_base", "legend_stage_select"), [(548, 150), (400, 150)],
+        label="Start!! (Legend Stages)", at=(474, 142))
+    add(find("legend_stage_select", "cat_base"), [(400, 166), (548, 166)])
+
+    # Cat Base Select: the flat chapter strip
+    add(find("cat_base_select", "cat_base"), [(172, 462), (548, 462)],
+        label="enter the centred card", at=(360, 476))
+    add(find("cat_base_select", "title"), [(98, 484), (98, 490)],
+        label="Back \u2192 title", at=(110, 494), anchor="start", stub=True)
+    return E
+
+
+def _capsule_edges(find, screens, pos, sizes) -> list[Edge]:
+    """The capsule machines: rare and Platinum in one column with the live
+    events stacked between them, the normal machines in the other. Moves that
+    fan out to many screens -- the banner picker, the Ok that returns to
+    whichever machine drew -- are drawn once, not once per screen."""
+    E: list[Edge] = []
+
+    def add(tids, pts=None, **kw):
+        if tids:
+            E.append(Edge(tids=tids, pts=pts, **kw))
+
+    events = [n for n, sc in screens.items() if sc.parent == "rare_capsules"]
+    step = min(EVENT_STEP, EVENT_SPAN / max(len(events), 1))
+    for k, name in enumerate(events):
+        pos[name] = (C5, EVENT_TOP + k * step)
+        sizes[name] = (NW, min(EVENT_H, step - 6))
+    machines = [n for n in ("rare_capsules", "platinum_capsules") if n in screens] + events
+
     add(find("cat_base", "rare_capsules"), [(640, 632), (996, 632)], label="Rare Capsule", at=(700, 622))
     add(find("rare_capsules", "cat_base"), [(996, 648), (640, 648)])
-    add(find("platinum_capsules", "cat_base"), [(996, 792), (640, 792)])
-    add(find("rare_capsules", "storage"), [(1012, 669), (1012, 708), (900, 708)],
-        label="Storage", at=(954, 698), zone=True)
-    add(find("platinum_capsules", "storage"), [(1012, 763), (1012, 724), (900, 724)],
-        label="Storage", at=(954, 742), zone=True)
-    add(find("rare_capsules", "platinum_capsules"), [(1056, 669), (1056, 763)])
-    add(find("platinum_capsules", "rare_capsules"), [(1084, 763), (1084, 669)])
-    add(find("rare_capsules", "platinum_capsules") + find("platinum_capsules", "rare_capsules"),
-        chip=("banner picker", 1070, 716), chip_only=True)
-    add(find("roll_result", "sent_to_storage"), [(900, 912), (996, 912)], label="Ok",
-        at=(948, 902), zone=True)
-    add(find("sent_to_storage", "rare_capsules") + find("sent_to_storage", "platinum_capsules"),
-        [(1070, 883), (1070, 859)], label="Ok", at=(1060, 876), anchor="end",
-        head=False, trunk=True, diamond=(1070, 853), zone=True)
-    add(find("sent_to_storage", "platinum_capsules"), [(1070, 847), (1070, 821)])
-    add(find("sent_to_storage", "rare_capsules"),
-        [(1076, 853), (1166, 853), (1166, 640), (1144, 640)])
+    add(find("rare_capsules", "storage"), [(996, 660), (930, 660), (930, 708), (900, 708)],
+        label="Storage", at=(946, 700), anchor="start", zone=True)
+    add(find("platinum_capsules", "storage"), [(996, 830), (952, 830), (952, 724), (900, 724)],
+        label="Storage", at=(960, 790), anchor="start", zone=True)
+    add(find("platinum_capsules", "cat_base"), [(1070, 869), (1070, 880)],
+        label="Back \u2192 cat_base", at=(1070, 892), stub=True)
+    # Every banner switch is the one picker: tap a tab, read the subtitle.
+    picker = sorted({i for a in machines for b in machines if a != b for i in find(a, b)})
+    add(picker, [(1144, 640), (1164, 640), (1164, 840), (1144, 840)], head=False)
+    add(picker, chip=("tabs", 1164, 740), chip_only=True)
+
+    # The normal machines: Cat Capsule from the Cat Base, the others by tab.
+    y = {n: LAYOUT[n][1] for n in ("cat_capsules", "lucky_capsules", "lucky_capsules_g")}
+    add(find("cat_base", "cat_capsules"), [(640, y["cat_capsules"] - 8), (752, y["cat_capsules"] - 8)],
+        label="Cat Capsule", at=(696, y["cat_capsules"] - 18))
+    for name in y:
+        add(find(name, "cat_base"), [(752, y[name] + 8), (640, y[name] + 8)])
+    add(sum((find(n, "storage") for n in y), []), [(880, y["cat_capsules"] - 29), (880, 745)],
+        label="Storage", at=(872, 760), anchor="end")
+    pairs = [("cat_capsules", "lucky_capsules"), ("lucky_capsules", "lucky_capsules_g")]
+    for k, (a, b) in enumerate(pairs):
+        ta, tb = (826, y[a] + 29), (826, y[b] - 29)
+        tids = find(a, b) + find(b, a)
+        if k == len(pairs) - 1:     # the Cat and Lucky G tabs, which skip a row
+            tids += find("cat_capsules", "lucky_capsules_g") + find("lucky_capsules_g", "cat_capsules")
+        add(tids, [ta, tb], head=False, heads=[(tb, ta), (ta, tb)],
+            label="tab" if k == 0 else "tab, either way", at=(838, (ta[1] + tb[1]) / 2 + 4), anchor="start")
+
+    # Results, and the notice that follows them.
+    add(find("roll_result", "sent_to_storage"), [(900, 1060), (948, 1060), (948, 1090), (996, 1090)],
+        label="Ok", at=(924, 1052))
+    add(find("normal_result", "sent_to_storage"), [(900, 1136), (948, 1136), (948, 1106), (996, 1106)],
+        label="Ok", at=(924, 1128))
+    back = sorted(i for n in machines + list(y) for i in find("sent_to_storage", n))
+    add(back, [(1070, 1069), (1070, 1052)], label="Ok \u2192 the machine that drew",
+        at=(1070, 1044), stub=True)
     return E
 
 
@@ -365,19 +423,24 @@ def render_svg(graph: UIGraph, svg_id: str = "map") -> Drawing:
 
     pos = {n: p for n, p in LAYOUT.items() if n in screens}
     sizes: dict[str, tuple[float, float]] = {}
-    edges = _layout_edges(find)
+    for name, size in SMALL.items():
+        if name in pos:
+            sizes[name] = size
+    edges = _layout_edges(find) + _capsule_edges(find, screens, pos, sizes)
     panel_edges, panel_zone, panel_end = _panel(screens, trans, find, pos, sizes)
     edges += panel_edges
     zones = ZONES + [panel_zone]
 
     # The purchase offer sits under the carousels; the Cat Base reaches down to it.
-    bus_bot = BUS_BOT
+    # The bus reaches down to the lowest normal machine's way back.
+    bus_bot = max(BUS_BOT, max((LAYOUT[n][1] + 30 for n in ("cat_capsules", "lucky_capsules",
+                                                          "lucky_capsules_g") if n in screens), default=0))
     if "purchase_offer" in screens:
         py = max(716, panel_end + 60)
         pos["purchase_offer"] = (C2, py)
         edges.append(Edge(tids=find("purchase_offer", HUB), pts=[(C2 + NW, py), (BUS_L, py)]))
         bus_bot = max(BUS_BOT, py + 30)
-    height = max(VBH, bus_bot + 110)
+    height = max(VBH, bus_bot + 110, max(z[1] + z[3] for z in ZONES) + 20)
 
     # Screens the layout has no place for go in a strip along the bottom.
     unplaced = [n for n in screens if n not in pos and n != HUB]
@@ -491,6 +554,11 @@ def render_svg(graph: UIGraph, svg_id: str = "map") -> Drawing:
                 sub = s.note.split(", ", 1)[-1] if s.note else sub
             elif name.startswith("chapter:"):
                 top_line, sub = f"Chapter {name.rsplit(':', 1)[1]}", s.title or ""
+            elif s.parent == "rare_capsules":
+                # An event card: one line, what a person calls the event.
+                label = s.note.split(":", 1)[0] if s.note else name
+                out += [_text("card-name", cx, cy + 4, label, extra=f' data-max="{w - 12}"'), "</g>"]
+                return "".join(out)
             else:
                 top_line, sub = name, title_text(s)
             cls_top = "node-id" if not name.startswith(("saga:", "chapter:")) else "card-name"
