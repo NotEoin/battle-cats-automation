@@ -703,6 +703,8 @@ def result_ok(graph: "UIGraph", frame: np.ndarray) -> tuple[float, float] | None
 # give a cat away, start a battle, or play an advert.
 NEVER_PRESS = ("Store", "Buy", "Attack!", "Draw for Free!", "Trade for Ticket",
                "Change to XP", "Exchange", "Exchange all", "Cat Food")
+# How long a tapped event tab has to show its event.
+TAB_CONFIRM = 4.0
 # A person takes this long, jittered, to find the button on a new screen.
 REACTION = 0.35
 # After a tap the screen is watched for up to WATCH times the step's settle.
@@ -823,11 +825,17 @@ class Navigator:
         spot = self.graph.profile_for(frame).find_image(f"tab {wanted.key}", frame, TAB_STRIP)
         if spot is None:
             return False
-        here = self.graph.recognise(frame, slow=False, ocr=False).here
         self._press(*spot)
-        landed, _ = self._settle(here, 1.5)
-        if landed == wanted.screen:
-            return True
+        # Confirmed on a still frame by a quick look that may read: some
+        # events' subtitles move, so no remembered picture of them holds.
+        deadline, last, landed = time.monotonic() + TAB_CONFIRM, None, None
+        while time.monotonic() < deadline:
+            frame = self.session.screenshot()
+            if last is not None and not frame_changed(last, frame):
+                landed = self.graph.recognise(frame, slow=False).here
+                if landed == wanted.screen:
+                    return True
+            last = frame
         if log:
             log(f"    the {wanted.label} tab did not select it ({landed}); stepping through the tabs")
         return False
