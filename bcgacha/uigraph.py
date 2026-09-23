@@ -703,7 +703,15 @@ class Navigator:
                     log(f"  {argument!r} is not a live event")
                 return False
             picker = BannerPicker(self.session, load(), ocr=self.graph.ocr)
-            return picker.select(wanted.banner, [e.banner for e in self.graph.events])
+            if not picker.select(wanted.banner, [e.banner for e in self.graph.events]):
+                return False
+            # The new banner fades in: give the screen a few looks to read as
+            # the event before calling the switch done.
+            for _ in range(6):
+                if self.graph.identify(self.session.screenshot()) == wanted.screen:
+                    return True
+                self.human.sleep(0.8)
+            return False
         if kind == "banner":
             import datetime as dt
 
@@ -787,7 +795,9 @@ class Navigator:
                 log(f"  {here} --{step.label}--> {step.dst}")
             if step.action:
                 if not self._run_action(step, log=log):
-                    return False
+                    barren.add(key)
+                    if log:
+                        log(f"    {step.label!r} did not take; trying another way")
                 continue
             point = self._resolve(here, step, frame, log=log)
             if point is None:
