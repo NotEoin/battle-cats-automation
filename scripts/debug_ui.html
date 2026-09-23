@@ -73,6 +73,24 @@ button.stop { border-color: var(--critical); }
   font-variant-ligatures: none; white-space: pre-wrap; color: var(--ink-2);
 }
 .message { font-size: 13px; color: var(--ink-2); }
+.pipe { margin-top: 16px; padding: 14px 16px; }
+.pipe h2, .pipe h3 { margin: 0 0 8px; font-size: 11px; font-weight: 650; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.pipe .controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; font-size: 12.5px; }
+.pipe .controls input[type=number] { width: 70px; }
+.pipe .controls input[type=text] { width: 120px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.chip2 { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--hair-2); font-size: 12px; color: var(--ink-2); }
+.chip2.running { border-color: var(--route); color: var(--ink); font-weight: 650; }
+.chip2.done { border-color: var(--edge-back); }
+.pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.pgrid > div { min-width: 0; }
+.ptable { overflow-x: auto; max-height: 360px; overflow-y: auto; }
+.ptable table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.ptable th, .ptable td { text-align: left; padding: 3px 6px; border-top: 1px solid var(--hair); white-space: nowrap; }
+.ptable th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--surface); }
+.ok { color: var(--edge-back); } .bad { color: var(--critical); } .dim { color: var(--muted); }
+.newtag { font-weight: 700; color: var(--route); }
+
 .how { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
 .layers .opt { margin-left: auto; }
 
@@ -142,6 +160,34 @@ button.stop { border-color: var(--critical); }
     </div>
   </div>
 
+
+  <div class="card pipe" id="pipe">
+    <h2>Pipeline</h2>
+    <div class="controls">
+      <button id="p-setup" type="button" title="Map, owned cats, events, seed and plan -- no rolling">Run setup</button>
+      <label>Rare tickets <input id="p-rare" type="number" min="0" value="0"></label>
+      <label>Platinum <input id="p-plat" type="number" min="0" value="0"></label>
+      <label>Prefer <input id="p-prefer" type="text" value="Iron Legion"></label>
+      <label><input id="p-arm" type="checkbox"> I have checked the plan</label>
+      <button id="p-run" type="button" disabled>Start goal run</button>
+    </div>
+    <div class="chips" id="p-stages"></div>
+    <div class="pgrid">
+      <div><h3>Account</h3><dl class="kv" id="p-account"></dl></div>
+      <div><h3>Run</h3><dl class="kv" id="p-run-kv"></dl></div>
+      <div><h3>Last draw check</h3><dl class="kv" id="p-gate"></dl></div>
+      <div><h3>Owned cats</h3><dl class="kv" id="p-owned"></dl></div>
+    </div>
+    <div class="pgrid" style="margin-top:14px">
+      <div><h3>Events</h3><div class="ptable" id="p-events"></div></div>
+      <div><h3>Goal</h3><div class="ptable" id="p-goal"></div></div>
+    </div>
+    <div class="pgrid" style="margin-top:14px">
+      <div><h3>Next draws planned</h3><div class="ptable" id="p-plan"></div></div>
+      <div><h3>Simulation of the whole run</h3><div class="ptable" id="p-sim"></div></div>
+    </div>
+    <div style="margin-top:14px"><h3>Draws made</h3><div class="ptable" id="p-rolls"></div></div>
+  </div>
   <div class="card mapcard">
     <div class="maphead">
       <h2>Map</h2>
@@ -400,6 +446,75 @@ button.stop { border-color: var(--critical); }
       r.setAttribute('width', w.toFixed(1));
     });
   }
+
+  // -- pipeline -------------------------------------------------------------
+  let pipeVersion = -1, pipe = null;
+  const STAGES = ['graph', 'owned', 'events', 'seed', 'plan', 'run'];
+  function kv(el, pairs) {
+    el.replaceChildren(...pairs.filter(p => p[1] !== undefined && p[1] !== null).flatMap(([k, v]) => [h('dt', '', k), h('dd', '', String(v))]));
+  }
+  function table(el, cols, rows) {
+    const t = h('table', '');
+    t.append(h('thead', '', h('tr', '', ...cols.map(c => h('th', '', c[0])))));
+    const body = h('tbody', '');
+    for (const r of rows) {
+      const tr = h('tr', '');
+      for (const c of cols) { const v = c[1](r); const td = h('td', c[2] ? c[2](r) : '', v === null || v === undefined ? '–' : String(v)); tr.append(td); }
+      body.append(tr);
+    }
+    t.append(body);
+    el.replaceChildren(t);
+  }
+  const tick = b => b === true ? '✓' : b === false ? '·' : '?';
+  function drawPipe() {
+    if (!pipe) return;
+    const S = pipe.sections || {};
+    const cur = S.stage || {};
+    $('p-stages').replaceChildren(...STAGES.map(n => h('span', 'chip2' + (cur.name === n ? (cur.state === 'done' ? ' done' : ' running') : ''), n + (cur.name === n ? ` · ${cur.state}` : ''))));
+    const a = S.account || {};
+    kv($('p-account'), [['seed', a.seed], ['position', a.position], ['source', a.source], ['confirmed', a.confirmed],
+      ['rolls made', a.rolls_made], ['storage', a.storage_used !== undefined ? `${a.storage_used}/${a.storage_capacity}` : undefined],
+      ['godfat seed', a.current_seed]]);
+    const r = S.run || {}, t = S.tickets || {};
+    kv($('p-run-kv'), [['rolled', r.rolled], ['rare left', r.rare_left ?? t.rare], ['platinum left', r.platinum_left ?? t.platinum],
+      ['Cat Food', r.cat_food], ['goal cats left', r.remaining], ['unlocked', (r.unlocked || []).map(u => u.cat).join(', ') || undefined],
+      ['stopped', r.reason || undefined]]);
+    const g = S.gate || {};
+    kv($('p-gate'), [['verdict', g.ok === undefined ? undefined : g.ok ? 'ticket: draw' : 'REFUSED'], ['why', g.reason], ['event', g.event],
+      ['position', g.position], ['expecting', g.cat], ['red on button', g.red], ['cost digits', g.digits]]);
+    const o = S.owned || {}, oe = (pipe.owned_entries || []).slice(-1)[0] || {};
+    kv($('p-owned'), [['owned', o.owned ?? oe.owned], ['complete', o.complete], ['scanned', o.scanned_at], ['walked', o.walked ?? oe.step],
+      ['locked', o.locked ?? oe.locked], ['last read', oe.raw ? `${oe.raw} → ${oe.name || oe.status}` : undefined],
+      ['by rarity', o.by_rarity ? Object.entries(o.by_rarity).map(([k, v]) => `${k} ${v}`).join(', ') : undefined],
+      ['seed search', S.seed_search ? `${(100 * S.seed_search.done).toFixed(0)}% · ${S.seed_search.survivors} left · ${S.seed_search.seconds}s` : undefined]]);
+    const ev = S.events || [];
+    table($('p-events'), [['event', e => e.label], ['key', e => e.key], ['ends', e => e.end], ['legend', e => (e.legends || []).map(l => `${l.name} ${tick(l.owned)}`).join(', ')],
+      ['ubers', e => Array.isArray(e.ubers) ? e.ubers.length : e.ubers], ['on screen', e => tick(e.seen)]], ev);
+    const goal = S.goal || {};
+    const grows = [...(goal.legendaries || []).map(x => ({ ...x, kind: 'legend' })), ...(goal.ubers || []).map(x => ({ ...x, kind: 'uber' })), ...(goal.platinum || []).map(x => ({ ...x, kind: 'platinum' }))];
+    table($('p-goal'), [['kind', x => x.kind], ['cat', x => x.name], ['tier', x => x.tier], ['from', x => x.event], ['owned', x => tick(x.owned)]], grows);
+    table($('p-plan'), [['#', x => x.n], ['pos', x => x.position], ['event', x => x.event], ['ticket', x => x.platinum ? 'PLAT' : 'rare'], ['cat', x => x.cat], ['new', x => x.new ? 'NEW' : '', x => x.new ? 'newtag' : '']], (S.plan || []).slice(0, 20));
+    const sim = S.simulation || {};
+    table($('p-sim'), [['roll', x => x.n], ['pos', x => x.position], ['event', x => x.event], ['ticket', x => x.platinum ? 'PLAT' : 'rare'], ['unlocks', x => x.cat]], sim.unlocked || []);
+    table($('p-rolls'), [['#', x => x.n], ['pos', x => x.position], ['event', x => x.event], ['ticket', x => x.platinum ? 'PLAT' : 'rare'], ['expected', x => x.expected], ['seen', x => x.seen],
+      ['check', x => x.verdict, x => x.verdict === 'match' ? 'ok' : 'bad'], ['new', x => x.new ? 'NEW' : '', x => x.new ? 'newtag' : '']], (pipe.rolls || []).slice().reverse());
+  }
+  async function pollPipe() {
+    if (state && state.pipeline_version !== pipeVersion) {
+      try {
+        pipe = await (await fetch('/api/pipeline', { cache: 'no-store' })).json();
+        pipeVersion = pipe.version;
+        drawPipe();
+      } catch (err) { /* the next poll retries */ }
+    }
+    $('p-run').disabled = !$('p-arm').checked || !state || state.nav.running;
+    $('p-setup').disabled = !state || state.nav.running || state.mode === 'replay';
+    setTimeout(pollPipe, 700);
+  }
+  const opts = () => ({ rare: Number($('p-rare').value), platinum: Number($('p-plat').value), prefer: $('p-prefer').value });
+  $('p-setup').addEventListener('click', () => post('/api/pipeline', { stages: ['graph', 'owned', 'events', 'seed', 'plan'], options: opts() }));
+  $('p-run').addEventListener('click', () => { $('p-arm').checked = false; post('/api/pipeline', { stages: ['run'], options: opts() }); });
+  pollPipe();
   bindMap();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   poll();

@@ -20,7 +20,9 @@ Two things the game does that get in the way:
 
 from __future__ import annotations
 
+import datetime as dt
 import json
+import os
 import re
 import time
 from dataclasses import dataclass, field
@@ -113,17 +115,25 @@ class OwnedIndex:
     scanned_rarities: list[int] = field(default_factory=list)
     locked_seen: int = 0      # entries showing ??? -- present but not unlocked
     entries_walked: int = 0
+    # Only a walk that reached the end of the Guide is the owned list. A
+    # partial one would make every cat it did not reach look like a target.
+    complete: bool = False
+    scanned_at: str = ""
 
     def save(self, path: Path | None = None) -> Path:
         path = Path(path or INDEX_FILE)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps({
             "owned": sorted(self.owned),
             "unresolved": self.unresolved,
             "scanned_rarities": self.scanned_rarities,
             "locked_seen": self.locked_seen,
             "entries_walked": self.entries_walked,
+            "complete": self.complete,
+            "scanned_at": self.scanned_at,
         }, indent=1))
+        os.replace(tmp, path)
         return path
 
     @classmethod
@@ -138,7 +148,19 @@ class OwnedIndex:
             scanned_rarities=raw.get("scanned_rarities", []),
             locked_seen=raw.get("locked_seen", 0),
             entries_walked=raw.get("entries_walked", 0),
+            complete=raw.get("complete", False),
+            scanned_at=raw.get("scanned_at", ""),
         )
+
+    def to_json(self, dataset=None) -> dict:
+        from collections import Counter
+
+        by = Counter(dataset.rarity_of(c) for c in self.owned) if dataset else {}
+        names = {0: "normal", 1: "special", 2: "rare", 3: "super rare", 4: "uber", 5: "legend"}
+        return dict(owned=len(self.owned), complete=self.complete, scanned_at=self.scanned_at,
+                    walked=self.entries_walked, locked=self.locked_seen,
+                    unresolved=self.unresolved[-20:],
+                    by_rarity={names.get(k, k): v for k, v in sorted(by.items())})
 
 
 def _crop(frame: np.ndarray, box) -> np.ndarray:
@@ -409,3 +431,156 @@ class CatIndexer:
             steps=24, duration=0.28,
         )
         time.sleep(0.85)
+
+
+# -- the device-independent scan ------------------------------------------------------
+
+PARTIAL_FILE = INDEX_FILE.with_name("owned.partial.json")
+# Name reading: the plate is upscaled and every OCR piece kept; a name must be
+# close and clearly closer than the next-best cat.
+NAME_SCALE = 2
+NAME_MATCH = 78
+NAME_MARGIN = 6
+
+
+def read_plate(frame: np.ndarray, ocr) -> str:
+    """The whole name on the detail panel, all pieces in reading order."""
+    crop = _crop(frame, NAME_BOX)
+    if crop.size == 0:
+        return ""
+    crop = cv2.resize(crop, None, fx=NAME_SCALE, fy=NAME_SCALE, interpolation=cv2.INTER_CUBIC)
+    result, _ = ocr(crop)
+    pieces = sorted(result or [], key=lambda r: (round(min(p[1] for p in r[0]) / 30), r[0][0][0]))
+    return clean_name(" ".join(str(r[1]) for r in pieces))
+
+
+def match_cat(raw: str, table: dict[str, int]) -> tuple[int | None, float, float]:
+    """(cat id, score, margin) for a plate reading, strictly."""
+    raw = raw.strip().lower()
+    if len(raw) < 3:
+        return None, 0.0, 0.0
+    best: dict[int, float] = {}
+    for name, cat in table.items():
+        n = name.lower()
+        score = max(fuzz.ratio(raw, n), fuzz.token_sort_ratio(raw, n))
+        if score > best.get(cat, 0.0):
+            best[cat] = score
+    ranked = sorted(((v, c) for c, v in best.items()), reverse=True)
+    if not ranked:
+        return None, 0.0, 0.0
+    score, cat = ranked[0]
+    margin = score - (ranked[1][0] if len(ranked) > 1 else 0.0)
+    if score < NAME_MATCH or margin < NAME_MARGIN:
+        return None, score, margin
+    return cat, score, margin
+
+
+def _reward_popup(frame: np.ndarray, ocr):
+    """The "<cat> unlocked! You got N Cat Food" popup's OK, only once its text
+    says that is what it is; None otherwise."""
+    from .perception import perceive
+
+    percept = perceive(frame, ocr)
+    text = " ".join(t.text for t in percept.readings()).lower()
+    if "unlock" not in text and "got" not in text:
+        return None
+    return percept.find("OK")
+
+
+def scan(session, graph, dataset, ocr, log=print, on_entry=None, should_stop=None, human=None,
+         limit: int | None = None) -> OwnedIndex:
+    """Read every Cat Guide entry and return the cats this account owns.
+
+    Reaches the Guide through the UI map, from wherever the game is, and
+    re-enters it so it starts on its first page. Every tap is made only once
+    the screen is confirmed: the filter dialog by its own words, the reward
+    popup by its text. The owned list is only saved as the owned list when the
+    walk reaches the end of the Guide; until then it is a partial file.
+    """
+    from .perception import perceive
+    from .uigraph import Navigator
+
+    nav = Navigator(session, graph, humaniser=human)
+    if not (nav.goto("cat_base", log=log) and nav.goto("cat_guide", log=log)):
+        raise RuntimeError("could not reach the Cat Guide")
+    frame = session.screenshot()
+    percept = perceive(frame, ocr)
+    filt = percept.find("Filter")
+    if filt is not None:
+        # Clear every filter, so the walk covers the whole Guide.
+        nav._tap(*filt.tap, 1.6)
+        dialog = perceive(session.screenshot(), ocr)
+        clear, ok = dialog.find("Clear"), dialog.find("OK")
+        if clear is None or ok is None:
+            raise RuntimeError("the Guide's filter dialog did not read as expected")
+        nav._tap(*clear.tap, 0.8)
+        nav._tap(*ok.tap, 2.0)
+    if graph.identify(session.screenshot()) != "cat_guide":
+        raise RuntimeError("not on the Cat Guide grid")
+    nav._tap(*GUIDE["first_cell"], 2.0)
+
+    table: dict[str, int] = {}
+    for cat_id, entry in dataset.cats.items():
+        for form in entry.get("name") or []:
+            if form and form.strip():
+                table.setdefault(form.strip(), cat_id)
+    index = OwnedIndex(scanned_rarities=sorted({BASIC, EX, RARE, SUPER_RARE, 4, LEGEND}))
+    indexer = CatIndexer(session, dataset, ocr)
+    limit = limit or len(dataset.cats) + 80
+    previous, stuck, misses = None, 0, 0
+    for step in range(limit):
+        if should_stop and should_stop():
+            index.save(PARTIAL_FILE)
+            raise RuntimeError("owned scan stopped part way; partial list kept aside")
+        frame = session.screenshot()
+        signature = (_crop(frame, PANEL_BOX), _crop(frame, FORMS_BOX))
+        if previous is not None and all(_frames_match(a, b) for a, b in zip(previous, signature)):
+            stuck += 1
+            if stuck >= END_OF_LIST_FRAMES:
+                index.complete = True
+                break
+        else:
+            stuck = 0
+        previous = signature
+        panel = _crop(frame, PANEL_BOX)
+        if not panel.size or float(panel.mean()) >= 90:
+            ok = _reward_popup(frame, ocr)
+            if ok is not None:
+                nav._tap(*ok.tap, 0.9)
+                continue
+            misses += 1
+            if misses >= 8:
+                index.save(PARTIAL_FILE)
+                raise RuntimeError(f"lost the Guide's detail view at entry {step}")
+            indexer.advance()
+            continue
+        misses = 0
+        raw = read_plate(frame, ocr)
+        index.entries_walked += 1
+        if not raw or LOCKED_RE.search(raw):
+            index.locked_seen += 1
+            cat, score, margin, status = None, 0.0, 0.0, "locked"
+        else:
+            cat, score, margin = match_cat(raw, table)
+            if cat is not None:
+                index.owned.add(cat)
+                status = "owned"
+            else:
+                index.unresolved.append(raw)
+                status = "unresolved"
+        if on_entry:
+            on_entry(dict(step=step, raw=raw, cat_id=cat, name=dataset.cat_name(cat) if cat is not None else None,
+                          score=round(score, 1), margin=round(margin, 1), status=status,
+                          owned=len(index.owned), locked=index.locked_seen))
+        if step % 25 == 0:
+            index.save(PARTIAL_FILE)
+            log(f"  {step:>4} {raw[:34]:<34} owned={len(index.owned)} locked={index.locked_seen}")
+        indexer.advance()
+    if not index.complete:
+        index.save(PARTIAL_FILE)
+        raise RuntimeError("the Guide walk ended without reaching its last entry")
+    index.scanned_at = dt.datetime.now().isoformat(timespec="seconds")
+    index.save()
+    log(f"  Cat Guide read: {len(index.owned)} owned, {index.locked_seen} locked, "
+        f"{len(index.unresolved)} unread")
+    return index

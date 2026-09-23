@@ -153,6 +153,11 @@ class Debugger:
         self._latest = 0
         self._quit = threading.Event()
         self.map_version = 0
+        # What the pipeline has found so far, by section, for the page.
+        self.pipeline: dict = {}
+        self.pipeline_version = 0
+        self.rolls: deque = deque(maxlen=400)
+        self.owned_entries: deque = deque(maxlen=40)
         self._set_graph(self._load())
         self.log(f"learning device profiles into {profile_root or DEVICES_DIR}")
 
@@ -344,6 +349,7 @@ class Debugger:
         errors = [e for e in (self.grab_error, self.analysis_error) if e]
         return dict(mode="replay" if self.replay else "device", error="; ".join(errors) or None,
                     map_version=self.map_version, options=self.options,
+                    pipeline_version=self.pipeline_version,
                     now=time.time(), view=view, route=route, nav=dict(self.nav),
                     log=list(self.log_lines)[-80:])
 
@@ -465,6 +471,103 @@ class Debugger:
         except Exception:
             self.log(traceback.format_exc(limit=4).rstrip())
 
+    # -- the pipeline -------------------------------------------------------------
+
+    def publish(self, section: str, payload) -> None:
+        with self._lock:
+            if section == "roll":
+                self.rolls.append(payload)
+            elif section == "owned_entry":
+                self.owned_entries.append(payload)
+            else:
+                self.pipeline[section] = payload
+            self.pipeline_version += 1
+
+    def pipeline_state(self) -> dict:
+        with self._lock:
+            return dict(version=self.pipeline_version, sections=dict(self.pipeline),
+                        rolls=list(self.rolls)[-80:], owned_entries=list(self.owned_entries)[-12:])
+
+    STAGES = ("graph", "owned", "events", "seed", "plan", "run")
+
+    def run_pipeline(self, stages: list[str], options: dict) -> tuple[bool, str]:
+        """Run pipeline stages in order, in the background, on the one device session."""
+        if self.replay:
+            return False, "Replay mode has no device."
+        stages = [st for st in self.STAGES if st in stages]
+        if not stages:
+            return False, "No stages named."
+        with self._lock:
+            if self.nav["running"]:
+                return False, f"{self._busy()}. Stop it first."
+            self.nav = dict(running=True, target=None, job=f"pipeline: {stages[0]}", result=None)
+        self.shared.stop_requested.clear()
+        threading.Thread(target=self._pipeline, args=(stages, options), daemon=True).start()
+        return True, f"Running {', '.join(stages)}."
+
+    def _pipeline(self, stages: list[str], options: dict) -> None:
+        from bcgacha import events as live
+        from bcgacha import pipeline as P
+        from bcgacha.catindex import OwnedIndex
+        from bcgacha.data import load
+
+        result = "failed"
+        try:
+            graph = self._load()
+            ctx = P.Context(session=self.shared, graph=graph, ocr=graph.ocr, dataset=load(),
+                            log=self.log, publish=self.publish,
+                            should_stop=self.shared.stop_requested.is_set)
+            owned = account = None
+            for stage in stages:
+                with self._lock:
+                    self.nav["job"] = f"pipeline: {stage}"
+                self.publish("stage", dict(name=stage, state="running"))
+                self.log(f"pipeline: {stage}")
+                if stage == "graph":
+                    P.stage_graph(ctx, reload=self._load)
+                    self._set_graph(self._load())
+                elif stage == "owned":
+                    owned = P.stage_owned(ctx, force=bool(options.get("rescan_owned")),
+                                          limit=options.get("owned_limit"))
+                elif stage == "events":
+                    P.stage_events(ctx, visit=True)
+                elif stage == "seed":
+                    account = P.stage_seed(ctx)
+                elif stage in ("plan", "run"):
+                    owned = owned or OwnedIndex.load()
+                    if not owned.complete:
+                        raise RuntimeError("no complete owned list: run the owned stage first")
+                    account = account or P.stage_seed(ctx)
+                    events = ctx.graph.events
+                    prefer = live.find(events, options.get("prefer", "Iron Legion"))
+                    rare, platinum = int(options.get("rare", 0)), int(options.get("platinum", 0))
+                    if not rare:
+                        raise RuntimeError("the rare ticket count is needed (options.rare)")
+                    self.publish("tickets", dict(rare=rare, platinum=platinum, source="given"))
+                    sim = P.simulate(ctx, account, owned.owned, events, rare, platinum, prefer)
+                    self.publish("simulation", sim)
+                    planner, goal, tiers = P.build_plan(ctx, account, owned.owned, events, platinum, prefer)
+                    self.publish("goal", P.goal_json(goal, ctx.dataset, tiers, owned.owned, events))
+                    plan = planner.plan(account.seed, rolls=P.PLAN_ROLLS, index=account.index,
+                                        track=account.track, previous_cat=account.last_cat_id)
+                    self.publish("plan", P.plan_json(plan, ctx.dataset, events))
+                    if stage == "run":
+                        run = P.GoalRun(ctx, account, planner, goal, owned, events, tiers, rare, platinum)
+                        self.publish("stage", dict(name="run", state="rolling"))
+                        run.run()
+                self.publish("stage", dict(name=stage, state="done"))
+            result = "done"
+        except (Stopped, P.Stopped):
+            result = "stopped"
+        except Exception as exc:
+            result = f"error: {exc}"
+            self.log(traceback.format_exc(limit=6).rstrip())
+        finally:
+            self.log(f"pipeline: {result}")
+            with self._lock:
+                self.nav = dict(running=False, target=None, job="pipeline", result=result)
+            self.shared.stop_requested.clear()
+
     def stop(self) -> None:
         if self.nav["running"]:
             self.shared.stop_requested.set()
@@ -528,6 +631,8 @@ def make_handler(dbg: Debugger):
                 self._json(200, dbg.state())
             elif url.path == "/api/map":
                 self._json(200, dbg.map)
+            elif url.path == "/api/pipeline":
+                self._json(200, dbg.pipeline_state())
             else:
                 self._send(404, b"not found", "text/plain")
 
@@ -540,6 +645,9 @@ def make_handler(dbg: Debugger):
                 body = {}
             if url.path == "/api/goto":
                 ok, message = dbg.goto(str(body.get("dst", "")))
+                self._json(200 if ok else 409, dict(ok=ok, message=message))
+            elif url.path == "/api/pipeline":
+                ok, message = dbg.run_pipeline(list(body.get("stages") or []), dict(body.get("options") or {}))
                 self._json(200 if ok else 409, dict(ok=ok, message=message))
             elif url.path == "/api/scan":
                 ok, message = dbg.scan()
