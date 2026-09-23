@@ -686,6 +686,14 @@ def make_handler(dbg: Debugger):
                     self._send(200, body, "image/jpeg")
                 else:
                     self._send(404, b"no frame yet", "text/plain")
+            elif url.path == "/frame.png":
+                # The newest frame at full size, for looking at offline.
+                frame = dbg.shared.frame
+                ok, png = cv2.imencode(".png", frame) if frame is not None else (False, None)
+                if ok:
+                    self._send(200, png.tobytes(), "image/png")
+                else:
+                    self._send(404, b"no frame yet", "text/plain")
             elif url.path == "/api/state":
                 self._json(200, dbg.state())
             elif url.path == "/api/map":
