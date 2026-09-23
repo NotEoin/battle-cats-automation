@@ -481,11 +481,13 @@ class UIGraph:
             missed = 0
             for mark in screen.marks:
                 seen = mark_seen(mark, screen.name)
-                if seen is False and percept is not None:
+                if seen is False and percept is not None and (screen.title or screen.shapes):
                     # OCR misses the odd word, so on a full look one missed
-                    # mark is forgiven -- but most of a screen's marks must
-                    # read. The Legend Stages stage list keeps the Cat Base
-                    # title with neither Start!! nor Equip on it.
+                    # mark is forgiven -- but only on a screen with other
+                    # evidence, and most of its marks must still read. The
+                    # Legend Stages stage list keeps the Cat Base title with
+                    # neither Start!! nor Equip on it; a roll result, with no
+                    # title at all, needs every mark.
                     missed += 1
                     if 2 * missed > len(screen.marks):
                         ruled_out = True
@@ -669,7 +671,8 @@ class Navigator:
         # A label that can be read but was not is not on this screen: pressing
         # where it sat on some other screen is how a stage gets opened. Only
         # the Ok pill, whose lettering OCR cannot read, falls back to its spot.
-        if step.target in BLIND_TARGETS and (step.x or step.y):
+        # Never on Storage: a stray tap there can exchange cats away.
+        if step.target in BLIND_TARGETS and (step.x or step.y) and here != "storage":
             if log:
                 log(f"    {step.target!r} not read; using the recorded position")
             return step.x, step.y
