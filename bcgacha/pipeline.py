@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -542,7 +543,10 @@ class GoalRun:
                 result_frame, read, _ = got
                 ctx.log(f"    result read {time.time() - tapped:.1f}s after the tap")
                 stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-                cv2.imwrite(str(ctx.captures / f"roll_{stamp}_{step.position}.png"), result_frame)
+                # A full-size PNG takes half a second to write: written aside,
+                # while the game moves on. Not a daemon: it is seed evidence.
+                threading.Thread(target=cv2.imwrite, args=(
+                    str(ctx.captures / f"roll_{stamp}_{step.position}.png"), result_frame)).start()
                 seen = read.cat_id if read is not None else None
                 verdict = ("match" if seen == step.cat_id else
                            "unverified" if seen is None else "desync")
@@ -572,18 +576,19 @@ class GoalRun:
             if step.rarity >= UBER:
                 s.unlocked.append(dict(cat=ctx.dataset.cat_name(step.cat_id), rarity=step.rarity,
                                        position=step.position, event=event.label))
+        if seen is not None:
+            # On the result screen, read, with the position and owned list
+            # saved: press its Ok now. The next step watches for the notice
+            # rather than sleeping for it.
+            ok = next((t for t in ctx.graph.transitions
+                       if t.src == "roll_result" and t.target == "Ok"), None)
+            if ok is not None:
+                self.nav._press(ok.x, ok.y)
         ctx.put("roll", dict(n=s.rolled, position=step.position, event=event.label, platinum=platinum,
                              expected=ctx.dataset.cat_name(step.cat_id),
                              seen=ctx.dataset.cat_name(seen) if seen is not None else None,
                              verdict=verdict, new=new, rarity=step.rarity,
                              goal=step.cat_id in self.goal.wanted))
-        if seen is not None:
-            # On the result screen, just read: press its Ok straight away,
-            # at the spot the map records for it, rather than look again.
-            ok = next((t for t in ctx.graph.transitions
-                       if t.src == "roll_result" and t.target == "Ok"), None)
-            if ok is not None:
-                self.nav._tap(ok.x, ok.y, 1.2)
         ctx.log(f"  #{s.rolled:>3} {step.position:>6} {'PLAT' if platinum else '    '} "
                 f"{ctx.dataset.cat_name(step.cat_id):<26} {verdict}{'  NEW' if new else ''}")
         if verdict == "unverified":

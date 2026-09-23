@@ -30,8 +30,8 @@ FACE_MATCH = 0.93
 # Where a skip tap goes, and how long after a press the capsule starts to
 # take one: taps while it is still being lowered are ignored.
 SKIP_POINT = (0.5, 0.035)
-SKIP_AFTER = 3.5
-SKIP_EVERY = 0.7
+SKIP_AFTER = 3.0
+SKIP_EVERY = 0.5
 # After an Ok the next capsule of a batch opens straight away.
 SKIP_AFTER_OK = 0.8
 # A draw button's height, as a share of the frame; a learned box much shorter
