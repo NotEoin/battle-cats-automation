@@ -32,6 +32,8 @@ CAPTURES = ROOT / "captures"
 # draw button's own face is what guards a draw (see draw.py).
 TICKETS_BOX = (0.635, 0.865, 0.745, 0.950)
 CAT_FOOD_BOX = (0.845, 0.865, 0.955, 0.950)
+# A draw paid in Cat Food costs exactly this much.
+CAT_FOOD_PER_DRAW = 150
 # How long a reveal may take: Uber and Legend animations run long.
 REVEAL_TIMEOUT = 45.0
 PLAN_ROLLS = 40
@@ -434,14 +436,19 @@ class GoalRun:
             return f"draw refused: {gate.reason}"
         food = read_number(frame, CAT_FOOD_BOX, ctx.ocr)
         if food is not None:
-            if s.cat_food is not None and food < s.cat_food:
-                # A misread digit looks like a drop: only a second read of a
-                # fresh frame that agrees is taken as Cat Food really spent.
+            if s.cat_food is None:
+                # The first reading only counts once a second one agrees.
                 again = read_number(ctx.session.screenshot(), CAT_FOOD_BOX, ctx.ocr)
-                if again is not None and again < s.cat_food:
-                    return f"Cat Food fell from {s.cat_food} to {again}"
-                food = s.cat_food
-            s.cat_food = food
+                s.cat_food = food if again == food else None
+            elif food < s.cat_food and len(str(food)) == len(str(s.cat_food)) \
+                    and (s.cat_food - food) % CAT_FOOD_PER_DRAW == 0:
+                # Cat Food only ever goes in 150s on a draw; a misread digit
+                # rarely lands on one. A second fresh read must agree.
+                again = read_number(ctx.session.screenshot(), CAT_FOOD_BOX, ctx.ocr)
+                if again == food:
+                    return f"Cat Food fell from {s.cat_food} to {food}"
+            elif food > s.cat_food and len(str(food)) == len(str(s.cat_food)):
+                s.cat_food = food           # rewards add Cat Food
 
         # From the tap on, the draw has happened: whatever goes wrong below,
         # the position is advanced and saved before anything else.
