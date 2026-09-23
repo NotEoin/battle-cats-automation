@@ -215,9 +215,14 @@ def stage_seed(ctx: Context):
     return account
 
 
-def build_plan(ctx: Context, account, owned: set[int], events, platinum_tickets: int, prefer):
+def build_plan(ctx: Context, account, owned: set[int], events, platinum_tickets: int, prefer,
+               goal_events=None, legends: bool = True):
     """The goal and a planner for it. Refuses an owned list that is not whole:
-    everything missing from it would look like a target."""
+    everything missing from it would look like a target.
+
+    `goal_events` narrows the wanted units to those events' (None: every live
+    one); the route may still roll on any banner, and the Platinum picks are
+    wanted whatever it names, slotted into the same route."""
     from . import goals
     from .planner import Planner
     from .scoring import Scorer
@@ -234,7 +239,8 @@ def build_plan(ctx: Context, account, owned: set[int], events, platinum_tickets:
     # does is a ticket wasted. The planner still spends only what is held.
     goal = goals.build(ctx.dataset, tiers, owned, normal, platinum,
                        platinum_tickets=PLATINUM_CHOICE * platinum_tickets,
-                       preferred_banner=prefer.key if prefer else None)
+                       preferred_banner=prefer.key if prefer else None,
+                       only={e.key for e in goal_events} if goal_events else None, legends=legends)
     scorer = Scorer(owned=set(owned), tiers=tiers, priority=goal.priority)
     planner = Planner(ctx.dataset, normal, scorer, platinum_banner=platinum,
                       platinum_tickets=platinum_tickets, platinum_wanted=set(goal.platinum))
@@ -273,12 +279,13 @@ def plan_json(plan, dataset, events) -> list[dict]:
     return out
 
 
-def simulate(ctx: Context, account, owned, events, rare: int, platinum: int, prefer) -> dict:
+def simulate(ctx: Context, account, owned, events, rare: int, platinum: int, prefer,
+             goal_events=None, legends: bool = True) -> dict:
     """Play the run out on paper on a planner of its own, so nothing the real
     run relies on is touched. Platinum draws cost Platinum, not rare tickets."""
     from .planner import PLATINUM_TICKET
 
-    planner, goal, tiers = build_plan(ctx, account, owned, events, platinum, prefer)
+    planner, goal, tiers = build_plan(ctx, account, owned, events, platinum, prefer, goal_events, legends)
     have = set(owned)
     index, track, prev = account.index, account.track, account.last_cat_id
     rolls, unlocked = [], []
@@ -349,6 +356,9 @@ class GoalRun:
         self.ctx, self.account, self.planner, self.goal = ctx, account, planner, goal
         self.owned_index, self.events, self.tiers = owned_index, events, tiers
         self.state = RunState(rare_left=rare_tickets, platinum_left=platinum_tickets)
+        # Draws made by hand since the last run move the position unseen: a
+        # run spends no Platinum Ticket until one of its own draws has matched.
+        self.account.confirmed = False
         self.planner.platinum_tickets = platinum_tickets
         self.nav = ctx.navigator()
         ctx.captures.mkdir(parents=True, exist_ok=True)
@@ -384,13 +394,23 @@ class GoalRun:
         from .results import read_result
         from .uigraph import frame_changed
 
+        import random
+
+        from .capsules import SKIP_AFTER, SKIP_EVERY, SKIP_POINT
+        from .layout import landscape_to_hid
+
         deadline = time.time() + REVEAL_TIMEOUT
         pool = {c for e in self.events for r in (2, 3, 4, 5) for c in e.banner.slots.get(r) or []}
         moved, last, started = False, None, time.time()
+        next_skip = started + SKIP_AFTER
         while time.time() < deadline:
-            time.sleep(0.2)             # a screenshot itself takes a second
             frame = self.ctx.session.screenshot()
             moved = moved or frame_changed(before, frame)
+            if moved and time.time() >= next_skip:
+                # The reveal jumps to the result on a tap once the capsule
+                # has opened; the top bar takes the tap and presses nothing.
+                self.ctx.session.tap(*self.nav.human.jitter_point(*landscape_to_hid(*SKIP_POINT)))
+                next_skip = time.time() + SKIP_EVERY * random.uniform(0.7, 1.3)
             # The whole-frame fallback costs a second: only once the reveal
             # has had time to finish, not through the animation.
             read = read_result(frame, self.ctx.ocr, self.ctx.dataset, pool,

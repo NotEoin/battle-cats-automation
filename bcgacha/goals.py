@@ -73,11 +73,15 @@ def build(
     platinum_banner: Banner | None,
     platinum_tickets: int = 0,
     preferred_banner: str | None = None,
+    only: set[str] | None = None,
+    legends: bool = True,
 ) -> Goal:
     """Every unowned Legend and Uber the live banners can produce, ranked.
 
     `preferred_banner` nudges the ordering so a Legend obtainable there is
-    chased before an equally-ranked one elsewhere.
+    chased before an equally-ranked one elsewhere. `only` names the banner
+    keys whose units are wanted, None for all; `legends` False wants their
+    Ubers alone. The planner still rolls on any banner to reach them.
     """
     from .planner import platinum_targets
 
@@ -92,7 +96,9 @@ def build(
         return 1.0 - rank / max(UNRANKED - 1, 1)
 
     for banner in banners:
-        for cat in banner.slots.get(LEGEND) or []:
+        if only is not None and banner.key not in only:
+            continue
+        for cat in (banner.slots.get(LEGEND) or []) if legends else []:
             if cat in owned:
                 continue
             goal.legendaries.add(cat)

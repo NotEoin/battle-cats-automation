@@ -168,6 +168,8 @@ button.stop { border-color: var(--critical); }
       <label>Rare tickets <input id="p-rare" type="number" min="0" value="0"></label>
       <label>Platinum <input id="p-plat" type="number" min="0" value="0"></label>
       <label>Prefer <input id="p-prefer" type="text" value="Iron Legion"></label>
+      <label title="Comma-separated live events whose units are wanted; blank for all">Goal events <input id="p-events" type="text" value="Galaxy Gals, Iron Legion"></label>
+      <label><input id="p-legends" type="checkbox"> Legends too</label>
       <label><input id="p-arm" type="checkbox"> I have checked the plan</label>
       <button id="p-run" type="button" disabled>Start goal run</button>
     </div>
@@ -511,7 +513,8 @@ button.stop { border-color: var(--critical); }
     $('p-setup').disabled = !state || state.nav.running || state.mode === 'replay';
     setTimeout(pollPipe, 700);
   }
-  const opts = () => ({ rare: Number($('p-rare').value), platinum: Number($('p-plat').value), prefer: $('p-prefer').value });
+  const opts = () => ({ rare: Number($('p-rare').value), platinum: Number($('p-plat').value), prefer: $('p-prefer').value,
+                        goal_events: $('p-events').value, legends: $('p-legends').checked });
   $('p-setup').addEventListener('click', () => post('/api/pipeline', { stages: ['graph', 'owned', 'events', 'seed', 'plan'], options: opts() }));
   $('p-run').addEventListener('click', () => { $('p-arm').checked = false; post('/api/pipeline', { stages: ['run'], options: opts() }); });
   pollPipe();

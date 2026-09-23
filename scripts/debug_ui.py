@@ -546,15 +546,23 @@ class Debugger:
                     account = account or P.stage_seed(ctx)
                     events = ctx.graph.events
                     prefer = live.find(events, options.get("prefer", "Iron Legion"))
+                    # "Galaxy Gals, Iron Legion": only their units are wanted.
+                    names = [n.strip() for n in str(options.get("goal_events") or "").split(",") if n.strip()]
+                    goal_events = [live.find(events, n) for n in names]
+                    if None in goal_events:
+                        raise RuntimeError(f"no live event named {names[goal_events.index(None)]!r}")
+                    legends = bool(options.get("legends", True))
                     # Counts given with the request win; else what the last run left.
                     rare = int(options.get("rare") or account.tickets or 0)
                     platinum = int(options.get("platinum") or account.platinum_tickets or 0)
                     if not rare:
                         raise RuntimeError("the rare ticket count is needed (options.rare)")
                     self.publish("tickets", dict(rare=rare, platinum=platinum, source="given"))
-                    sim = P.simulate(ctx, account, owned.owned, events, rare, platinum, prefer)
+                    sim = P.simulate(ctx, account, owned.owned, events, rare, platinum, prefer,
+                                     goal_events, legends)
                     self.publish("simulation", sim)
-                    planner, goal, tiers = P.build_plan(ctx, account, owned.owned, events, platinum, prefer)
+                    planner, goal, tiers = P.build_plan(ctx, account, owned.owned, events, platinum, prefer,
+                                                        goal_events, legends)
                     self.publish("goal", P.goal_json(goal, ctx.dataset, tiers, owned.owned, events))
                     plan = planner.plan(account.seed, rolls=P.PLAN_ROLLS, index=account.index,
                                         track=account.track, previous_cat=account.last_cat_id)
