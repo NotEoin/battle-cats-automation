@@ -1009,11 +1009,16 @@ class Navigator:
                 # An unlock reward popup holds every tap until its OK.
                 from .perception import reward_ok
 
-                ok = reward_ok(self.session.screenshot(), self.graph.ocr)
+                now = self.session.screenshot()
+                ok = reward_ok(now, self.graph.ocr)
                 if ok is not None:
                     if log:
                         log("    unlock reward popup in the way: OK")
                     self._tap(*ok, 1.0)
+                    continue
+                # A question left standing over a screen the map knows --
+                # Use all's, when its answer was missed -- holds every tap.
+                if self._answer_dialog(now, log=log):
                     continue
                 barren.add(key)
                 if log:

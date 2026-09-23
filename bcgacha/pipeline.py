@@ -47,6 +47,8 @@ FRESH_SAVE = 600
 # A desync is placed at most this far past the saved position: draws made
 # by hand between runs.
 RECOVER_AHEAD = 40
+# How long Use all's question may take to come up, in seconds.
+ASK_WAIT = 8.0
 # Empty storage this many draws before it would fill.
 STORAGE_MARGIN = 3
 
@@ -131,18 +133,25 @@ def drain_storage(ctx: Context) -> bool:
     nav._tap(*use_all.tap, 1.5)
     from .perception import read_texts
 
-    quiet = 0
-    for _ in range(8):
+    quiet, answered = 0, False
+    asked_by = time.time() + ASK_WAIT
+    for _ in range(16):
         texts = read_texts(ctx.session.screenshot(), ctx.ocr)
         answer = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("yes", "ok")), None)
         if answer is None:
-            # Activating takes a moment before its closing notice appears.
+            # The question can take seconds to come up; once answered,
+            # activating takes a moment before its closing notice appears.
+            if not answered:
+                if time.time() > asked_by:
+                    break
+                time.sleep(0.5)
+                continue
             quiet += 1
             if quiet >= 3:
                 break
             time.sleep(1.0)
             continue
-        quiet = 0
+        quiet, answered = 0, True
         # Only the dialog's own words count: the Storage screen always shows
         # "Exchange all for NP/XP" along its bottom, beside Use all.
         question = [t for t in texts if 0.08 < t.centre[1] < answer.centre[1] - 0.02
