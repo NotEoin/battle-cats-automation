@@ -370,7 +370,7 @@ class GoalRun:
         pool = {c for e in self.events for r in (2, 3, 4, 5) for c in e.banner.slots.get(r) or []}
         moved, last, started = False, None, time.time()
         while time.time() < deadline:
-            time.sleep(1.0)
+            time.sleep(0.2)             # a screenshot itself takes a second
             frame = self.ctx.session.screenshot()
             moved = moved or frame_changed(before, frame)
             # The whole-frame fallback costs a second: only once the reveal
@@ -425,8 +425,9 @@ class GoalRun:
             return f"{step.banner_key} is not a live event"
         if not self.nav.goto(event.screen, log=ctx.log):
             return f"could not put {event.label} on screen"
-        frame = ctx.session.screenshot()
-        here = ctx.graph.identify(frame)
+        # The frame the navigator just read as this event: nothing has been
+        # tapped since, so it stands for the screen as it is.
+        here, frame = self.nav.arrival
         if here != event.screen:
             return f"expected {event.label} on screen, saw {here}"
         button = self._draw_button(frame, here)

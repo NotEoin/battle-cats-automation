@@ -756,6 +756,8 @@ class Navigator:
             if here == destination or (
                 here and self.graph.screens[here].parent == destination
             ):
+                # The frame that showed arrival, for a caller that acts next.
+                self.arrival = (here, frame)
                 return True
             if here is None:
                 if self._answer_dialog(frame, rec.percept, log):
