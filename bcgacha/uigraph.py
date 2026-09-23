@@ -417,6 +417,7 @@ class UIGraph:
         title OCR had to read can be remembered once it has named its screen.
         """
         from .perception import CLOSE_SCORE, close_glyph_score, find_discs
+        from .profile import MARK_PAD
 
         profile = self.profile_for(frame)
         texts: dict[tuple, str] = {} if reads is None else reads
@@ -451,7 +452,7 @@ class UIGraph:
             key = f"@{kind}"
             homes = [n for n in (screen.name, screen.parent) if n and key in profile.controls(n)]
             if homes and percept is None:
-                return any(profile.find(frame, n, key) for n in homes)
+                return any(profile.find(frame, n, key, pad=MARK_PAD) for n in homes)
             if percept is None and not ocr:
                 # The look that reads nothing does not search the frame for
                 # shapes either: an X not yet learned here is unknown.
@@ -477,7 +478,7 @@ class UIGraph:
             # Whether it is anywhere is the same for every screen asking.
             learned_on = set(profile.learned_on(mark))
             if mark not in found_marks:
-                found_marks[mark] = any(profile.locate(frame, name, mark) is not None
+                found_marks[mark] = any(profile.locate(frame, name, mark, pad=MARK_PAD) is not None
                                         for name in sorted(learned_on))
             if found_marks[mark]:
                 return True

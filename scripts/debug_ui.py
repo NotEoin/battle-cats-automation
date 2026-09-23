@@ -40,7 +40,7 @@ sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
 
 from bcgacha import bases, carousel, safety, vision  # noqa: E402
-from bcgacha.profile import DEVICES_DIR  # noqa: E402
+from bcgacha.profile import DEVICES_DIR, MARK_PAD  # noqa: E402
 from bcgacha.uigraph import Navigator, NoRoute, UIGraph, find_buttons  # noqa: E402
 import draw_ui_graph  # noqa: E402
 
@@ -312,7 +312,7 @@ class Debugger:
 
         learned = []
         for key, entry in (profile.controls(here) if here else {}).items():
-            found = profile.find(frame, here, key)
+            found = profile.find(frame, here, key, pad=MARK_PAD)
             learned.append(dict(key=key, label=entry.get("label", key), kind=entry.get("kind"),
                                 found=found is not None,
                                 box=list(found["box"]) if found else entry["box"],
@@ -345,7 +345,7 @@ class Debugger:
                 if not t.target or t.target == "@card":
                     how, point = "fixed point", (t.x, t.y)
                 else:
-                    found = profile.find(frame, here, t.target)
+                    found = profile.find(frame, here, t.target, pad=MARK_PAD)
                     control = percept.find(t.target) if (found is None and percept) else None
                     if found:
                         how, point = "learned template", found["tap"]

@@ -29,6 +29,9 @@ DEVICES_DIR = Path(__file__).resolve().parent.parent / "state" / "devices"
 # How far from its last position a template is searched for, and how well it
 # must match there to count as the same control.
 SEARCH_PAD = 0.04
+# Whether a mark is on screen at all is asked of the place it was learned,
+# where the game draws it to the pixel: a narrow look, a fifteenth the sums.
+MARK_PAD = 0.012
 TEMPLATE_MATCH = 0.8
 # A control has moved if its box shifts by more than this; below it, jitter.
 MOVE_TOLERANCE = 0.01
@@ -310,9 +313,9 @@ class Profile:
         best = max(scored, default=(0, None))
         return best[1] if best[0] >= 85 else None
 
-    def locate(self, frame: np.ndarray, screen: str, key: str):
+    def locate(self, frame: np.ndarray, screen: str, key: str, pad: float = SEARCH_PAD):
         """Where a learned control is now, from its template, or None if not there."""
-        found = self.find(frame, screen, key)
+        found = self.find(frame, screen, key, pad)
         return found["tap"] if found else None
 
     def _memo_for(self, frame: np.ndarray) -> dict:
@@ -321,16 +324,19 @@ class Profile:
             memo.frame, memo.rev, memo.found = frame, self._rev, {}
         return memo.found
 
-    def find(self, frame: np.ndarray, screen: str, key: str) -> dict | None:
-        """A learned control's tap point and box as they are in this frame."""
+    def find(self, frame: np.ndarray, screen: str, key: str, pad: float = SEARCH_PAD) -> dict | None:
+        """A learned control's tap point and box as they are in this frame,
+        looked for within `pad` of where it was learned."""
         key = self.key_for(screen, key) or key
         found = self._memo_for(frame)
-        if (screen, key) not in found:
-            found[(screen, key)] = self._find(frame, screen, key)
-        hit = found[(screen, key)]
+        if (screen, key, pad) not in found:
+            # A wide look that found it answers a narrow one too.
+            wide = found.get((screen, key, SEARCH_PAD)) if pad < SEARCH_PAD else None
+            found[(screen, key, pad)] = wide or self._find(frame, screen, key, pad)
+        hit = found[(screen, key, pad)]
         return dict(hit) if hit else None
 
-    def _find(self, frame: np.ndarray, screen: str, key: str) -> dict | None:
+    def _find(self, frame: np.ndarray, screen: str, key: str, pad: float = SEARCH_PAD) -> dict | None:
         entry = self._controls(screen).get(key)
         if not entry or "template" not in entry:
             return None
@@ -349,8 +355,8 @@ class Profile:
             start = lo - reach if lo - reach >= 0 else lo % step
             return start, min(size, hi + reach)
 
-        sx, ex = span(x0, x1, w, SEARCH_PAD)
-        sy, ey = span(y0, y1, h, SEARCH_PAD)
+        sx, ex = span(x0, x1, w, pad)
+        sy, ey = span(y0, y1, h, pad)
         region = _small_grey(frame[sy:ey, sx:ex])
         th, tw = template.shape[:2]
         if region.shape[0] < th or region.shape[1] < tw:
