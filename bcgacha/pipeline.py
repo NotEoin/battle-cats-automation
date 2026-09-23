@@ -16,6 +16,7 @@ here opens a device session of its own: the caller owns the one there is.
 from __future__ import annotations
 
 import datetime as dt
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -121,22 +122,27 @@ def drain_storage(ctx: Context) -> bool:
         return True
     ctx.log("  Cat Storage: Use all")
     nav._tap(*use_all.tap, 1.5)
+    from .perception import read_texts
+
     for _ in range(4):
-        frame = ctx.session.screenshot()
-        percept = perceive(frame, ctx.ocr)
-        text = " ".join(t.text for t in percept.readings()).lower()
-        yes = percept.find("Yes") or percept.find("OK")
-        if yes is None:
+        texts = read_texts(ctx.session.screenshot(), ctx.ocr)
+        answer = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("yes", "ok")), None)
+        if answer is None:
             break
-        spends = any(w in text for w in ("cat food", "exchange", "np", "xp"))
-        if spends:
-            ctx.log(f"  refusing a Storage question that mentions spending: {text[:80]!r}")
-            no = percept.find("No") or percept.find("Cancel")
+        # Only the dialog's own words count: the Storage screen always shows
+        # "Exchange all for NP/XP" along its bottom, beside Use all.
+        question = [t for t in texts if 0.08 < t.centre[1] < answer.centre[1] - 0.02
+                    and 0.12 < t.centre[0] < 0.88]
+        said = " ".join(t.text for t in question).lower()
+        reward = "unlocked" in said and "you got" in said     # Cat Food received, not spent
+        if not reward and re.search(r"cat food|exchange|\bnp\b|\bxp\b", said):
+            ctx.log(f"  refusing a Storage question that mentions spending: {said[:100]!r}")
+            no = next((t for t in texts if t.text.strip().lower() in ("no", "cancel")), None)
             if no:
-                nav._tap(*no.tap, 1.2)
+                nav._tap(*no.centre, 1.2)
             return False
-        ctx.log(f"  confirming: {text[:80]!r}")
-        nav._tap(*yes.tap, 2.0)
+        ctx.log(f"  confirming: {said[:100]!r}")
+        nav._tap(*answer.centre, 2.0)
     ctx.put("storage", dict(drained_at=dt.datetime.now().isoformat(timespec="seconds")))
     return True
 
