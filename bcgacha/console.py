@@ -101,6 +101,9 @@ class Console:
         rows = g["targets"] + g["legendaries"] + g["ubers"] + g["platinum"]
         wanted = [r for r in rows if not r["owned"]]
         self.say(f"  wanted: {g['remaining']} unit{'s' if g['remaining'] != 1 else ''}")
+        if g.get("empty_why"):
+            self.say(self.note(f"    nothing to go for: {g['empty_why']}"))
+            self.say(self.dim("    name a unit with -t (bcgacha search finds it), or add --platinum N"))
         for r in wanted[:12]:
             plat = " [Platinum ticket reserved]" if r.get("platinum") else ""
             self.say(f"    {r['tier']:<4} {r['name']:<28} {self.dim(r['why'])}{plat}")

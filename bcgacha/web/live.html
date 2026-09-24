@@ -318,7 +318,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
         <div><h3>Saved data</h3><dl class="facts" id="ov-data"></dl></div>
         <div><h3>What to do next</h3><ul class="next" id="ov-next"></ul></div>
       </div>
-      <h3 style="margin-top: 16px">Live events <span class="dim" style="text-transform: none; letter-spacing: 0">— as scheduled; a draw run checks which the phone shows</span></h3>
+      <h3 style="margin-top: 16px">Live events <span class="dim" style="text-transform: none; letter-spacing: 0" id="ov-checked">— as scheduled; a draw run checks which the phone shows</span></h3>
       <div class="ptable" id="ov-events"></div>
     </div>
     <div class="panel" id="tab-goal" role="tabpanel" hidden>
@@ -765,6 +765,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
         ['rolls on', x => x.event], ['Platinum may go on it', x => x.platinum ? 'yes' : ''], ['owned', x => x.owned ? 'yes' : 'no'], ['priority', x => x.priority]],
         rows.map((r, i) => ({ ...r, i })), r => r.kind === 'unreachable' ? 'bad-row' : r.owned ? '' : r.kind === 'target' ? 'hl' : '');
       [...$('goal-table').querySelectorAll('tbody tr')].forEach((tr, i) => { tr.firstChild.textContent = i + 1; });
+      if (g.empty_why) $('goal-table').prepend(h('p', 'error-box', h('b', '', 'Nothing to go for'), `${upper(g.empty_why)}. Search for a unit under “Start a run”, or give Platinum tickets.`));
       badge('goal', g.remaining, true);
     }
     // Plan
@@ -800,7 +801,8 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       ['red on the button', gt.red], ['cost digits', gt.digits], ['stopped because', r.reason]]);
     // Events (checked on the phone, or as scheduled)
     if (S.events) {
-      table($('events-table'), [['event', e => e.label], ['on the phone', e => tick(e.seen)], ['from', e => e.start], ['ends', e => e.end],
+      table($('events-table'), [['event', e => e.label],
+        ['on the phone', e => e.seen === true ? '✓ shown' : e.seen === false ? '✗ not shown' : 'not checked', e => e.seen === false ? 'bad' : e.seen ? 'ok' : 'dim'], ['from', e => e.start], ['ends', e => e.end],
         ['rates R/SR/U/L', e => e.rates ? `${e.rates.rare}/${e.rates.supa}/${e.rates.uber}/${e.rates.legend}` : ''],
         ['Legend Rares', e => (e.legends || []).map(l => `${l.name} ${tick(l.owned)}`).join(', ')],
         ['Ubers', e => Array.isArray(e.ubers) ? `${e.ubers.filter(u => u.owned === false).length} missing of ${e.ubers.length}` : `${e.ubers} (Platinum)`],
@@ -861,8 +863,11 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       ['tier list', st.tiers && st.tiers.ok ? yes(true, `${st.tiers.cats} cats, ${st.tiers.updated}`) : yes(false, 'missing')],
       ['save’s map', st.map && st.map.ok ? yes(true, `${st.map.sagas} sagas`) : yes(false, 'not read yet')],
       ['owned cats', o.ok ? yes(true, `${o.owned}, read ${o.scanned_at}`) : yes(false, 'not read yet')]]);
+    $('ov-checked').textContent = st.screen_checked ? `— the phone's capsule screen was last checked at ${st.screen_checked}` : '— as scheduled; a draw run checks which the phone shows';
     $('ov-next').replaceChildren(...(st.next || []).map(x => h('li', '', x)));
-    table($('ov-events'), [['event', e => e.label], ['ends', e => e.end], ['Ubers missing', e => `${e.ubers_missing} of ${e.ubers}`],
+    table($('ov-events'), [['event', e => e.label],
+      ['on the phone', e => e.on_phone === true ? '✓ shown' : e.on_phone === false ? '✗ not shown' : 'not checked', e => e.on_phone === false ? 'bad' : e.on_phone ? 'ok' : 'dim'],
+      ['ends', e => e.end], ['Ubers missing', e => `${e.ubers_missing} of ${e.ubers}`],
       ['Legend Rares missing', e => e.legend_rares ? `${e.legend_rares_missing} of ${e.legend_rares}` : '–'], ['best missing tier', e => e.best_missing]], st.events || []);
     $('idle-status').replaceChildren(h('h2', '', 'Ready?'), h('dl', 'facts', ...[
       ['Phone', st.phone && st.phone.ok ? 'connected' : st.phone && st.phone.mode === 'replay' ? 'replay: plans only' : 'not connected'],
@@ -872,7 +877,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     // The event choices follow what is live.
     const box = $('events');
     const have = new Set([...box.querySelectorAll('input:checked')].map(i => i.value));
-    const normal = (st.events || []).filter(e => !e.platinum);
+    const normal = (st.events || []).filter(e => !e.platinum && e.on_phone !== false);
     if (box.dataset.keys !== normal.map(e => e.key).join()) {
       box.dataset.keys = normal.map(e => e.key).join();
       box.replaceChildren(...normal.map(e => {

@@ -289,7 +289,11 @@ def goal_json(goal, dataset, tiers, owned, events) -> dict:
                 ubers=[row(c) for c in order(goal.ubers)],
                 platinum=[row(c) for c in order(goal.platinum - set(goal.targets))],
                 unreachable=[row(c) for c in goal.unreachable],
-                remaining=len(goal.remaining(owned)))
+                remaining=len(goal.remaining(owned)),
+                empty_why=None if goal.remaining(owned) else (
+                    "every unit named is owned already" if goal.targets else
+                    "every Uber of the events wanted is owned already"
+                    + ("" if goal.platinum else "; Platinum tickets would go on the best unowned Platinum Ubers")))
 
 
 def plan_json(plan, dataset, events, goal=None, tiers=None) -> list[dict]:

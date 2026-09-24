@@ -27,6 +27,10 @@ from dataclasses import asdict, dataclass, field
 
 from . import pipeline as P
 
+# What the last look at the capsule screen found: which events it shows.
+SCREEN_FILE = P.ROOT / "state" / "capsule_screen.json"
+# A look older than this, in hours, no longer says what the screen shows.
+SCREEN_FRESH = 12
 # Held tickets assumed for the paper run when the count is unknown.
 SIM_ASSUMED = 50
 MACHINE_NAMES = {"cat": "Cat Capsules", "lucky": "Lucky Capsules", "lucky_g": "Lucky Capsules G"}
@@ -296,12 +300,14 @@ class Job:
         schedule lists some the game does not show, and a route through one
         of those could never be drawn -- then the rare tickets held, read off
         the counter; else the count the last run left behind."""
+        from .catindex import OwnedIndex
         from .state import STATE_PATH, Account
 
         self._needs_device("Checking the capsule screen")
         ctx = self.ctx
         nav = ctx.navigator()
         events = ctx.graph.events
+        self.owned = self.owned or OwnedIndex.load()
         seen = {}
         for e in events:
             ctx.check()
@@ -314,6 +320,7 @@ class Job:
             raise Refused("no live event could be put on screen", "look at the phone: something is in the way")
         # The route is planned over the events the phone shows, and no other.
         ctx.graph.events = [e for e in events if seen.get(e.key)]
+        save_screen(seen)
 
         held = None
         if nav.goto("rare_capsules", log=ctx.log):
@@ -324,6 +331,10 @@ class Job:
         saved = Account.load().tickets if STATE_PATH.exists() else None
         if held is not None:
             self.rare_held, self.rare_source = held, "read off the screen"
+            if STATE_PATH.exists():
+                account = Account.load()
+                account.tickets = held
+                account.save()
         elif saved is not None:
             self.rare_held, self.rare_source = saved, "saved by the last run (the counter did not read)"
         else:
@@ -381,8 +392,16 @@ class Job:
             ctx.log("no tier list saved: every Uber is ranked as middling (bcgacha tools tiers)")
         self.events = ctx.graph.events
         if "capsule" not in self.req.tasks():
-            owned_now = self.owned.owned
-            ctx.put("events", [dict(e.to_json(ctx.dataset, owned_now), seen=None) for e in self.events])
+            # No look at the phone this run: the last one, if fresh, says which
+            # events the game shows; the schedule alone lists some it does not.
+            seen, when = last_screen()
+            ctx.put("events", [dict(e.to_json(ctx.dataset, self.owned.owned), seen=seen.get(e.key),
+                                    checked=when) for e in self.events])
+            gone = [e for e in self.events if seen.get(e.key) is False]
+            if gone:
+                ctx.log(f"left out, as the capsule screen did not show them at {when}: "
+                        + ", ".join(e.label for e in gone))
+                self.events = ctx.graph.events = [e for e in self.events if e not in gone]
         wanted_events = []
         for name in self.req.events:
             e = live.find(self.events, name)
@@ -465,6 +484,26 @@ class Job:
         return f"{s.wins} won, {s.losses} lost: {reason}"
 
 
+def save_screen(seen: dict) -> None:
+    import json
+
+    SCREEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SCREEN_FILE.write_text(json.dumps(dict(checked_at=time.time(), seen=seen), indent=1))
+
+
+def last_screen() -> tuple[dict, str | None]:
+    """{event key: shown on the phone} from the last look, if fresh, and when."""
+    import json
+
+    try:
+        raw = json.loads(SCREEN_FILE.read_text())
+    except (FileNotFoundError, ValueError):
+        return {}, None
+    if time.time() - raw.get("checked_at", 0) > SCREEN_FRESH * 3600:
+        return {}, None
+    return raw.get("seen", {}), time.strftime("%H:%M", time.localtime(raw["checked_at"]))
+
+
 def run(ctx: P.Context, request: Request, reload=None) -> tuple[bool, str]:
     return Job(ctx, request, reload).run()
 
@@ -518,10 +557,12 @@ def status(dataset=None) -> dict:
     out["captures"] = len(captures)
     events = live.live_events(dataset)
     owned = index.owned if index.complete else set()
+    seen, out["screen_checked"] = last_screen()
     out["events"] = []
     for e in events:
         ubers = list(e.ubers)
         out["events"].append(dict(label=e.label, key=e.key, end=e.end, platinum=e.platinum,
+                                  on_phone=seen.get(e.key),
                                   ubers=len(ubers), ubers_missing=sum(c not in owned for c in ubers),
                                   legend_rares=len(e.legends),
                                   legend_rares_missing=sum(c not in owned for c in e.legends),

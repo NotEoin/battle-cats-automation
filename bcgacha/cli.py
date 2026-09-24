@@ -244,11 +244,15 @@ def cmd_status(args) -> int:
         else:
             con.say(f"  {no} seed        unknown ({s['captures']} saved result screens to find it from)")
         con.say()
-        con.say(con.bold("Live events") + con.dim("  (as scheduled; a run checks which the phone shows)"))
-        rows = [[e["label"][:40], e["end"], f"{e['ubers_missing']}/{e['ubers']}",
+        checked = (f"  (the phone's capsule screen checked at {s['screen_checked']})" if s.get("screen_checked")
+                   else "  (as scheduled; a draw run checks which the phone shows)")
+        con.say(con.bold("Live events") + con.dim(checked))
+        shown = {True: "shown", False: "NOT shown", None: "?"}
+        rows = [[e["label"][:40], shown[e.get("on_phone")], e["end"], f"{e['ubers_missing']}/{e['ubers']}",
                  f"{e['legend_rares_missing']}/{e['legend_rares']}" if e["legend_rares"] else "-",
                  e["best_missing"]] for e in s["events"]]
-        con.say("  " + table(rows, ["event", "ends", "Ubers missing", "Legend Rares", "best missing"]).replace("\n", "\n  "))
+        con.say("  " + table(rows, ["event", "on phone", "ends", "Ubers missing", "Legend Rares", "best missing"])
+                .replace("\n", "\n  "))
     if s["next"]:
         con.say()
         con.say(con.bold("Next"))
@@ -423,7 +427,7 @@ def _guided(con: Console, units, args) -> int:
                 ids.append(u)
                 con.say(con.good(f"    + {u.name}") + (" (already owned)" if u.owned else ""))
         req.targets = [f"#{u.id}" for u in ids]
-        events = [e for e in jobs.status()["events"] if not e["platinum"]]
+        events = [e for e in jobs.status()["events"] if not e["platinum"] and e.get("on_phone") is not False]
         default = "none" if ids else "all"
         con.say()
         con.say(con.bold("Also want every unowned Uber of some events?"))
@@ -711,7 +715,17 @@ def parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _interrupt(*_args) -> None:
+    raise KeyboardInterrupt
+
+
 def main(argv=None) -> int:
+    import signal
+
+    # A kill stops a run as Ctrl+C does: between taps, the device let go.
+    signal.signal(signal.SIGTERM, _interrupt)
+    if signal.getsignal(signal.SIGINT) is signal.SIG_IGN:
+        signal.signal(signal.SIGINT, signal.default_int_handler)
     args = parser().parse_args(argv)
     if not getattr(args, "func", None):
         if not sys.stdin.isatty():

@@ -165,6 +165,8 @@ class UIGraph:
     _profiles: dict = field(default_factory=dict, repr=False)
     # The gacha events live today, each a screen of the map (see events.py).
     events: list = field(default_factory=list, repr=False)
+    # Live events a sweep of the tab strip did not find: listed, not shown.
+    missing_events: set = field(default_factory=set, repr=False)
 
     # -- persistence --------------------------------------------------------
 
@@ -783,6 +785,11 @@ class Navigator:
             last = (name, frame)
         return None, frame
 
+    def _missing(self, screen: str) -> bool:
+        """An event screen whose tab a full sweep of the tabs did not find."""
+        return any(e.screen == screen and e.key in self.graph.missing_events
+                   for e in getattr(self.graph, "events", []))
+
     def _clear_notice(self, frame: np.ndarray, log=None) -> bool:
         """Press Ok on a notice that only hands something over -- an unlock
         reward, a log-in bonus -- found by its words. True if one was."""
@@ -900,6 +907,12 @@ class Navigator:
             for key, ((x, y), frame) in picker.seen_tabs.items():
                 self.graph.profile_for(frame).learn_image(f"tab {key}", frame, tab_box(x, y))
             if not chosen:
+                if picker.seen_tabs and wanted.key not in picker.seen_tabs:
+                    # Every tab was read and none was this event: the schedule
+                    # lists it, but the game does not show it.
+                    self.graph.missing_events.add(wanted.key)
+                    if log:
+                        log(f"    {wanted.label} is not among the capsule screen's tabs")
                 return False
             # The new banner fades in: give the screen a few looks to read as
             # the event before calling the switch done.
@@ -908,24 +921,6 @@ class Navigator:
                     return True
                 self.human.sleep(0.8)
             return False
-        if kind == "banner":
-            import datetime as dt
-
-            from .bannerpick import BannerPicker
-            from .cli import _live_banners
-            from .data import load
-
-            dataset = load()
-            normal, platinum = _live_banners(dataset, dt.date.today())
-            candidates = normal + ([platinum] if platinum else [])
-            wanted = next((b for b in candidates if b.key == argument), None)
-            if wanted is None and argument == "platinum":
-                wanted = platinum
-            if wanted is None:
-                if log:
-                    log(f"  no banner matching {argument!r}")
-                return False
-            return BannerPicker(self.session, dataset).select(wanted, candidates)
         if log:
             log(f"  unknown action {step.action!r}")
         return False
@@ -945,6 +940,10 @@ class Navigator:
         forgiven = False
         settled = None                  # the frame a tap was watched settling on
         for _ in range(max_steps):
+            if self._missing(destination):
+                if log:
+                    log(f"  {destination} is not on the capsule screen today")
+                return False
             frame = settled if settled is not None else self.session.screenshot()
             settled = None
             rec = self.graph.recognise(frame)
