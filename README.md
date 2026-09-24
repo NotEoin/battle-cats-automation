@@ -118,6 +118,16 @@ The normal machines are opened by `capsules.CapsuleRun(ctx, "cat" | "lucky" |
 face checked against how it looked when it first drew, and the run stopped if
 the Cat Food counter ever falls.
 
+**Play Uncanny Legends** beats the Uncanny Legends one stage after another
+with the in-game Cat CPU (`legends.LegendRun(ctx).run()`): it opens the
+topmost green chapter of the Legend Stages list that is not greyed out, picks
+its rightmost stage, keeps the Cat CPU item on CPU (a second tap turns it to
+skip-battle, which refuses a stage not yet cleared) and presses Attack!. Energy
+is refilled with Leadership; the offer to continue a lost battle for Cat Food
+is always refused. It stops when that topmost chapter is CLEAR, or when one
+stage is lost three times running, which needs a person. Each battle's end is
+kept under `logs/legends`.
+
 The older `cli run` and `cli goal` loops still check screens against captured
 templates, which no longer ship; the debug page's pipeline replaces them.
 
@@ -247,6 +257,7 @@ bc.godfat.org output saved under `tests/fixtures`.
 | `draw` | whether the draw button spends a ticket or Cat Food |
 | `pipeline` | the stages and the goal run, reported live |
 | `capsules` | the normal machines: Cat Capsules and both Lucky Capsules |
+| `legends` | the Uncanny Legends, battle after battle, with the Cat CPU |
 
 ## When the position drifts
 
