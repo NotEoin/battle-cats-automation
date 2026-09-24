@@ -537,7 +537,7 @@ class Debugger:
             return dict(version=self.pipeline_version, sections=dict(self.pipeline),
                         rolls=list(self.rolls)[-80:], owned_entries=list(self.owned_entries)[-12:])
 
-    STAGES = ("graph", "owned", "events", "seed", "plan", "run")
+    STAGES = ("graph", "storage", "owned", "events", "seed", "plan", "run")
 
     def run_pipeline(self, stages: list[str], options: dict) -> tuple[bool, str]:
         """Run pipeline stages in order, in the background, on the one device session."""
@@ -575,6 +575,16 @@ class Debugger:
                 if stage == "graph":
                     P.stage_graph(ctx, reload=self._load)
                     self._set_graph(self._load())
+                elif stage == "storage":
+                    # Use all: what the run drew joins the roster.
+                    if not P.drain_storage(ctx):
+                        raise RuntimeError("Cat Storage was not emptied")
+                    from bcgacha.state import STATE_PATH, Account
+
+                    if STATE_PATH.exists():
+                        account = Account.load()
+                        account.storage_used = getattr(ctx, "storage_left", 0)
+                        account.save()
                 elif stage == "owned":
                     owned = P.stage_owned(ctx, force=bool(options.get("rescan_owned")),
                                           limit=options.get("owned_limit"))
