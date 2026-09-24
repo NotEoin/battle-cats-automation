@@ -9,6 +9,31 @@ banners, and nothing but a rare roll advances it. So the bot does not read roll
 results off the screen — it computes them, and reads the screen only to confirm
 it is on the screen it expects.
 
+## Quick start
+
+    bcgacha                 # guided: says what it knows, asks what you want, does it
+
+That is all that is needed. Every run on the phone also serves the live page at
+http://127.0.0.1:8765, which shows everything the bot sees and works out, and
+can stop it. Either one can do anything the other can:
+
+| You want to | Command line | Live page (`bcgacha ui`) |
+|---|---|---|
+| see what is known | `bcgacha status` | Overview tab |
+| find a unit | `bcgacha search dark kasli` | search box under Start a run |
+| see the plan, spending nothing | `bcgacha plan -t "Dark Kasli"` | Plan |
+| draw for units, most wanted first | `bcgacha run -t "Dark Kasli" -t Gunduros --roll` | tick Draw, Start |
+| use Platinum tickets too | `--platinum 2` | Platinum tickets |
+| want every Uber of an event | `-e "Iron Legion"` (`--legend-rares` for its Legend Rares) | tick the event |
+| open Cat or Lucky Capsules | `--capsules cat:30` (`lucky`, `lucky_g`; no count: until out) | Normal capsules |
+| play the Uncanny Legends | `--play-legends` | Battles |
+| all of it in one go | `bcgacha run -t Gunduros --roll --capsules cat --play-legends` | tick them all |
+| stop | Ctrl+C (between taps) | Stop |
+
+The page shows the command for whatever is ticked, so a run set up there can be
+repeated from a terminal. Setting up -- the save's map, the owned cats, the seed
+-- happens on the first run by itself, and only again when asked.
+
 ## Status
 
 | Capability | State |
@@ -87,49 +112,54 @@ chapters are scanned into `state/carousels.json` once per save.
 
 Delete `state/devices/WxH/` to make a phone learn from scratch.
 
-## Running the whole pipeline
+## What a run does
 
-    .venv/bin/python scripts/debug_ui.py
+A run is a list of tasks, each done only when needed, each reported on the
+terminal and the page as it starts and ends (`jobs.py`):
 
-The debug page (http://127.0.0.1:8765) is the one process that drives the
-phone, and shows every stage live. On a fresh start it scans the save's sagas
-and chapters and learns the device; **Run setup** then reads the Cat Guide
-(owned cats), checks each live event on the device, finds the seed and
-position, and plans and simulates the run. **Start goal run** rolls: every
-unowned Uber of the events named under Goal events (all live ones if blank;
-their Legends too if ticked, the one named under Prefer first), and the best
-unowned Platinum Ubers by tier with the Platinum Tickets, slotted into the same
-route, until the goal is met or the rare tickets run out.
+| Task | Does |
+|---|---|
+| map | this save's sagas and chapters, and this phone's Cat Base doors: once per save and phone |
+| storage | Use all on Cat Storage, when asked |
+| owned | reads every Cat Guide entry for what the account owns: once, or when asked |
+| capsule | before drawing: puts each live event on screen -- the schedule lists some the game does not show -- and reads the rare ticket counter |
+| seed | the seed and position, found from the saved result screens in `captures/`, spending nothing |
+| goal | what is wanted and why, the route to it, and the whole run played out on paper |
+| roll | draws along the route, every result read and checked against the plan |
+| capsules | the normal machines, with their own tickets |
+| legends | the Uncanny Legends, stage after stage, with the Cat CPU |
 
+- What is wanted: the units named with `-t`, in that order, outrank everything;
+  then each event named with `-e`. With neither, every unowned Uber of every
+  live event. Platinum tickets go on named units first, then the best unowned
+  Platinum Ubers by tier -- twice as many are earmarked as tickets held, so
+  one that never comes up on the route does not strand a ticket.
 - Each live event is a screen of the map: `goto("event:979")` selects Iron
-  Legion from anywhere, in one call.
-- The seed is found from the saved result screens in `captures/`, with no
-  tickets spent. Keep that folder: without it, finding the seed costs draws.
+  Legion from anywhere, in one call. An event the tab strip does not show is
+  noted after one sweep of the tabs and left out of every plan that day.
 - Every draw is refused unless the button shows a ticket and a cost of 1, and
   the position is saved the moment a draw is tapped.
 - Stop takes effect between draws; a run resumes from `state/account.json`.
 - A run spends no Platinum Ticket until one of its own draws has matched: a
   draw made by hand since the last run moves the position unseen. A draw that
   disagrees is placed on the banner it was drawn on, near the saved position.
-- Once a capsule has opened, a tap on the top bar skips its reveal.
+- Once a capsule has opened, a tap on the top bar skips its reveal. Log-in
+  bonus and reward notices in the way are pressed through with their Ok.
 
-The normal machines are opened by `capsules.CapsuleRun(ctx, "cat" | "lucky" |
-"lucky_g")`: Try 10 times! while its face shows the 10, else Try once!, each
-face checked against how it looked when it first drew, and the run stopped if
+The normal machines press Try 10 times! while its face shows the 10, else Try
+once!, each face checked against how it looked when it first drew, and stop if
 the Cat Food counter ever falls.
 
-**Play Uncanny Legends** beats the Uncanny Legends one stage after another
-with the in-game Cat CPU (`legends.LegendRun(ctx).run()`): it opens the
-topmost green chapter of the Legend Stages list that is not greyed out, picks
-its rightmost stage, keeps the Cat CPU item on CPU (a second tap turns it to
-skip-battle, which refuses a stage not yet cleared) and presses Attack!. Energy
-is refilled with Leadership; the offer to continue a lost battle for Cat Food
-is always refused. It stops when that topmost chapter is CLEAR, or when one
-stage is lost three times running, which needs a person. Each battle's end is
-kept under `logs/legends`.
+The Uncanny Legends player opens the topmost green chapter of the Legend Stages
+list that is not greyed out, picks its rightmost stage, keeps the Cat CPU item
+on CPU (a second tap turns it to skip-battle, which refuses a stage not yet
+cleared) and presses Attack!. Energy is refilled with Leadership; the offer to
+continue a lost battle for Cat Food is always refused. It stops when that
+topmost chapter is CLEAR, or when one stage is lost three times running, which
+needs a person. Each battle's end is kept under `logs/legends`.
 
-The older `cli run` and `cli goal` loops still check screens against captured
-templates, which no longer ship; the debug page's pipeline replaces them.
+Only one thing may drive the phone. A second `bcgacha run` while the page is up
+refuses, and says to start the run from the page.
 
 ## What banner switching can and cannot do
 
@@ -149,7 +179,7 @@ Rarity only moves when the weights move:
 | Epicfest | 1000 | 39 |
 | Platinum | 10000 | 400 |
 
-`bcgacha ubers` lists the positions that pay out, so rolls can be spent getting
+`bcgacha tools ubers` lists the positions that pay out, so rolls can be spent getting
 to them and the right banner selected when they arrive.
 
 ## Setup
@@ -157,37 +187,34 @@ to them and the right banner selected when they arrive.
     sudo apt install -y python3-dev usbmuxd
     python3 -m venv .venv && .venv/bin/pip install -e .
     .venv/bin/python scripts/fetch_data.py --lang en
+    .venv/bin/bcgacha tools tiers
+
+`bcgacha` is then `.venv/bin/bcgacha` (or `python -m bcgacha`); activate the
+venv to call it by name.
 
 On the phone, once: Settings > Privacy & Security > Developer Mode, on, and
 restart. Then mount the developer disk image:
 
     .venv/bin/pymobiledevice3 mounter auto-mount
 
-## Use
+## Tools
 
-    python -m bcgacha.cli probe                 # what the device supports
-    python -m bcgacha.cli find-seed --event <banner> --cats "A,B,C,..." --progress
-    python -m bcgacha.cli tiers                 # refresh community rankings
-    python -m bcgacha.cli index                 # scan the Cat Guide
-    python -m bcgacha.cli owned                 # what the scan found
-    python -m bcgacha.cli plan --count 20       # what it would roll, and why
-    python -m bcgacha.cli run --mode until-target
+Single steps, for a closer look (`bcgacha tools --help`):
 
-`find-seed` wants 7–10 rolls. Fewer than about 7 usually leaves several seeds
-fitting; the command says so and asks for one more roll.
+    bcgacha tools probe                 # what the attached iPhone supports
+    bcgacha tools upkeep owned          # read the Cat Guide again (also: map, storage)
+    bcgacha tools resync --cat NAME     # fix the position after draws made by hand
+    bcgacha tools tiers                 # fetch the community tier list again
+    bcgacha tools predict --seed S --event KEY
+    bcgacha tools ubers --seed S --event KEY
+    bcgacha tools find-seed --event KEY --cats "A,B,C,..."
+    bcgacha tools map                   # draw the screen map to logs/ui_graph.html
 
-### Run modes
+`find-seed` wants 7–10 draws written down by hand; a run finds the seed from
+`captures/` by itself.
 
-| Mode | Stops when |
-|---|---|
-| `until-target` (default) | the next new Uber or Legend lands |
-| `max-tickets` | `--max-tickets N` tickets have been spent |
-| `until-storage-full` | Cat Storage reaches its cap |
-| `all` | tickets run out; empties storage with Use all as needed |
-
-`--speed 0.6` scales every delay down; `--no-humanise` removes the jitter
-entirely. Delays are drawn from a distribution by default, with the occasional
-longer pause, so the cadence is not machine-exact.
+`bcgacha ui --replay captures/` serves the page over saved frames, with no
+phone: plans work, nothing else.
 
 ## How rolls are chosen
 
@@ -231,33 +258,38 @@ bc.godfat.org output saved under `tests/fixtures`.
 
 | Module | Does |
 |---|---|
+| `cli` | the `bcgacha` command: guided mode, status, search, plan, run, ui, tools |
+| `jobs` | a run as a list of tasks, the one thing both the CLI and the page start |
+| `console` | what a run says on the terminal |
+| `liveview` | the live page: the screen, what is recognised, and every section of a run |
+| `units` | find a unit by any name, nickname or id |
+| `goals` | what a run wants, in what order, and why |
+| `planner` | which banner at each position, and when to spend Platinum |
+| `scoring` | what an outcome is worth: new, tier, duplicate |
+| `pipeline` | the rare draw loop and its checks, storage, owned list, seed |
+| `capsules` | the normal machines: Cat Capsules and both Lucky Capsules |
+| `legends` | the Uncanny Legends, battle after battle, with the Cat CPU |
 | `prng` | xorshift32 forward and inverse |
 | `data` | godfat's dataset: cat pools, rarity weights, schedule |
 | `gacha` | positions, tracks, dupe rerolls, guaranteed ubers |
 | `seedfind` | brute-force seed recovery from observed rolls |
+| `seedpos` | seed and position from saved result screens |
 | `tiers` | community rankings, with nickname aliases |
 | `catindex` | reads the Cat Guide to learn what is owned |
-| `scoring` | what an outcome is worth: new, tier, duplicate |
-| `planner` | which banner at each position, and when to spend Platinum |
+| `events` | the live gacha events, each a screen of the map, and which the phone shows |
+| `results` | the cat on a result screen, or "unsure" |
+| `draw` | whether the draw button spends a ticket or Cat Food |
 | `session` | one persistent tunnel for taps and frames |
-| `vision` | screen classification, counters, storage capacity |
-| `safety` | verify-before-tap, dialog handling |
-| `layout` | tap targets, and the portrait/landscape rotation |
-| `timing` | jittered, human-looking delays |
-| `roller` | a single draw, bracketed by checks |
-| `runner` | the loop: plan, roll, drain storage, stop |
+| `device` | what the phone supports, and whether one is plugged in |
 | `uigraph` | the screen map, recognition, and the navigator |
 | `perception` | reading a screen with no templates: OCR and gold shapes |
 | `profile` | what one device has learned: title box, controls, Cat Base doors |
 | `bases` | which chapter a Cat Base belongs to, from its door |
 | `carousel` | the save's sagas and chapters, scanned into the map |
-| `events` | the live gacha events, each a screen of the map |
-| `seedpos` | seed and position from saved result screens |
-| `results` | the cat on a result screen, or "unsure" |
-| `draw` | whether the draw button spends a ticket or Cat Food |
-| `pipeline` | the stages and the goal run, reported live |
-| `capsules` | the normal machines: Cat Capsules and both Lucky Capsules |
-| `legends` | the Uncanny Legends, battle after battle, with the Cat CPU |
+| `bannerpick` | the capsule screen's event tabs |
+| `mapdraw` | draws the screen map, for the page and as its own page |
+| `layout` | the portrait/landscape rotation taps need |
+| `timing` | jittered, human-looking delays |
 
 ## When the position drifts
 
@@ -268,7 +300,7 @@ the cat off each result screen and stops the moment one disagrees with the plan.
 Recovering does not need the seed finding again -- the seed has not changed,
 only the position. Give `resync` the cat that actually came out:
 
-    python -m bcgacha.cli resync --cat "Figure Skating Cats"
+    bcgacha tools resync --cat "Figure Skating Cats"
 
 It searches forward for the position that would have produced it and corrects
 the state, refusing when the answer is not unique.
