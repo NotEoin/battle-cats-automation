@@ -157,7 +157,8 @@ class Request:
                          + (" and their Legend Rares" if self.legend_rares else ""))
         if self.roll:
             lines.append(f"draw with {'every rare ticket held' if self.rare is None else f'up to {self.rare} rare tickets'}"
-                         + (f" and up to {self.platinum} Platinum" if self.platinum else ", no Platinum"))
+                         + (f" and up to {self.platinum} Platinum" if self.platinum else ", no Platinum")
+                         + "; it stops once everything wanted is unlocked")
         else:
             lines.append("plan only: no rare ticket is spent")
         for machine, n in self.capsules.items():
@@ -441,6 +442,8 @@ class Job:
 
     def _do_roll(self):
         self._needs_device("Drawing")
+        if self.goal.complete(self.owned.owned):
+            return "skipped: nothing wanted is left to draw for -- name a unit, or give Platinum tickets"
         rare = self._rare_budget()
         if rare == 0 and not self.req.platinum:
             return "skipped: no rare tickets to spend"

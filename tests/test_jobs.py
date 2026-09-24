@@ -54,3 +54,8 @@ def test_a_task_needing_the_phone_says_so_without_one():
     assert not ok and "needs the phone" in why
     assert published["error"]["hint"]
     assert [t["state"] for t in published["tasks"]] == ["failed", "not run", "not run", "not run"]
+
+
+def test_a_draw_run_says_it_stops_at_the_goal():
+    assert any("stops once everything wanted is unlocked" in line
+               for line in jobs.Request(roll=True).summary())
