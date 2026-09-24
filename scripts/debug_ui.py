@@ -544,7 +544,7 @@ class Debugger:
             return dict(version=self.pipeline_version, sections=dict(self.pipeline),
                         rolls=list(self.rolls)[-80:], owned_entries=list(self.owned_entries)[-12:])
 
-    STAGES = ("graph", "storage", "owned", "events", "seed", "plan", "run")
+    STAGES = ("graph", "storage", "owned", "events", "seed", "plan", "run", "legends")
 
     def run_pipeline(self, stages: list[str], options: dict) -> tuple[bool, str]:
         """Run pipeline stages in order, in the background, on the one device session."""
@@ -592,6 +592,11 @@ class Debugger:
                         account = Account.load()
                         account.storage_used = getattr(ctx, "storage_left", 0)
                         account.save()
+                elif stage == "legends":
+                    from bcgacha.legends import LegendRun
+
+                    self.publish("stage", dict(name="legends", state="playing"))
+                    LegendRun(ctx).run()
                 elif stage == "owned":
                     owned = P.stage_owned(ctx, force=bool(options.get("rescan_owned")),
                                           limit=options.get("owned_limit"))

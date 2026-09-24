@@ -181,6 +181,7 @@ button.stop { border-color: var(--critical); }
         <label><input id="p-legends" type="checkbox"> Legends too</label>
         <label><input id="p-arm" type="checkbox"> I have checked the plan</label>
         <button id="p-run" type="button" disabled>Start goal run</button>
+        <button id="p-uncanny" type="button" title="Beat the Uncanny Legends with the Cat CPU until all are clear or one stage is lost three times running">Play Uncanny Legends</button>
       </div>
       <div class="chips" id="p-stages"></div>
       <div class="pgrid">
@@ -188,6 +189,7 @@ button.stop { border-color: var(--critical); }
         <div><h3>Run</h3><dl class="kv" id="p-run-kv"></dl></div>
         <div><h3>Last draw check</h3><dl class="kv" id="p-gate"></dl></div>
         <div><h3>Owned cats</h3><dl class="kv" id="p-owned"></dl></div>
+        <div><h3>Uncanny Legends</h3><dl class="kv" id="p-legends-kv"></dl></div>
       </div>
       <div class="pgrid" style="margin-top:14px">
         <div><h3>Events</h3><div class="ptable" id="p-events"></div></div>
@@ -483,7 +485,7 @@ button.stop { border-color: var(--critical); }
 
   // -- pipeline -------------------------------------------------------------
   let pipeVersion = -1, pipe = null;
-  const STAGES = ['graph', 'storage', 'owned', 'events', 'seed', 'plan', 'run'];
+  const STAGES = ['graph', 'storage', 'owned', 'events', 'seed', 'plan', 'run', 'legends'];
   function kv(el, pairs) {
     el.replaceChildren(...pairs.filter(p => p[1] !== undefined && p[1] !== null).flatMap(([k, v]) => [h('dt', '', k), h('dd', '', String(v))]));
   }
@@ -513,6 +515,10 @@ button.stop { border-color: var(--critical); }
     kv($('p-run-kv'), [['rolled', r.rolled], ['rare left', r.rare_left ?? t.rare], ['platinum left', r.platinum_left ?? t.platinum],
       ['Cat Food', r.cat_food], ['goal cats left', r.remaining], ['unlocked', (r.unlocked || []).map(u => u.cat).join(', ') || undefined],
       ['stopped', r.reason || undefined]]);
+    const L = S.legends || {};
+    kv($('p-legends-kv'), [['stage', L.stage], ['battles', L.battles], ['won', L.wins], ['lost', L.losses],
+      ['losses running', L.streak], ['minutes', L.minutes], ['last cleared', (L.cleared || []).slice(-3).join('; ') || undefined],
+      ['stopped', L.reason || undefined]]);
     const g = S.gate || {};
     kv($('p-gate'), [['verdict', g.ok === undefined ? undefined : g.ok ? 'ticket: draw' : 'REFUSED'], ['why', g.reason], ['event', g.event],
       ['position', g.position], ['expecting', g.cat], ['red on button', g.red], ['cost digits', g.digits]]);
@@ -543,12 +549,14 @@ button.stop { border-color: var(--critical); }
     }
     $('p-run').disabled = !$('p-arm').checked || !state || state.nav.running;
     $('p-setup').disabled = !state || state.nav.running || state.mode === 'replay';
+    $('p-uncanny').disabled = $('p-setup').disabled;
     setTimeout(pollPipe, 700);
   }
   const opts = () => ({ rare: Number($('p-rare').value), platinum: Number($('p-plat').value), prefer: $('p-prefer').value,
                         goal_events: $('p-events').value, legends: $('p-legends').checked });
   $('p-setup').addEventListener('click', () => post('/api/pipeline', { stages: ['graph', 'owned', 'events', 'seed', 'plan'], options: opts() }));
   $('p-run').addEventListener('click', () => { $('p-arm').checked = false; post('/api/pipeline', { stages: ['run'], options: opts() }); });
+  $('p-uncanny').addEventListener('click', () => post('/api/pipeline', { stages: ['legends'], options: {} }));
   pollPipe();
   bindMap();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
