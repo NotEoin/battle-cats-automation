@@ -172,34 +172,6 @@ def test_a_reroll_actually_occurs_somewhere_in_a_long_plan():
     assert any(s.reroll_steps for s in plan.steps), "no reroll in 200 rolls"
 
 
-def test_result_verification_accepts_the_predicted_cat():
-    """A real result frame must verify against the cat that was predicted."""
-    from bcgacha.runner import Runner
-
-    ds = load()
-    runner = Runner.__new__(Runner)
-    runner.dataset, runner._ocr = ds, None
-    frame = pathlib.Path(__file__).parent / "fixtures" / "result_viking_cat.png"
-    matched, seen = runner.verify_result(frame, 48)   # 48 = Viking Cat
-    assert matched, seen
-
-
-def test_result_verification_catches_a_desync():
-    """A wrong prediction must be rejected, not quietly accepted.
-
-    If the saved seed position drifts, every later prediction is wrong, so
-    this is the check that stops a bad run rather than letting it continue.
-    """
-    from bcgacha.runner import Runner
-
-    ds = load()
-    runner = Runner.__new__(Runner)
-    runner.dataset, runner._ocr = ds, None
-    frame = pathlib.Path(__file__).parent / "fixtures" / "result_viking_cat.png"
-    matched, _seen = runner.verify_result(frame, 800)  # 800 = Morta-Loncha
-    assert not matched
-
-
 def test_platinum_reserves_the_best_unowned_units():
     """N tickets reserve exactly the N best unowned units, in rank order."""
     from bcgacha.planner import platinum_targets
@@ -263,32 +235,30 @@ def test_deeper_lookahead_keeps_the_uber_route():
     assert run(6) == "46A"
 
 
-def test_verification_tolerates_an_ocr_slip_but_not_a_wrong_cat():
-    """The check must survive mangled text without waving through a desync.
+def _read_viking(candidates):
+    from rapidocr_onnxruntime import RapidOCR
 
-    "Rich Cat III" comes back from OCR as 'Rich Cat "'. That must still verify,
-    while a genuinely different unit must not.
+    from bcgacha import vision
+    from bcgacha.results import read_result
+
+    frame = vision.load(pathlib.Path(__file__).parent / "fixtures" / "result_viking_cat.png")
+    return read_result(frame, RapidOCR(), load(), candidates)
+
+
+def test_result_verification_accepts_the_predicted_cat():
+    """A real result frame must read as the cat that was predicted."""
+    read = _read_viking({48, 800})           # 48 = Viking Cat, 800 = Morta-Loncha
+    assert read.cat_id == 48, read
+
+
+def test_result_verification_catches_a_desync():
+    """A wrong prediction must be rejected, not quietly accepted.
+
+    If the saved seed position drifts, every later prediction is wrong, so
+    this is the check that stops a bad run rather than letting it continue.
     """
-    from rapidfuzz import fuzz
-
-    from bcgacha.runner import VERIFY_SCORE
-
-    ds = load()
-
-    def forms_of(name):
-        for entry in ds.cats.values():
-            names = [n for n in (entry.get("name") or []) if n]
-            if name in names:
-                return names
-        raise AssertionError(name)
-
-    def score(raw, target):
-        return max(fuzz.ratio(raw.lower(), f.lower()) for f in forms_of(target))
-
-    assert score('rich cat "', "Rich Cat III") >= VERIFY_SCORE
-    assert score("Viking Cat", "Viking Cat") >= VERIFY_SCORE
-    assert score('rich cat "', "Swordsman Cat") < VERIFY_SCORE
-    assert score("Bath Cat", "Rich Cat III") < VERIFY_SCORE
+    read = _read_viking({48, 800})
+    assert read.cat_id != 800
 
 
 def _goal_fixture():

@@ -369,7 +369,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     <div class="panel" id="tab-vision" role="tabpanel" hidden>
       <p class="hint">How the bot reads the screen above: the screen it settled on and the evidence, the taps that leave it, and what it has learned about this phone.</p>
       <div class="pgrid">
-        <div><h3>Identified as</h3><dl class="facts" id="v-here"></dl><div id="v-dialog"></div>
+        <div><h3>Identified as</h3><dl class="facts" id="v-here"></dl>
           <h3 style="margin-top: 12px">Candidates</h3>
           <p class="hint">&#x2713; every piece of evidence checked, ? some not. A screen with no text read is never named.</p>
           <ul class="cands" id="v-cands"></ul></div>
@@ -638,8 +638,6 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       rows.push(['Controls known', v.learned.length ? `${found} of ${v.learned.length} found by template` : 'none yet']);
     }
     facts($('v-here'), rows);
-    $('v-dialog').replaceChildren(v.dialog.present
-      ? h('p', 'error-box', `A question is up${v.dialog.spends_cat_food ? ': it would spend Cat Food' : ''}. The navigator answers No.`) : '');
     $('v-cands').replaceChildren(...(v.candidates.length ? v.candidates.map(c => h('li', null,
       h('span', 'mono', `${c.verified ? '✓' : '?'} ${c.name}`, c.read ? null : h('span', 'dim', c.score > 0 ? ' · shape only' : ' · nothing read')),
       h('span', 'num', c.score.toFixed(1)))) : [h('li', null, 'No screen fits this frame')]));

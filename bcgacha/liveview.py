@@ -33,7 +33,7 @@ from urllib.parse import parse_qs, urlparse
 import cv2
 import numpy as np
 
-from . import bases, carousel, jobs, mapdraw, safety, vision
+from . import bases, carousel, jobs, mapdraw, vision
 from .pipeline import Stopped
 from .profile import DEVICES_DIR, MARK_PAD
 from .uigraph import Navigator, NoRoute, UIGraph, find_buttons
@@ -384,7 +384,6 @@ class LiveView:
             exits.append(dict(i=i, label=t.label, target=t.target, dst=t.dst, action=t.action,
                               how=how, x=point[0] if point else None, y=point[1] if point else None,
                               forbidden=graph.screens[t.dst].forbidden))
-        dialog = safety.inspect_dialog(frame)
         # Drawn on the page, not acted on: found on a quarter-size frame.
         buttons = find_buttons(cv2.resize(frame, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA))
 
@@ -403,7 +402,6 @@ class LiveView:
             door=list(rec.door) if rec.door else None, base=base,
             profile=dict(key=profile.key, title_box=title_box,
                          screens=profile.screen_names(), bases=sorted(known_bases)),
-            dialog=dict(present=dialog.present, spends_cat_food=dialog.spends_cat_food),
             analysis_ms=round((time.monotonic() - started) * 1000),
         )
 

@@ -1,16 +1,15 @@
-"""The whole run, stage by stage, each one reported as it happens.
+"""The pieces of a run that touch the rare capsules, reported as they happen.
 
-  graph    the UI map for this save and device: carousels, Cat Base doors
   storage  empty Cat Storage with Use all, so every cat shows in the Guide
   owned    read the Cat Guide: which cats this account has
-  events   the gacha events live now, each a screen of the map
   seed     the seed and position, from the archive of result screens
   plan     the goal, the route to it, and the whole run played out on paper
   run      roll to the goal, or until the rare tickets run out
 
-Every stage takes a Context and reports through ctx.publish(section, data),
-with plain JSON-able data, so the debug view can show all of it live. Nothing
-here opens a device session of its own: the caller owns the one there is.
+jobs.py puts them in order. Every piece takes a Context and reports through
+ctx.put(section, data), with plain JSON-able data, so the live page and the
+terminal can show all of it. Nothing here opens a device session of its own:
+the caller owns the one there is.
 """
 
 from __future__ import annotations
@@ -25,7 +24,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .data import LEGEND, UBER
+from .data import UBER
 from .gacha import next_position
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -102,17 +101,6 @@ def read_number(frame: np.ndarray, box, ocr) -> int | None:
 
 
 # -- stages -----------------------------------------------------------------------
-
-def stage_graph(ctx: Context, reload) -> None:
-    """The saga and chapter carousels and this device's Cat Base doors."""
-    from . import carousel
-
-    ctx.put("stage", dict(name="graph", state="running"))
-    catalogue = carousel.ensure(ctx.session, log=ctx.log, graph=ctx.graph)
-    ctx.graph = reload()
-    ctx.put("graph", dict(sagas=[s["name"] for s in catalogue["sagas"]],
-                          screens=len(ctx.graph.screens), transitions=len(ctx.graph.transitions)))
-
 
 def storage_count(texts) -> tuple[int, int] | None:
     """Storage's "used/capacity" in its bottom-right corner; OCR reads the
@@ -216,20 +204,6 @@ def stage_owned(ctx: Context, force: bool = False, limit: int | None = None):
                      human=ctx.human, limit=limit)
     ctx.put("owned", index.to_json(ctx.dataset))
     return index
-
-
-def stage_events(ctx: Context, visit: bool = True):
-    """The live events, each checked on the device by going to it."""
-    events = ctx.graph.events
-    seen = {}
-    if visit:
-        nav = ctx.navigator()
-        for e in events:
-            ctx.check()
-            seen[e.key] = nav.goto(e.screen, log=ctx.log)
-            ctx.log(f"  {e.label}: {'on screen' if seen[e.key] else 'NOT reached'}")
-    ctx.put("events", [dict(e.to_json(ctx.dataset), seen=seen.get(e.key)) for e in events])
-    return events
 
 
 def stage_seed(ctx: Context):

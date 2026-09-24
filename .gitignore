@@ -16,3 +16,4 @@ secrets/
 *.p12
 *.mobileprovision
 data/*.pickle
+bcgacha.egg-info/
