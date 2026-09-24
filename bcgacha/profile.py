@@ -24,7 +24,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-DEVICES_DIR = Path(__file__).resolve().parent.parent / "state" / "devices"
+from .paths import STATE
+
+DEVICES_DIR = STATE / "devices"
 
 # How far from its last position a template is searched for, and how well it
 # must match there to count as the same control.
@@ -133,7 +135,7 @@ class Profile:
         # Called with a sentence each time something new is learned, so a
         # watcher such as the debug view can show the profile filling in.
         self.listeners: list = []
-        self.data = json.loads(self.file.read_text()) if self.file.exists() else {}
+        self.data = json.loads(self.file.read_text(encoding="utf-8")) if self.file.exists() else {}
         self.data.setdefault("title_box", None)
         self.data.setdefault("screens", {})
         self.data.setdefault("bases", {})
@@ -151,6 +153,7 @@ class Profile:
 
     @classmethod
     def for_frame(cls, frame: np.ndarray, root: Path | None = None) -> "Profile":
+        """The profile of the device `frame` came from, by its resolution."""
         h, w = frame.shape[:2]
         return cls(w, h, root)
 
@@ -167,17 +170,19 @@ class Profile:
             return hit[1]
 
     def save(self) -> None:
+        """Write the profile out, written aside and swapped in whole."""
         with self._lock:
             self._rev += 1
         self.root.mkdir(parents=True, exist_ok=True)
         tmp = self.file.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.data, indent=1, sort_keys=True))
+        tmp.write_text(json.dumps(self.data, indent=1, sort_keys=True), encoding="utf-8")
         os.replace(tmp, self.file)
 
     # -- the top-left title --------------------------------------------------
 
     @property
-    def title_box(self):
+    def title_box(self) -> tuple[float, float, float, float] | None:
+        """Where this device prints screen names, once a title has been read."""
         with self._lock:
             box = self.data["title_box"]
         return tuple(box) if box else None
@@ -225,6 +230,7 @@ class Profile:
         return list(index.get(name, ()))
 
     def screen_names(self) -> list[str]:
+        """Every screen something has been learned on, sorted."""
         with self._lock:
             return sorted(self.data["screens"])
 
@@ -311,7 +317,7 @@ class Profile:
         scored = [(title_match(target, e.get("label", k), within=True), k)
                   for k, e in controls.items() if not k.startswith("@")]
         best = max(scored, default=(0, None))
-        return best[1] if best[0] >= 85 else None
+        return best[1] if best[0] >= LABEL_MATCH else None
 
     def locate(self, frame: np.ndarray, screen: str, key: str, pad: float = SEARCH_PAD):
         """Where a learned control is now, from its template, or None if not there."""
@@ -440,7 +446,12 @@ class Profile:
         with self._lock:
             kept = text in self.data["texts"].get(key, {})
         if kept and path.exists() and time.time() - path.stat().st_mtime < TEXT_KEEP:
-            return False
+            # Unless it was taken dimmed, under a dialog, or this is: a
+            # whole shade apart is not a pulse, and would never match again.
+            old = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+            grey = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            if old is None or abs(float(old.mean()) - float(grey.mean())) <= TEXT_LEVEL:
+                return False
         path.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(path), cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY))
         rel = str(path.relative_to(self.root))
@@ -491,7 +502,8 @@ class Profile:
 
     # -- Cat Base backgrounds ------------------------------------------------------
 
-    def bases(self) -> dict:
+    def bases(self) -> dict[str, list[float]]:
+        """Each chapter's learned Cat Base door signature."""
         with self._lock:
             return {k: list(v) for k, v in self.data["bases"].items()}
 

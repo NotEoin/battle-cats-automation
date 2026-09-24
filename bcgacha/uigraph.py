@@ -330,7 +330,8 @@ class UIGraph:
         doubt = [c for c in found if not c.verified and c.score > 0
                  and (best_sure is None or c.score >= best_sure)]
         if (sure and not doubt) or not slow:
-            best = max(sure or found, default=None, key=lambda c: c.score)
+            # With no evidence for any screen, none is named.
+            best = max(sure or [c for c in found if c.score > 0], default=None, key=lambda c: c.score)
             if best is not None and best.verified and sure and not doubt:
                 self._remember_titles(frame, best.name, reads)
             return self._with_chapter(frame, Recognition(best.name if best else None, found, None))

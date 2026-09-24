@@ -268,3 +268,15 @@ def test_a_remembered_title_that_stops_matching_is_kept_until_it_is_old(tmp_path
     os.utime(path, (old, old))
     assert profile.learn_text(_textured(11), box, "Ok"), "a stale picture gives way"
     assert profile.known_text(_textured(11), box) == "Ok"
+
+
+def test_a_title_remembered_dimmed_under_a_dialog_gives_way_at_once(tmp_path):
+    """Learned while a dialog dimmed the screen, it would never match the lit title again."""
+    profile = Profile(*SIZE, root=tmp_path)
+    box = (0.02, 0.01, 0.30, 0.08)
+    lit = _textured(12)
+    dimmed = (lit // 3).astype(lit.dtype)
+    assert profile.learn_text(dimmed, box, "Stage Select")
+    assert profile.known_text(lit, box) is None
+    assert profile.learn_text(lit, box, "Stage Select"), "a dimmed picture kept while fresh"
+    assert profile.known_text(lit, box) == "Stage Select"
