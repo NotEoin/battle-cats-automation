@@ -13,11 +13,13 @@ recognised again from small template matches instead.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import cv2
 import numpy as np
 
+from .profile import LABEL_MATCH
 from .uigraph import find_back_arrow, find_buttons
 
 # Full-frame OCR works on the frame resized to this width, whatever the
@@ -36,16 +38,20 @@ CONTROL_MAX_AREA = 0.06
 
 @dataclass(frozen=True)
 class Text:
+    """One piece of text OCR read, and where."""
+
     text: str
     box: tuple[float, float, float, float]      # x0, y0, x1, y1 as frame fractions
     conf: float
 
     @property
     def centre(self) -> tuple[float, float]:
+        """The middle of its box, as frame fractions."""
         return (self.box[0] + self.box[2]) / 2, (self.box[1] + self.box[3]) / 2
 
     @property
     def height(self) -> float:
+        """How tall it is set, as a fraction of the frame."""
         return self.box[3] - self.box[1]
 
 
@@ -61,6 +67,8 @@ class Control:
 
 @dataclass
 class Percept:
+    """A full look at one frame: its text, its title and its controls."""
+
     width: int
     height: int
     texts: list[Text] = field(default_factory=list)
@@ -74,6 +82,7 @@ class Percept:
         return self.texts + self.groups + self.rows
 
     def text(self) -> str:
+        """All the text read, in OCR order, as one string."""
         return " ".join(t.text for t in self.texts)
 
     def find(self, label: str) -> Control | None:
@@ -90,7 +99,7 @@ class Percept:
             score = title_match(label, c.label, within=True)
             if score > best_score:
                 best, best_score = c, score
-        return best if best_score >= 85 else None
+        return best if best_score >= LABEL_MATCH else None
 
 
 def _box(points, w, h, scale) -> tuple[float, float, float, float]:
@@ -99,7 +108,8 @@ def _box(points, w, h, scale) -> tuple[float, float, float, float]:
     return min(xs) / w, min(ys) / h, max(xs) / w, max(ys) / h
 
 
-def read_texts(frame: np.ndarray, ocr, width: int = OCR_WIDTH) -> list[Text]:
+def read_texts(frame: np.ndarray, ocr: Callable, width: int = OCR_WIDTH) -> list[Text]:
+    """Every piece of text OCR finds on the frame, read at `width` pixels wide."""
     h, w = frame.shape[:2]
     scale = width / w
     small = cv2.resize(frame, None, fx=scale, fy=scale,
@@ -221,11 +231,13 @@ def close_glyph_score(frame: np.ndarray, box) -> float:
 CLOSE_SCORE = 0.57
 
 
-def is_close_glyph(frame: np.ndarray, box) -> bool:
+def is_close_glyph(frame: np.ndarray, box: tuple[float, float, float, float]) -> bool:
+    """True when the disc in `box` carries a close X."""
     return close_glyph_score(frame, box) >= CLOSE_SCORE
 
 
-def perceive(frame: np.ndarray, ocr) -> Percept:
+def perceive(frame: np.ndarray, ocr: Callable) -> Percept:
+    """Read a frame from scratch: text by OCR, controls by shape."""
     h, w = frame.shape[:2]
     texts = read_texts(frame, ocr)
     percept = Percept(width=w, height=h, texts=texts, title=find_title(texts))
@@ -267,10 +279,18 @@ def perceive(frame: np.ndarray, ocr) -> Percept:
     return percept
 
 
+# A notice handing something over, read with its spaces dropped.
+GIFT_WORDS = ("yougot", "received!", "loginstamp")
+# Words that make a notice a question about spending: never pressed through.
+SPEND_WORDS = ("purchase", "buy", "?")
+PILL_ASPECT = 2.0
+
+
 def reward_ok(frame: np.ndarray, ocr) -> tuple[float, float] | None:
     """Where to press OK on a notice that only informs -- "<cat> unlocked! You
-    got N Cat Food!", or Storage's "All of the possible Cat Capsules have been
-    used." -- only once its text says so; None otherwise.
+    got N Cat Food!", Storage's "All of the possible Cat Capsules have been
+    used.", or a log-in bonus's "You got an item! 1 Cat Ticket received!" --
+    only once its text says so; None otherwise.
 
     The popup leaves the screen behind it readable, so the screen still reads
     as whatever it was -- it is found by its words. Its OK sits right above
@@ -289,6 +309,19 @@ def reward_ok(frame: np.ndarray, ocr) -> tuple[float, float] | None:
     # around the screen.
     message = [t for t in texts if ("unlocked" in flat(t) and "yougot" in flat(t))
                or "havebeenused" in flat(t)]
+    # A log-in bonus hands over an item, one notice after another. Its Ok is
+    # a gold pill below its words; an OK read by OCR there can be the dimmed
+    # one of the notice behind, which does not take a tap.
+    gift = [t for t in texts if any(w in flat(t) for w in GIFT_WORDS) and 0.3 < t.centre[0] < 0.7]
+    if not message and gift and not any(w in flat(t) for t in texts for w in SPEND_WORDS):
+        # An Ok is a wide pill; the gold cards a stamp board or an item
+        # shows are square.
+        h, w = frame.shape[:2]
+        below = max(t.box[3] for t in gift)
+        pills = [b for b in find_buttons(frame) if below < b.top and b.y < 0.82
+                 and b.w * w >= PILL_ASPECT * b.h * h]
+        best = min(pills, key=lambda b: b.top, default=None)
+        return (best.x, best.y) if best else None
     if not message:
         return None
     ok = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("ok", "0k")), None)

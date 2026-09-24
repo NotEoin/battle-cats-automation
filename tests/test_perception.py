@@ -192,3 +192,48 @@ def test_an_unlock_notice_is_answered_at_its_own_ok(monkeypatch):
     frame = np.zeros((1170, 2532, 3), np.uint8)
     x, y = perception.reward_ok(frame, None)
     assert abs(x - 0.615) < 0.01 and abs(y - 0.615) < 0.01
+
+
+# -- log-in bonus notices ---------------------------------------------------------------
+
+def _gold(frame, box):
+    """A gold block over the landscape fractions `box`."""
+    h, w = frame.shape[:2]
+    cv2.rectangle(frame, (round(box[0] * w), round(box[1] * h)), (round(box[2] * w), round(box[3] * h)), GOLD, -1)
+
+
+def _gift(monkeypatch, texts, blocks):
+    from bcgacha import perception
+
+    monkeypatch.setattr(perception, "read_texts", lambda frame, ocr: [
+        perception.Text(t, box, 0.9) for t, box in texts])
+    frame = np.full((1170, 2532, 3), BACKDROP, np.uint8)
+    for box in blocks:
+        _gold(frame, box)
+    return perception.reward_ok(frame, None)
+
+
+def test_a_login_item_notice_is_answered_at_its_bright_ok(monkeypatch):
+    """The OK OCR reads is the dimmed one of the notice behind; the notice's
+    own Ok is the gold pill under its words."""
+    point = _gift(monkeypatch,
+                  [("You got an item!", (0.425, 0.49, 0.574, 0.538)),
+                   ("1CatTicketreceived!", (0.402, 0.548, 0.599, 0.585)),
+                   ("OK", (0.479, 0.751, 0.518, 0.823))],
+                  [(0.596, 0.69, 0.703, 0.78)])
+    assert point == pytest.approx((0.65, 0.735), abs=0.01)
+
+
+def test_a_login_stamp_board_is_closed_at_its_ok_not_a_day_card(monkeypatch):
+    """The gold day cards under the words are square; the Ok is a wide pill."""
+    point = _gift(monkeypatch,
+                  [("Fate/stay night[HF] Login Stamps", (0.078, 0.14, 0.55, 0.21))],
+                  [(0.12, 0.37, 0.24, 0.64), (0.28, 0.37, 0.40, 0.64), (0.37, 0.73, 0.63, 0.83)])
+    assert point == pytest.approx((0.5, 0.78), abs=0.01)
+
+
+def test_a_question_is_never_taken_for_a_gift(monkeypatch):
+    point = _gift(monkeypatch,
+                  [("You got an item! Use 150 Cat Food?", (0.3, 0.49, 0.7, 0.54))],
+                  [(0.37, 0.70, 0.63, 0.80)])
+    assert point is None

@@ -783,6 +783,19 @@ class Navigator:
             last = (name, frame)
         return None, frame
 
+    def _clear_notice(self, frame: np.ndarray, log=None) -> bool:
+        """Press Ok on a notice that only hands something over -- an unlock
+        reward, a log-in bonus -- found by its words. True if one was."""
+        from .perception import reward_ok
+
+        ok = reward_ok(frame, self.graph.ocr)
+        if ok is None:
+            return False
+        if log:
+            log("    a reward notice in the way: Ok")
+        self._tap(*ok, 1.2)
+        return True
+
     def _answer_dialog(self, frame: np.ndarray, percept=None, log=None) -> bool:
         """Say No to a question standing in the way -- above all "use Cat
         Food?". Found by reading it, not by a captured picture of one."""
@@ -952,7 +965,7 @@ class Navigator:
                     landed, after = self._settle(None, 1.0)
                     settled = after if landed is not None else None
                     continue
-                if self._answer_dialog(frame, rec.percept, log):
+                if self._answer_dialog(frame, rec.percept, log) or self._clear_notice(frame, log):
                     continue
                 # Not on the map. Backing out is almost always right: nearly
                 # every screen has a back arrow in the same corner, and the
@@ -996,6 +1009,10 @@ class Navigator:
                         log(f"    {step.label!r} did not take; trying another way")
                 continue
             point = self._resolve(here, step, frame, log=log)
+            if point is None and self._clear_notice(frame, log):
+                # A notice over the screen hid the control -- and can pass
+                # for another screen, as a log-in bonus over the Cat Base did.
+                continue
             if point is None:
                 barren.add(key)
                 if log:
@@ -1009,14 +1026,8 @@ class Navigator:
             # Watched and never left: a last, closer look before the tap is blamed.
             if self._unmoved(here, frame, wait=0.5):
                 # An unlock reward popup holds every tap until its OK.
-                from .perception import reward_ok
-
                 now = self.session.screenshot()
-                ok = reward_ok(now, self.graph.ocr)
-                if ok is not None:
-                    if log:
-                        log("    unlock reward popup in the way: OK")
-                    self._tap(*ok, 1.0)
+                if self._clear_notice(now, log):
                     continue
                 # A question left standing over a screen the map knows --
                 # Use all's, when its answer was missed -- holds every tap.
