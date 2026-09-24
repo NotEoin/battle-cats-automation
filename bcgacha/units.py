@@ -51,9 +51,13 @@ class Unit:
     def obtainable(self) -> bool:
         return bool(self.events) or self.platinum
 
-    def where(self) -> str:
+    def where(self, most: int | None = None) -> str:
         found = list(self.events) + (["Platinum"] if self.platinum else [])
-        return ", ".join(found) if found else "not in any live event"
+        if not found:
+            return "not in any live event"
+        if most and len(found) > most:
+            return ", ".join(found[:most]) + f" and {len(found) - most} more"
+        return ", ".join(found)
 
     def to_json(self) -> dict:
         return dict(id=self.id, name=self.name, rarity=self.rarity, rarity_name=self.rarity_name,
@@ -65,7 +69,7 @@ class Unit:
         owned = {True: "owned", False: "not owned", None: "owned ?"}[self.owned]
         also = f"  (as {self.matched!r})" if self.matched and self.matched != self.name else ""
         return (f"{self.name:<30} {self.rarity_name:<11} tier {self.tier:<4} {owned:<10} "
-                f"{self.where()}{also}")
+                f"{self.where(2)}{also}")
 
 
 class Catalogue:
@@ -103,7 +107,8 @@ class Catalogue:
         platinum = any(e.platinum and cat_id in (e.banner.slots.get(UBER) or []) for e in self.events)
         return Unit(id=cat_id, name=self.dataset.cat_name(cat_id), rarity=self.dataset.rarity_of(cat_id),
                     forms=forms, matched=matched, score=score,
-                    tier=self.tiers.tier_of(cat_id) if self.tiers else "?",
+                    tier=(self.tiers.tier_of(cat_id) if self.tiers else "?")
+                    if self.dataset.rarity_of(cat_id) >= UBER else "-",
                     owned=None if self.owned is None else cat_id in self.owned,
                     events=events, platinum=platinum)
 

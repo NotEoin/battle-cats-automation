@@ -353,10 +353,10 @@ def test_platinum_banner_is_the_newest_snapshot():
     """
     import datetime as dt
 
-    from bcgacha.cli import _live_banners
+    from bcgacha import events as live
 
     ds = load()
-    _normal, platinum = _live_banners(ds, dt.date(2026, 9, 22))
+    platinum = next(e.banner for e in live.live_events(ds, dt.date(2026, 9, 22)) if e.platinum)
     assert platinum is not None
     others = [b for b in ds.live_banners(dt.date(2026, 9, 22)) if b.uber == 10000]
     assert len(others) > 1, "test is meaningless without several snapshots"

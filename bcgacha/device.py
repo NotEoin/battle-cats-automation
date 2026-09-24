@@ -1,4 +1,4 @@
-"""Talk to a USB-attached iPhone: read the screen, and tap it.
+"""Talk to a USB-attached iPhone or iPad: read the screen, and tap it.
 
 Reading the screen works from iOS 17 upwards once Developer Mode is on and the
 Developer Disk Image is mounted; on iOS 17.4+ the tunnel runs in userspace, so
@@ -6,20 +6,22 @@ none of this needs root.
 
 Tapping is the half that is version-gated.  Apple's CoreDevice remote-control
 feature, which is what supplies synthetic touches at absolute coordinates,
-refuses with error 9021 below iOS 27.  `capabilities()` reports that up front
-rather than letting a bot discover it mid-run.
+refuses with error 9021 below iOS 27 (iPadOS 27 on an iPad).  `capabilities()`
+reports that up front rather than letting a bot discover it mid-run.
 """
 
 from __future__ import annotations
 
 import json
 import re
-import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-PMD3 = str(Path(__file__).resolve().parent.parent / ".venv" / "bin" / "pymobiledevice3")
+# pymobiledevice3 run by the interpreter running bcgacha, so it is always the
+# copy installed beside it, on any platform and in any kind of install.
+PMD3 = [sys.executable, "-m", "pymobiledevice3"]
 
 # CoreDevice's refusal when the feature is not on this OS version.
 REMOTE_CONTROL_UNSUPPORTED = 9021
@@ -27,13 +29,24 @@ REMOTE_CONTROL_UNSUPPORTED = 9021
 # HID coordinates are normalised across the screen, independent of resolution.
 HID_MAX = 65535
 
+# The long side over the short side of every screen bcgacha has been run on:
+# 2532x1170, an iPhone 16e. Positions that are not learned were measured
+# there, so another shape may need them checked.
+TESTED_ASPECTS = (2532 / 1170,)
+ASPECT_TOLERANCE = 0.02
+
+# Seconds to wait for usbmuxd to list what is plugged in.
+LIST_TIMEOUT = 10
+
 
 class DeviceError(RuntimeError):
-    pass
+    """The phone is missing, refused, or cannot do what was asked."""
 
 
 @dataclass
 class Capabilities:
+    """What the attached phone supports, and why tapping is blocked if it is."""
+
     product_type: str
     ios_version: str
     developer_mode: bool
@@ -45,11 +58,9 @@ class Capabilities:
 
 
 def _run(args: list[str], timeout: int = 120) -> subprocess.CompletedProcess:
-    exe = PMD3 if Path(PMD3).exists() else shutil.which("pymobiledevice3")
-    if not exe:
-        raise DeviceError("pymobiledevice3 not found")
     return subprocess.run(
-        [exe, *args], capture_output=True, text=True, timeout=timeout
+        [*PMD3, *args], capture_output=True, text=True, encoding="utf-8",
+        errors="replace", timeout=timeout,
     )
 
 
@@ -66,7 +77,21 @@ def _json_tail(text: str):
     return json.loads(text[start:])
 
 
+def attached() -> list[str]:
+    """Serials of the iPhones and iPads plugged in by USB, found in a moment."""
+    import asyncio
+
+    from pymobiledevice3.usbmux import list_devices
+
+    try:
+        devices = asyncio.run(asyncio.wait_for(list_devices(), LIST_TIMEOUT))
+    except Exception:  # no usbmuxd, or no answer from it, means nothing can be reached
+        return []
+    return [d.serial for d in devices if d.connection_type == "USB"]
+
+
 def lockdown_info() -> dict:
+    """The phone's lockdown record: model, OS version and the rest."""
     proc = _run(["lockdown", "info"])
     if proc.returncode != 0 and not proc.stdout:
         raise DeviceError(f"no device: {_strip_ansi(proc.stderr)[:300]}")
@@ -74,15 +99,18 @@ def lockdown_info() -> dict:
 
 
 def developer_mode_enabled() -> bool:
+    """True when Developer Mode is on."""
     return "true" in _strip_ansi(_run(["amfi", "developer-mode-status"]).stdout).lower()
 
 
 def ddi_mounted() -> bool:
+    """True when the Developer Disk Image is mounted."""
     out = _strip_ansi(_run(["mounter", "list"]).stdout)
     return "ImageSignature" in out or "Personalized" in out
 
 
 def mount_ddi() -> None:
+    """Mount the Developer Disk Image, which a restart of the phone takes off."""
     proc = _run(["mounter", "auto-mount"], timeout=600)
     combined = _strip_ansi(proc.stdout + proc.stderr)
     if "mounted successfully" not in combined and "already mounted" not in combined.lower():
@@ -90,16 +118,35 @@ def mount_ddi() -> None:
 
 
 def display_info() -> dict:
+    """CoreDevice's description of the phone's displays."""
     return _json_tail(_run(["developer", "core-device", "get-display-info"]).stdout)
 
 
 def native_size() -> tuple[int, int] | None:
+    """The primary display's native pixel size, portrait, or None if unsaid."""
     for display in display_info().get("displays", []):
         if display.get("primary"):
             size = display.get("nativeSize") or []
             if len(size) == 2 and size[0]:
                 return int(size[0]), int(size[1])
     return None
+
+
+def reveal_developer_mode() -> None:
+    """Make the Developer Mode switch appear in the device's Settings.
+
+    iOS hides it until a developer tool has connected; this changes no
+    setting itself.
+    """
+    proc = _run(["amfi", "reveal-developer-mode"])
+    if proc.returncode != 0:
+        raise DeviceError(f"could not reveal Developer Mode: {_strip_ansi(proc.stderr)[-300:]}")
+
+
+def tested_shape(width: int, height: int) -> bool:
+    """True when a screen of this size has the shape bcgacha was tested on."""
+    aspect = max(width, height) / min(width, height)
+    return any(abs(aspect - tested) <= ASPECT_TOLERANCE for tested in TESTED_ASPECTS)
 
 
 def screenshot(dest: Path) -> Path:
@@ -117,7 +164,7 @@ def screenshot(dest: Path) -> Path:
 def tap(x: int, y: int) -> None:
     """Tap at normalised coordinates (0..65535 on both axes).
 
-    Raises DeviceError carrying the OS requirement when the device predates the
+    Raises `DeviceError` carrying the OS requirement when the device predates the
     CoreDevice remote-control feature.
     """
     proc = _run(
@@ -139,7 +186,8 @@ def tap_points(x: float, y: float, width: int, height: int) -> None:
     tap(round(x / width * HID_MAX), round(y / height * HID_MAX))
 
 
-def _version_tuple(version: str) -> tuple[int, ...]:
+def version_tuple(version: str) -> tuple[int, ...]:
+    """`"27.0.1"` as `(27, 0, 1)`, stopping at the first part that is not a number."""
     out = []
     for part in version.split("."):
         try:
@@ -165,7 +213,7 @@ def capabilities() -> Capabilities:
             reason = f"display info unavailable: {exc}"
         # Decide by OS version rather than firing a probe tap: a real tap on a
         # live screen is not something a capability check should be doing.
-        if _version_tuple(info.get("ProductVersion", "0")) >= (27,):
+        if version_tuple(info.get("ProductVersion", "0")) >= (27,):
             can_tap = True
         else:
             reason = (

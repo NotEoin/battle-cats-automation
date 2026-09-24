@@ -1,28 +1,26 @@
-#!/usr/bin/env python3
-"""Watch what the bot sees, and send it anywhere on the map.
+"""The live page: what the bot sees and does, and the one place to drive it from.
 
 Serves a local page showing the live iPhone screen with what recognition finds
-on it: the screen it settles on and the candidates it weighed, the title it
-read, the controls it has learned for this device and the ones a full look
-perceives, the Cat Base door it compares, and the tap points of the
-transitions leaving the current screen. Everything learned is logged as it is
-learned. Under it sits the UI map; clicking a screen there runs
-Navigator.goto() to it, and Stop aborts the walk before its next tap.
+on it -- the screen it settles on and the candidates it weighed, the title it
+read, the controls it knows, the Cat Base door, the taps leaving the screen --
+beside everything a run does: its tasks, the goal and the route to it, the run
+played out on paper, every draw and how it was checked, the normal capsules,
+the Uncanny Legends, and the log. Runs are started from the page with the same
+choices the command line takes (jobs.Request); `bcgacha run` serves this page
+too, so a run started either way can be watched and stopped from the browser.
 
-    python scripts/debug_ui.py                     # then open http://127.0.0.1:8765
-    python scripts/debug_ui.py --replay captures/  # no device: cycle saved frames
+    bcgacha ui                          # then open http://127.0.0.1:8765
+    bcgacha ui --replay captures/       # no device: cycle saved frames
 
-One device session is shared. While a walk runs the page shows the frames the
-navigator itself takes rather than competing with it for the screen. Replayed
+One device session is shared. While a job runs the page shows the frames the
+job itself takes rather than competing with it for the screen. Replayed
 frames learn into a fresh temporary folder unless --profiles says otherwise,
 never into state/devices, where a running bot keeps what it has learned.
 """
 from __future__ import annotations
 
-import argparse
 import json
 import math
-import sys
 import tempfile
 import threading
 import time
@@ -35,23 +33,18 @@ from urllib.parse import parse_qs, urlparse
 import cv2
 import numpy as np
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent))
-sys.path.insert(0, str(HERE))
+from . import bases, carousel, jobs, mapdraw, safety, vision
+from .pipeline import Stopped
+from .profile import DEVICES_DIR, MARK_PAD
+from .uigraph import Navigator, NoRoute, UIGraph, find_buttons
 
-from bcgacha import bases, carousel, safety, vision  # noqa: E402
-from bcgacha.profile import DEVICES_DIR, MARK_PAD  # noqa: E402
-from bcgacha.uigraph import Navigator, NoRoute, UIGraph, find_buttons  # noqa: E402
-import draw_ui_graph  # noqa: E402
-
-PAGE = HERE / "debug_ui.html"
+PAGE = Path(__file__).resolve().parent / "web" / "live.html"
 VIEW_WIDTH = 1280           # frames are downscaled to this for the browser
 KEEP_SNAPSHOTS = 8
 FRAME_SUFFIXES = {".png", ".jpg", ".jpeg"}
-
-
-class Stopped(RuntimeError):
-    pass
+LOG_LINES = 1500
+# The saved state is summarised again at most this often, in seconds.
+STATUS_EVERY = 20.0
 
 
 class SharedSession:
@@ -81,7 +74,7 @@ class SharedSession:
 
     def _guard(self) -> None:
         if self.stop_requested.is_set():
-            raise Stopped("stopped from the debug page")
+            raise Stopped("stopped by request")
 
     def tap(self, *args, **kwargs):
         self._guard()
@@ -128,19 +121,27 @@ class ReplaySession:
     swipe = drag = tap
 
 
-class Debugger:
-    def __init__(self, session, replay: bool, interval: float, profile_root: Path | None = None):
+class LiveView:
+    def __init__(self, session, replay: bool, interval: float, profile_root: Path | None = None,
+                 echo=None, speed: float = 1.0):
         self.shared = SharedSession(session)
         self.replay = replay
         self.interval = interval
+        self.speed = speed
+        # A Console the job's log and sections are mirrored to (bcgacha run).
+        self.echo = echo
         # Kept apart so a good frame cannot clear an analysis failure, nor a
         # good analysis a dropped tunnel.
         self.grab_error: str | None = None
         self.analysis_error: str | None = None
         self._failures: set = set()                 # analysis tracebacks already logged
-        self.log_lines: deque[str] = deque(maxlen=200)
-        # `job` names a background scan; a walk has a `target` instead.
-        self.nav = dict(running=False, target=None, job=None, result=None)
+        self.log_lines: deque[str] = deque(maxlen=LOG_LINES)
+        self.log_seq = 0
+        # What drives the phone now, if anything: a run, a walk to a screen.
+        self.job = dict(running=False, kind=None, title=None, target=None, result=None, ok=None,
+                        started=None, ended=None, request=None)
+        self.history: deque = deque(maxlen=30)      # runs finished since the page started
+        self.done = threading.Event()               # set whenever a job ends
         self.options = dict(full_look=False)
         # Every graph built here learns under this root into these profiles,
         # so the page, the navigator and a scan share one set of learning.
@@ -158,13 +159,22 @@ class Debugger:
         self._to_learn: np.ndarray | None = None    # the newest frame analysis could not name
         self._quit = threading.Event()
         self.map_version = 0
-        # What the pipeline has found so far, by section, for the page.
+        # What the running job has found so far, by section, for the page.
         self.pipeline: dict = {}
         self.pipeline_version = 0
-        self.rolls: deque = deque(maxlen=400)
+        self.rolls: deque = deque(maxlen=2000)
+        self.capsules: deque = deque(maxlen=400)
         self.owned_entries: deque = deque(maxlen=40)
+        self._status: dict | None = None
+        self._status_at = 0.0
+        self._catalogue = None
         self._set_graph(self._load())
         self.log(f"learning device profiles into {profile_root or DEVICES_DIR}")
+
+    @property
+    def nav(self) -> dict:
+        """The job, as the frame loops ask after it."""
+        return self.job
 
     def _load(self, carousels: bool = True, ocr=None) -> UIGraph:
         """The map, built as every graph here must be: under --profiles, into
@@ -186,7 +196,16 @@ class Debugger:
             self.page = build_page(self.map).encode()
 
     def log(self, line: str) -> None:
-        self.log_lines.append(f"{time.strftime('%H:%M:%S')} {line}")
+        with self._lock:
+            for part in str(line).split("\n"):
+                self.log_lines.append(f"{time.strftime('%H:%M:%S')} {part}")
+                self.log_seq += 1
+
+    def job_log(self, line: str) -> None:
+        """A line from a job: on the page, and on the terminal that started it."""
+        self.log(line)
+        if self.echo:
+            self.echo.log(line)
 
     # -- frames -----------------------------------------------------------------
 
@@ -391,21 +410,23 @@ class Debugger:
     def state(self) -> dict:
         with self._lock:
             snap = self._snaps.get(self._latest)
+            log = list(self.log_lines)[-400:]
         view = dict(snap) if snap else None
         route = None
-        if view and view["here"] and self.nav["target"] and view["here"] != self.nav["target"]:
+        target = self.job["target"] if self.job["kind"] == "goto" else None
+        if view and view["here"] and target and view["here"] != target:
             try:
                 index = {id(t): i for i, t in enumerate(self.graph.transitions)}
-                route = [index[id(t)] for t in self.graph.route(view["here"], self.nav["target"])]
+                route = [index[id(t)] for t in self.graph.route(view["here"], target)]
             except NoRoute:
                 route = None
         errors = [e for e in (self.grab_error, self.analysis_error) if e]
         return dict(mode="replay" if self.replay else "device", error="; ".join(errors) or None,
                     map_version=self.map_version, options=self.options,
                     pipeline_version=self.pipeline_version,
-                    now=time.time(), view=view, route=route, nav=dict(self.nav),
+                    now=time.time(), view=view, route=route, job=dict(self.job), nav=dict(self.job),
                     live=dict(version=self._live[0], taken_at=self._live[1]) if self._live else None,
-                    log=list(self.log_lines)[-80:])
+                    log=log, log_seq=self.log_seq)
 
     def jpeg(self, version: int | None) -> bytes | None:
         with self._lock:
@@ -414,7 +435,51 @@ class Debugger:
                 return live[2]
             return self._recent.get(version)
 
-    # -- navigation --------------------------------------------------------------
+    # -- what is saved ----------------------------------------------------------
+
+    def status(self, fresh: bool = False) -> dict:
+        """The saved state and today's events, summarised (jobs.status)."""
+        if fresh or self._status is None or time.time() - self._status_at > STATUS_EVERY:
+            try:
+                status = jobs.status()
+            except Exception as exc:
+                status = dict(error=f"{type(exc).__name__}: {exc}", next=[])
+            status["phone"] = dict(ok=not self.replay and self.grab_error is None,
+                                   mode="replay" if self.replay else "device", error=self.grab_error)
+            self._status, self._status_at = status, time.time()
+        return self._status
+
+    def search(self, query: str) -> list[dict]:
+        from . import units
+
+        if self._catalogue is None or time.time() - self._catalogue[1] > STATUS_EVERY:
+            self._catalogue = (units.load(), time.time())
+        return [u.to_json() for u in self._catalogue[0].search(query, limit=12)]
+
+    # -- jobs -------------------------------------------------------------------
+
+    def _busy(self) -> str:
+        return f"Busy: {self.job['title']}" if self.job["running"] else ""
+
+    def _claim(self, kind: str, title: str, target=None, request=None) -> tuple[bool, str]:
+        with self._lock:
+            if self.job["running"]:
+                return False, f"{self._busy()}. Stop it first."
+            self.job = dict(running=True, kind=kind, title=title, target=target, result=None, ok=None,
+                            started=time.time(), ended=None, request=request)
+        self.shared.stop_requested.clear()
+        self.done.clear()
+        return True, ""
+
+    def _release(self, result: str, ok: bool) -> None:
+        with self._lock:
+            self.job = dict(self.job, running=False, result=result, ok=ok, ended=time.time())
+            if self.job["kind"] == "run":
+                self.history.appendleft(dict(self.job))
+        self.shared.stop_requested.clear()
+        self._status = None
+        self._catalogue = None
+        self.done.set()
 
     def goto(self, dst: str) -> tuple[bool, str]:
         if self.replay:
@@ -424,17 +489,11 @@ class Debugger:
             return False, f"{dst!r} is not on the map."
         if screen.forbidden:
             return False, f"{dst} is off limits; the navigator never routes into it."
-        with self._lock:
-            if self.nav["running"]:
-                return False, f"{self._busy()}. Stop it first."
-            self.nav = dict(running=True, target=dst, job=None, result=None)
-        self.shared.stop_requested.clear()
+        ok, message = self._claim("goto", f"going to {dst}", target=dst)
+        if not ok:
+            return False, message
         threading.Thread(target=self._walk, args=(dst,), daemon=True).start()
         return True, f"Navigating to {dst}."
-
-    def _busy(self) -> str:
-        return (f"Busy {self.nav['job']}" if self.nav["job"]
-                else f"Already navigating to {self.nav['target']}")
 
     def _walk(self, dst: str) -> None:
         self.log(f"goto {dst}")
@@ -451,65 +510,73 @@ class Debugger:
             self.log(traceback.format_exc(limit=4).rstrip())
         finally:
             self.log(f"goto {dst}: {result}")
-            with self._lock:
-                self.nav = dict(running=False, target=dst, job=None, result=result)
-            self.shared.stop_requested.clear()
+            self._release(result, result == "arrived")
 
-    def scan(self, rescan: bool = True) -> tuple[bool, str]:
-        """In the background, read this save's sagas and chapters -- again if
-        `rescan`, else only if none are saved -- and learn any Cat Base
-        backgrounds this device lacks. The map redraws as it grows."""
-        if self.replay:
-            return False, "Replay mode has no device, so it cannot scan."
-        scanning = rescan or carousel.load_catalogue() is None
-        job = ("scanning the saga and chapter carousels" if scanning
-               else "learning this device's Cat Base backgrounds")
-        with self._lock:
-            if self.nav["running"]:
-                return False, f"{self._busy()}. Stop it first."
-            self.nav = dict(running=True, target=None, job=job, result=None)
-        self.shared.stop_requested.clear()
-        threading.Thread(target=self._scan, args=(rescan, scanning), daemon=True).start()
-        return True, f"{job[0].upper()}{job[1:]}."
-
-    def _scan(self, rescan: bool, scanning: bool) -> None:
-        job, result = self.nav["job"], "failed"
-
-        def grow(catalogue: dict) -> None:
-            # Every saga and chapter joins the map the moment it is read.
-            graph = self._load(carousels=False)
-            carousel.extend(graph, catalogue)
-            self._set_graph(graph)
-
+    def submit(self, raw: dict | jobs.Request) -> tuple[bool, str]:
+        """Start a run in the background: whatever the command line can ask
+        for, as a jobs.Request."""
         try:
-            scan_graph = self._load(carousels=False, ocr=self.graph._ocr)
-            carousel.ensure(self.shared, rescan=rescan, log=self.log, progress=grow,
-                            graph=scan_graph)
-            if scanning:
-                self._set_graph(self._load())
-                result = "done; the map now has this save's sagas and chapters"
-            else:
-                result = "done"
-        except Stopped:
-            result = "stopped"
+            request = raw if isinstance(raw, jobs.Request) else jobs.Request.from_json(raw)
+        except (TypeError, ValueError) as exc:
+            return False, f"Bad request: {exc}"
+        if self.replay and (request.spends or request.rescan_map or request.rescan_owned or request.storage):
+            return False, "Replay mode has no device: only a plan can run."
+        title = "; ".join(request.summary())
+        ok, message = self._claim("run", title, request=dict(request.to_json(), command=request.command(),
+                                                             summary=request.summary()))
+        if not ok:
+            return False, message
+        with self._lock:
+            self.pipeline, self.pipeline_version = {}, self.pipeline_version + 1
+            self.rolls.clear()
+            self.capsules.clear()
+            self.owned_entries.clear()
+        threading.Thread(target=self._run, args=(request,), daemon=True).start()
+        return True, "Started: " + title
+
+    def _run(self, request: jobs.Request) -> None:
+        from . import pipeline as P
+        from .data import load
+        from .timing import Humaniser
+
+        result, ok = "failed", False
+        try:
+            graph = self._load()
+            ctx = P.Context(session=None if self.replay else self.shared, graph=graph, ocr=graph.ocr,
+                            dataset=load(), log=self.job_log, publish=self.publish,
+                            should_stop=self.shared.stop_requested.is_set,
+                            human=Humaniser(scale=self.speed))
+
+            def grow(catalogue: dict) -> None:
+                # Every saga and chapter joins the drawn map the moment it is read.
+                g = self._load(carousels=False)
+                carousel.extend(g, catalogue)
+                self._set_graph(g)
+
+            ctx.map_progress = grow
+
+            def reload():
+                g = self._load()
+                self._set_graph(g)
+                return g
+
+            ok, result = jobs.run(ctx, request, reload=reload)
         except Exception as exc:
             result = f"error: {exc}"
-            self.log(traceback.format_exc(limit=4).rstrip())
+            self.job_log(traceback.format_exc(limit=6).rstrip())
         finally:
-            self.log(f"{job}: {result}")
-            with self._lock:
-                self.nav = dict(running=False, target=None, job=job, result=result)
-            self.shared.stop_requested.clear()
+            self.job_log(f"run {'finished' if ok else 'ended'}: {result}")
+            self._release(result, ok)
 
-    def catch_up(self, rescan: bool = False) -> None:
-        """Once the device sends a frame, start a scan if this save's carousels
-        are not saved (or `rescan`), or if the device lacks any Cat Base
-        background they lead to: a new phone, or a chapter unlocked since."""
-        threading.Thread(target=self._catch_up, args=(rescan,), daemon=True).start()
+    def catch_up(self) -> None:
+        """Once the device sends a frame, learn this save's map if it is not
+        saved, or any Cat Base background the device lacks: a new phone, or
+        a chapter unlocked since."""
+        threading.Thread(target=self._catch_up, daemon=True).start()
 
-    def _catch_up(self, rescan: bool) -> None:
+    def _catch_up(self) -> None:
         try:
-            catalogue = None if rescan else carousel.load_catalogue()
+            catalogue = carousel.load_catalogue()
             if catalogue is not None:
                 frame = None
                 while frame is None and not self._quit.is_set():
@@ -521,142 +588,42 @@ class Debugger:
                     return
                 self.log(f"this device has yet to learn {len(missing)} Cat Base "
                          f"background{'s' if len(missing) != 1 else ''}")
-            ok, message = self.scan(rescan=rescan)
+            ok, message = self.submit(jobs.Request(only=["map"]))
             if not ok:
-                self.log(f"startup scan not run: {message}")
+                self.log(f"startup map learning not run: {message}")
         except Exception:
             self.log(traceback.format_exc(limit=4).rstrip())
 
-    # -- the pipeline -------------------------------------------------------------
+    # -- what a job publishes -------------------------------------------------------
 
     def publish(self, section: str, payload) -> None:
         with self._lock:
             if section == "roll":
                 self.rolls.append(payload)
+            elif section == "capsule":
+                self.capsules.append(payload)
             elif section == "owned_entry":
                 self.owned_entries.append(payload)
             else:
                 self.pipeline[section] = payload
             self.pipeline_version += 1
+        if self.echo:
+            self.echo.publish(section, payload)
 
     def pipeline_state(self) -> dict:
         with self._lock:
             return dict(version=self.pipeline_version, sections=dict(self.pipeline),
-                        rolls=list(self.rolls)[-80:], owned_entries=list(self.owned_entries)[-12:])
-
-    STAGES = ("graph", "storage", "owned", "events", "seed", "plan", "run", "legends")
-
-    def run_pipeline(self, stages: list[str], options: dict) -> tuple[bool, str]:
-        """Run pipeline stages in order, in the background, on the one device session."""
-        if self.replay:
-            return False, "Replay mode has no device."
-        stages = [st for st in self.STAGES if st in stages]
-        if not stages:
-            return False, "No stages named."
-        with self._lock:
-            if self.nav["running"]:
-                return False, f"{self._busy()}. Stop it first."
-            self.nav = dict(running=True, target=None, job=f"pipeline: {stages[0]}", result=None)
-        self.shared.stop_requested.clear()
-        threading.Thread(target=self._pipeline, args=(stages, options), daemon=True).start()
-        return True, f"Running {', '.join(stages)}."
-
-    def _pipeline(self, stages: list[str], options: dict) -> None:
-        from bcgacha import events as live
-        from bcgacha import pipeline as P
-        from bcgacha.catindex import OwnedIndex
-        from bcgacha.data import load
-
-        result = "failed"
-        try:
-            graph = self._load()
-            ctx = P.Context(session=self.shared, graph=graph, ocr=graph.ocr, dataset=load(),
-                            log=self.log, publish=self.publish,
-                            should_stop=self.shared.stop_requested.is_set)
-            owned = account = None
-            for stage in stages:
-                with self._lock:
-                    self.nav["job"] = f"pipeline: {stage}"
-                self.publish("stage", dict(name=stage, state="running"))
-                self.log(f"pipeline: {stage}")
-                if stage == "graph":
-                    P.stage_graph(ctx, reload=self._load)
-                    self._set_graph(self._load())
-                elif stage == "storage":
-                    # Use all: what the run drew joins the roster.
-                    if not P.drain_storage(ctx):
-                        raise RuntimeError("Cat Storage was not emptied")
-                    from bcgacha.state import STATE_PATH, Account
-
-                    if STATE_PATH.exists():
-                        account = Account.load()
-                        account.storage_used = getattr(ctx, "storage_left", 0)
-                        account.save()
-                elif stage == "legends":
-                    from bcgacha.legends import LegendRun
-
-                    self.publish("stage", dict(name="legends", state="playing"))
-                    LegendRun(ctx).run()
-                elif stage == "owned":
-                    owned = P.stage_owned(ctx, force=bool(options.get("rescan_owned")),
-                                          limit=options.get("owned_limit"))
-                elif stage == "events":
-                    P.stage_events(ctx, visit=True)
-                elif stage == "seed":
-                    account = P.stage_seed(ctx)
-                elif stage in ("plan", "run"):
-                    owned = owned or OwnedIndex.load()
-                    if not owned.complete:
-                        raise RuntimeError("no complete owned list: run the owned stage first")
-                    account = account or P.stage_seed(ctx)
-                    events = ctx.graph.events
-                    prefer = live.find(events, options.get("prefer", "Iron Legion"))
-                    # "Galaxy Gals, Iron Legion": only their units are wanted.
-                    names = [n.strip() for n in str(options.get("goal_events") or "").split(",") if n.strip()]
-                    goal_events = [live.find(events, n) for n in names]
-                    if None in goal_events:
-                        raise RuntimeError(f"no live event named {names[goal_events.index(None)]!r}")
-                    legends = bool(options.get("legends", True))
-                    # Counts given with the request win; else what the last run left.
-                    rare = int(options.get("rare") or account.tickets or 0)
-                    platinum = int(options.get("platinum") or account.platinum_tickets or 0)
-                    if not rare:
-                        raise RuntimeError("the rare ticket count is needed (options.rare)")
-                    self.publish("tickets", dict(rare=rare, platinum=platinum, source="given"))
-                    sim = P.simulate(ctx, account, owned.owned, events, rare, platinum, prefer,
-                                     goal_events, legends)
-                    self.publish("simulation", sim)
-                    planner, goal, tiers = P.build_plan(ctx, account, owned.owned, events, platinum, prefer,
-                                                        goal_events, legends)
-                    self.publish("goal", P.goal_json(goal, ctx.dataset, tiers, owned.owned, events))
-                    plan = planner.plan(account.seed, rolls=P.PLAN_ROLLS, index=account.index,
-                                        track=account.track, previous_cat=account.last_cat_id)
-                    self.publish("plan", P.plan_json(plan, ctx.dataset, events))
-                    if stage == "run":
-                        run = P.GoalRun(ctx, account, planner, goal, owned, events, tiers, rare, platinum)
-                        self.publish("stage", dict(name="run", state="rolling"))
-                        run.run()
-                self.publish("stage", dict(name=stage, state="done"))
-            result = "done"
-        except (Stopped, P.Stopped):
-            result = "stopped"
-        except Exception as exc:
-            result = f"error: {exc}"
-            self.log(traceback.format_exc(limit=6).rstrip())
-        finally:
-            self.log(f"pipeline: {result}")
-            with self._lock:
-                self.nav = dict(running=False, target=None, job="pipeline", result=result)
-            self.shared.stop_requested.clear()
+                        rolls=list(self.rolls), capsules=list(self.capsules)[-60:],
+                        owned_entries=list(self.owned_entries)[-12:], history=list(self.history))
 
     def touch(self, kind: str, body: dict) -> tuple[bool, str]:
         """One tap, swipe or drag by hand, at landscape screen fractions, while no
         job drives the phone: for looking round screens the map lacks."""
-        from bcgacha.layout import landscape_to_hid
+        from .layout import landscape_to_hid
 
         if self.replay:
             return False, "Replay mode has no device."
-        if self.nav["running"]:
+        if self.job["running"]:
             return False, f"{self._busy()}. Stop it first."
         try:
             if kind == "tap":
@@ -675,9 +642,9 @@ class Debugger:
         return True, kind
 
     def stop(self) -> None:
-        if self.nav["running"]:
+        if self.job["running"]:
             self.shared.stop_requested.set()
-            self.log("stop requested; the walk ends before its next tap")
+            self.log("stop requested: the job ends before its next tap")
 
 
 def screen_note(graph: UIGraph, name: str) -> str:
@@ -689,8 +656,8 @@ def screen_note(graph: UIGraph, name: str) -> str:
 
 def map_payload(graph: UIGraph, version: int) -> dict:
     """The drawn map and the data its scripts need, tagged with a version."""
-    drawing = draw_ui_graph.render_svg(graph)
-    data = draw_ui_graph.map_data(graph)
+    drawing = mapdraw.render_svg(graph)
+    data = mapdraw.map_data(graph)
     data["version"] = version
     return dict(version=version, svg=drawing.svg, data=data)
 
@@ -698,7 +665,7 @@ def map_payload(graph: UIGraph, version: int) -> dict:
 def build_page(payload: dict) -> str:
     page = PAGE.read_text()
     for key, value in {
-        "CSS": draw_ui_graph.CSS_FILE.read_text(),
+        "CSS": mapdraw.CSS_FILE.read_text(),
         "SVG": payload["svg"],
         "DATA": json.dumps(payload["data"], separators=(",", ":")).replace("</", "<\\/"),
     }.items():
@@ -706,7 +673,7 @@ def build_page(payload: dict) -> str:
     return page
 
 
-def make_handler(dbg: Debugger):
+def make_handler(view: LiveView):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_args) -> None:
             pass
@@ -724,29 +691,39 @@ def make_handler(dbg: Debugger):
 
         def do_GET(self) -> None:
             url = urlparse(self.path)
+            query = parse_qs(url.query)
             if url.path == "/":
-                self._send(200, dbg.page, "text/html; charset=utf-8")
+                self._send(200, view.page, "text/html; charset=utf-8")
             elif url.path == "/frame.jpg":
-                v = parse_qs(url.query).get("v", [None])[0]
-                body = dbg.jpeg(int(v) if v and v.isdigit() else None)
+                v = query.get("v", [None])[0]
+                body = view.jpeg(int(v) if v and v.isdigit() else None)
                 if body:
                     self._send(200, body, "image/jpeg")
                 else:
                     self._send(404, b"no frame yet", "text/plain")
             elif url.path == "/frame.png":
                 # The newest frame at full size, for looking at offline.
-                frame = dbg.shared.frame
+                frame = view.shared.frame
                 ok, png = cv2.imencode(".png", frame) if frame is not None else (False, None)
                 if ok:
                     self._send(200, png.tobytes(), "image/png")
                 else:
                     self._send(404, b"no frame yet", "text/plain")
             elif url.path == "/api/state":
-                self._json(200, dbg.state())
+                self._json(200, view.state())
             elif url.path == "/api/map":
-                self._json(200, dbg.map)
+                self._json(200, view.map)
             elif url.path == "/api/pipeline":
-                self._json(200, dbg.pipeline_state())
+                self._json(200, view.pipeline_state())
+            elif url.path == "/api/status":
+                self._json(200, view.status(fresh=bool(query.get("fresh"))))
+            elif url.path == "/api/search":
+                self._json(200, view.search(query.get("q", [""])[0]))
+            elif url.path == "/api/command":
+                # The command line for a request, as the form is filled in.
+                raw = json.loads(query.get("request", ["{}"])[0] or "{}")
+                req = jobs.Request.from_json(raw)
+                self._json(200, dict(command=req.command(), summary=req.summary(), tasks=req.tasks()))
             else:
                 self._send(404, b"not found", "text/plain")
 
@@ -758,81 +735,38 @@ def make_handler(dbg: Debugger):
             except json.JSONDecodeError:
                 body = {}
             if url.path == "/api/goto":
-                ok, message = dbg.goto(str(body.get("dst", "")))
+                ok, message = view.goto(str(body.get("dst", "")))
                 self._json(200 if ok else 409, dict(ok=ok, message=message))
-            elif url.path == "/api/pipeline":
-                ok, message = dbg.run_pipeline(list(body.get("stages") or []), dict(body.get("options") or {}))
-                self._json(200 if ok else 409, dict(ok=ok, message=message))
-            elif url.path == "/api/scan":
-                ok, message = dbg.scan()
+            elif url.path == "/api/run":
+                ok, message = view.submit(body)
                 self._json(200 if ok else 409, dict(ok=ok, message=message))
             elif url.path == "/api/options":
-                dbg.options.update({k: bool(v) for k, v in body.items() if k in dbg.options})
-                self._json(200, dict(ok=True, message="", options=dbg.options))
+                view.options.update({k: bool(v) for k, v in body.items() if k in view.options})
+                self._json(200, dict(ok=True, message="", options=view.options))
             elif url.path in ("/api/tap", "/api/drag", "/api/swipe"):
-                ok, message = dbg.touch(url.path[5:], body)
+                ok, message = view.touch(url.path[5:], body)
                 self._json(200 if ok else 409, dict(ok=ok, message=message))
             elif url.path == "/api/stop":
-                dbg.stop()
-                self._json(200, dict(ok=True, message="Stopping."))
+                view.stop()
+                self._json(200, dict(ok=True, message="Stopping before the next tap."))
             else:
                 self._send(404, b"not found", "text/plain")
 
     return Handler
 
 
-def serve(dbg: Debugger, host: str, port: int, rescan: bool = False) -> None:
-    dbg.start()
-    server = ThreadingHTTPServer((host, port), make_handler(dbg))
-    if not dbg.replay:
-        dbg.catch_up(rescan)
-    print(f"debug UI on http://{host}:{port}  ({'replay' if dbg.replay else 'device'}); "
-          f"learning device profiles into {dbg.profile_root or DEVICES_DIR}", file=sys.stderr)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        dbg.stop()
-        server.server_close()
+def serve(view: LiveView, host: str = "127.0.0.1", port: int = 8765) -> ThreadingHTTPServer:
+    """Start the frame loops and the page's server, in the background."""
+    view.start()
+    server = ThreadingHTTPServer((host, port), make_handler(view))
+    server.daemon_threads = True
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=8765)
-    ap.add_argument("--interval", type=float, default=0.3,
-                    help="pause between frames while idle, seconds (default 0.3)")
-    ap.add_argument("--replay", nargs="+", type=Path, metavar="PATH",
-                    help="PNG or JPEG frames, or folders of them, to cycle through "
-                         "instead of the device")
-    ap.add_argument("--serial", help="device serial, if more than one is attached")
-    ap.add_argument("--profiles", type=Path, default=None, metavar="DIR",
-                    help="learn device profiles here instead of state/devices; with "
-                         "--replay, a fresh temporary folder unless given "
-                         "(an empty folder shows what a fresh device learns)")
-    ap.add_argument("--rescan", action="store_true",
-                    help="read the saga and chapter carousels again once serving")
-    args = ap.parse_args()
-
-    if args.replay:
-        # Replayed frames learn as live ones do. Into state/devices that could
-        # overwrite what a bot running on the real device has learned.
-        profiles = args.profiles or Path(tempfile.mkdtemp(prefix="bcgacha-profiles-"))
-        serve(Debugger(ReplaySession(args.replay), True, max(args.interval, 1.5), profiles),
-              args.host, args.port)
-        return 0
-
-    from bcgacha.session import DeviceSession
-
-    with DeviceSession(args.serial) as session:
-        # This save's sagas and chapters, and any Cat Base backgrounds this
-        # device lacks, are learned in the background, so the page is up at
-        # once and shows the learning happen.
-        serve(Debugger(session, False, args.interval, args.profiles),
-              args.host, args.port, rescan=args.rescan)
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+def replay_view(paths: list[Path], interval: float, profiles: Path | None) -> LiveView:
+    """Saved frames in place of the phone. They learn as live ones do, so into
+    a fresh folder: into state/devices they could overwrite what a bot on the
+    real device has learned."""
+    profiles = profiles or Path(tempfile.mkdtemp(prefix="bcgacha-profiles-"))
+    return LiveView(ReplaySession(paths), True, max(interval, 1.5), profiles)

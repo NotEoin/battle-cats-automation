@@ -1,25 +1,60 @@
 [project]
 name = "bcgacha"
 version = "0.1.0"
-description = "Capsule automation for The Battle Cats on a USB-attached iPhone"
+description = "Capsule automation for The Battle Cats on a USB-attached iPhone or iPad"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "NotEoin" }]
 requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Environment :: Console",
+    "Topic :: Games/Entertainment",
+]
 dependencies = [
-    "numpy",
-    "PyYAML",
-    "httpx",
-    "Pillow",
-    "opencv-python-headless",
     "beautifulsoup4",
+    "httpx",
     "lxml",
+    "numpy",
+    "opencv-python",           # not -headless: the OCR package requires this one, and both install cv2
+    "platformdirs",
     "pymobiledevice3>=11.15",
+    "PyYAML",
+    "rapidfuzz",
+    "rapidocr_onnxruntime",
 ]
 
+[project.urls]
+Homepage = "https://github.com/NotEoin/battle-cats-automation"
+Issues = "https://github.com/NotEoin/battle-cats-automation/issues"
+
+[project.scripts]
+bcgacha = "bcgacha.cli:main"
+
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "ruff"]
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["bcgacha"]
+
+[tool.setuptools.package-data]
+bcgacha = ["web/*", "resources/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+# pyflakes and pycodestyle errors, import order, and non-ASCII text in code.
+select = ["E4", "E7", "E9", "F", "I", "RUF001", "RUF002", "RUF003", "PLC2401"]

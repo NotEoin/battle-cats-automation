@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Draw data/ui_graph.json: every screen, how it is recognised, and every way between.
+"""Draw the screen map: every screen, how it is recognised, and every way between.
 
 Screens are placed by hand so no two edges cross. A screen or transition the
 layout does not know about yet is still drawn -- screens in a strip along the
 bottom, transitions as straight lines -- and named on stderr, so the picture
 never silently drops part of the map. Give it a place in LAYOUT or EDGES below.
 
-    python scripts/draw_ui_graph.py                  # writes logs/ui_graph.html
-    python scripts/draw_ui_graph.py --out map.html
+    python -m bcgacha.mapdraw                  # writes logs/ui_graph.html
+    python -m bcgacha.mapdraw --out map.html
 
-scripts/debug_ui.py imports render_svg() to draw the same map under the live
-screen. Routes on the page are UIGraph.route() output, never re-implemented.
+The live page (liveview.py) draws the same map with render_svg() under the
+live screen. Routes on the page are UIGraph.route() output, never re-implemented.
 """
 from __future__ import annotations
 
@@ -18,20 +18,23 @@ import argparse
 import html
 import json
 import math
+import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import __version__
+from .paths import LOGS
+from .uigraph import GRAPH_FILE, NoRoute, Screen, UIGraph
+
 ROOT = Path(__file__).resolve().parent.parent
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT))
-
-from bcgacha.uigraph import NoRoute, UIGraph  # noqa: E402
-
-CSS_FILE = HERE / "ui_graph.css"
-PAGE_TEMPLATE = HERE / "ui_graph_page.html"
-DEFAULT_OUT = ROOT / "logs" / "ui_graph.html"
+# Seconds to wait for git, which only stamps the page with the map's last commit.
+GIT_TIMEOUT = 10
+WEB = Path(__file__).resolve().parent / "web"
+CSS_FILE = WEB / "map.css"
+PAGE_TEMPLATE = WEB / "map_page.html"
+DEFAULT_OUT = LOGS / "ui_graph.html"
 
 # -- layout -------------------------------------------------------------------
 
@@ -61,7 +64,7 @@ EVENT_TOP, EVENT_STEP, EVENT_H, EVENT_SPAN = 692, 38, 30, 114
 HUB = "cat_base"
 
 ZONES = [
-    (740, 386, 416, 171, "GAMATOTO · three states"),
+    (740, 386, 416, 171, "GAMATOTO \u00b7 three states"),
     (740, 583, 440, 594, "Capsule machines"),
 ]
 
@@ -83,6 +86,8 @@ ORDER = ["opening", "title", "settings", "saga_select", "base_select", "cat_base
 
 @dataclass
 class Edge:
+    """One drawn line and the transitions it stands for."""
+
     tids: list[int]
     pts: list[tuple[float, float]] | None = None
     label: str | None = None
@@ -388,19 +393,21 @@ def _clip(box, frm, to):
 
 # -- the drawing ----------------------------------------------------------------------
 
-def evidence_text(screen) -> str:
+def evidence_text(screen: Screen) -> str:
     """What else, besides its title, the screen is recognised by: text and shapes."""
     bits = list(screen.marks) + [f"not {m}" for m in screen.absent_marks]
     bits += [f"{shape} shape" for shape in screen.shapes]
-    text = " · ".join(bits) or ("title only" if screen.title else "nothing")
-    return f"off limits · {text}" if screen.forbidden else text
+    text = " \u00b7 ".join(bits) or ("title only" if screen.title else "nothing")
+    return f"off limits \u00b7 {text}" if screen.forbidden else text
 
 
-def title_text(screen) -> str:
-    return f"“{screen.title}”" if screen.title else "no title"
+def title_text(screen: Screen) -> str:
+    """The screen's title in quotes, or "no title"."""
+    return f"\u201c{screen.title}\u201d" if screen.title else "no title"
 
 
-def flags(name: str, screen) -> list[str]:
+def flags(name: str, screen: Screen) -> list[str]:
+    """Short notes on what is special about a screen: home, reactive, off limits."""
     out = []
     if name == "opening":
         out.append("first launch")
@@ -415,12 +422,15 @@ def flags(name: str, screen) -> list[str]:
 
 @dataclass
 class Drawing:
+    """The drawn map, the order its screens were placed in, and what did not fit."""
+
     svg: str
     order: list[str]
     warnings: list[str]
 
 
 def render_svg(graph: UIGraph, svg_id: str = "map") -> Drawing:
+    """Draw every screen and transition of `graph` as one SVG."""
     screens, trans = graph.screens, graph.transitions
     warnings: list[str] = []
 
@@ -552,7 +562,7 @@ def render_svg(graph: UIGraph, svg_id: str = "map") -> Drawing:
                     _text(ocr_cls, cx, y + 47, title_text(s), extra=f' data-max="{w - 10}"'),
                     _text("node-ev", cx, y + 61, evidence_text(s), extra=f' data-max="{w - 10}"'),
                     f'<text class="hub-note" x="{cx}" y="{mid}" text-anchor="middle" '
-                    f'transform="rotate(-90 {cx} {mid})">home · every screen routes back here</text>']
+                    f'transform="rotate(-90 {cx} {mid})">home \u00b7 every screen routes back here</text>']
         elif name in sizes:
             cy = y + h / 2
             if name.startswith("saga:"):
@@ -651,14 +661,16 @@ def map_data(graph: UIGraph) -> dict:
 # -- the standalone page -------------------------------------------------------------
 
 def _git(*args: str) -> str:
+    """What git says about the screen map, or "" outside a git checkout."""
     try:
         return subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True,
-                              text=True, check=True).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
+                              text=True, check=True, timeout=GIT_TIMEOUT).stdout.strip()
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return ""
 
 
 def build_page(graph: UIGraph) -> tuple[str, list[str]]:
+    """The standalone map page, and the warnings drawing it raised."""
     drawing = render_svg(graph)
     data = map_data(graph)
     data["order"] = drawing.order
@@ -673,32 +685,33 @@ def build_page(graph: UIGraph) -> tuple[str, list[str]]:
     else:
         home_fact = f"{HUB} within <b>{max(home)}</b> steps of every screen"
 
-    commit = _git("log", "-1", "--format=%h", "--", "data/ui_graph.json") or "uncommitted"
-    date = _git("log", "-1", "--format=%cd", "--date=format:%-d %b %Y", "--", "data/ui_graph.json")
-    if _git("status", "--porcelain", "--", "data/ui_graph.json"):
+    graph_file = str(GRAPH_FILE.relative_to(ROOT))
+    commit = _git("log", "-1", "--format=%h", "--", graph_file) or __version__
+    date = _git("log", "-1", "--format=%cd", "--date=short", "--", graph_file)
+    if _git("status", "--porcelain", "--", graph_file):
         commit += " + uncommitted edits"
 
     def td(s, cls=""):
         return f'<td class="{cls}">{esc(str(s))}</td>'
 
     screen_rows = "".join(
-        "<tr>" + td(n, "mono") + td(title_text(s) if s.title else "—")
-        + td(", ".join(s.marks) or "—") + td(", ".join(s.absent_marks) or "—")
-        + td(", ".join(s.shapes) or "—")
-        + td(", ".join(flags(n, s)) or "—")
-        + td("—" if data["home"][n] is None else data["home"][n], "num")
-        + td(s.note or "—") + "</tr>"
+        "<tr>" + td(n, "mono") + td(title_text(s) if s.title else "\u2014")
+        + td(", ".join(s.marks) or "\u2014") + td(", ".join(s.absent_marks) or "\u2014")
+        + td(", ".join(s.shapes) or "\u2014")
+        + td(", ".join(flags(n, s)) or "\u2014")
+        + td("\u2014" if data["home"][n] is None else data["home"][n], "num")
+        + td(s.note or "\u2014") + "</tr>"
         for n, s in ((n, screens[n]) for n in drawing.order))
     trans_rows = "".join(
         "<tr>" + td(i, "num") + td(t.src, "mono") + td(t.label) + td(t.dst, "mono")
         + td("routine" if t.action else "tap")
-        + td(t.action if t.action else (f"{t.target} · hint " if t.target else "")
+        + td(t.action if t.action else (f"{t.target} \u00b7 hint " if t.target else "")
              + f"({t.x:.3f}, {t.y:.3f})", "mono")
         + td(f"{t.settle:.1f}", "num") + "</tr>"
         for i, t in enumerate(trans))
     n_routine = sum(bool(t.action) for t in trans)
     values = {
-        "CSS": CSS_FILE.read_text(),
+        "CSS": CSS_FILE.read_text(encoding="utf-8"),
         "SVG": drawing.svg,
         "DATA": json.dumps(data, separators=(",", ":")).replace("</", "<\\/"),
         "OPTIONS": "".join(f'<option value="{n}">{n}</option>' for n in drawing.order),
@@ -715,16 +728,18 @@ def build_page(graph: UIGraph) -> tuple[str, list[str]]:
         "SCREEN_ROWS": screen_rows,
         "TRANS_ROWS": trans_rows,
     }
-    page = PAGE_TEMPLATE.read_text()
+    page = PAGE_TEMPLATE.read_text(encoding="utf-8")
     for key, value in values.items():
         page = page.replace("{{" + key + "}}", value)
     return page, drawing.warnings
 
 
 def main() -> int:
+    """Write the standalone map page."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"default: {DEFAULT_OUT}")
-    ap.add_argument("--graph", type=Path, default=None, help="map to draw (default: data/ui_graph.json)")
+    ap.add_argument("--graph", type=Path, default=None,
+                    help="map to draw (default: bcgacha/resources/ui_graph.json)")
     ap.add_argument("--carousels", type=Path, default=None,
                     help="sagas and chapters to layer on (default: state/carousels.json)")
     args = ap.parse_args()
@@ -732,7 +747,9 @@ def main() -> int:
     for w in warnings:
         print(f"warning: {w}", file=sys.stderr)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(page)
+    tmp = args.out.with_suffix(".tmp")
+    tmp.write_text(page, encoding="utf-8")
+    os.replace(tmp, args.out)
     print(f"{args.out} ({len(page):,} bytes)", file=sys.stderr)
     return 0
 

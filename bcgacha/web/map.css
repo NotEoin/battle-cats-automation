@@ -1,4 +1,4 @@
-/* Shared by the UI map page (draw_ui_graph.py) and the live debug page (debug_ui.py).
+/* Shared by the UI map page (mapdraw.py) and the live page (liveview.py).
    Route blue and off-limits red were checked for colour-blind separation:
    CVD dE 23.8 light / 25.7 dark, normal vision 31.6 / 31.9. */
 :root {

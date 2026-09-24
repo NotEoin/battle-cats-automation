@@ -99,7 +99,7 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
 
 <div class="page">
   <header>
-    <p class="eyebrow">bcgacha · data/ui_graph.json · {{COMMIT}} · {{DATE}}</p>
+    <p class="eyebrow">bcgacha &middot; bcgacha/resources/ui_graph.json &middot; {{COMMIT}} &middot; {{DATE}}</p>
     <h1>Battle Cats Screen Map</h1>
     <p class="lede">The map the bot navigates by. It never trusts a remembered position. At every step it identifies the screen from the frame itself, by its title and the text and shapes that must or must not be on it, then takes the first hop of the fewest-taps route to its goal. A screen it can't place gets the back arrow.</p>
     <ul class="facts">
@@ -129,12 +129,12 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
     <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="edge"><path class="line" d="M2 11 H38"/><polygon class="head" points="44,11 36.5,7.2 36.5,14.8"/><g class="chip"><rect x="10" y="5" width="20" height="12" rx="6"/></g></g></svg><span><b>Routine</b>: a swipe or the banner picker, not a fixed tap</span></li>
     <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="edge"><path class="line" d="M2 11 H14"/><polygon class="diamond" points="19,6 24,11 19,16 14,11"/><path class="line" d="M24 11 L37 4.5"/><path class="line" d="M24 11 L37 17.5"/><polygon class="head" points="43,2 35.4,2.3 38.3,7.6"/><polygon class="head" points="43,20 38.3,14.4 35.4,19.7"/></g></svg><span><b>One tap, several outcomes</b>: the game decides where it lands</span></li>
     <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="stub"><path class="line" d="M2 11 H38"/><polygon class="head" points="44,11 36.5,7.2 36.5,14.8"/></g></svg><span><b>How a reactive screen appears</b> (not a map edge)</span></li>
-    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="edge on-route"><path class="line" d="M2 11 H38"/><polygon class="head" points="44,11 36.5,7.2 36.5,14.8"/></g><g class="badge"><circle cx="12" cy="11" r="7.5"/><text x="12" y="11.5">1</text></g></svg><span><b>Planned route</b> for From → To, numbered by step</span></li>
+    <li><svg viewBox="0 0 46 22" aria-hidden="true"><g class="edge on-route"><path class="line" d="M2 11 H38"/><polygon class="head" points="44,11 36.5,7.2 36.5,14.8"/></g><g class="badge"><circle cx="12" cy="11" r="7.5"/><text x="12" y="11.5">1</text></g></svg><span><b>Planned route</b> for From &rarr; To, numbered by step</span></li>
   </ul>
 
   <figure class="map">
     <div class="map-scroll">{{SVG}}</div>
-    <figcaption>All {{N_SCREENS}} screens and {{N_TRANS}} transitions in data/ui_graph.json. Each screen shows its title and the other text and shapes it is recognised by. None of it is a captured image: each device learns its own templates on first sight. Tap positions and settle times are in the tooltips and the table view.</figcaption>
+    <figcaption>All {{N_SCREENS}} screens and {{N_TRANS}} transitions in bcgacha/resources/ui_graph.json. Each screen shows its title and the other text and shapes it is recognised by. None of it is a captured image: each device learns its own templates on first sight. Tap positions and settle times are in the tooltips and the table view.</figcaption>
   </figure>
 
   <div class="below">
@@ -149,7 +149,7 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
   </div>
 
   <details class="tables">
-    <summary>Table view <span>· {{N_SCREENS}} screens, {{N_TRANS}} transitions</span></summary>
+    <summary>Table view <span>&middot; {{N_SCREENS}} screens, {{N_TRANS}} transitions</span></summary>
     <div class="table-wrap">
       <h3>Screens</h3>
       <table>
@@ -164,7 +164,7 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
     </div>
   </details>
 
-  <p class="foot">Built from data/ui_graph.json at {{COMMIT}} with the repo's own UIGraph.load(); regenerate with python scripts/draw_ui_graph.py. Every route shown is UIGraph.route() output, computed for every pair of screens by the repository code rather than re-implemented here. Tap positions are fractions of the landscape frame, as stored.</p>
+  <p class="foot">Built from bcgacha/resources/ui_graph.json at {{COMMIT}} with the repo's own UIGraph.load(); regenerate with bcgacha tools map. Every route shown is UIGraph.route() output, computed for every pair of screens by the repository code rather than re-implemented here. Tap positions are fractions of the landscape frame, as stored.</p>
 </div>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 
@@ -207,15 +207,15 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
     if (id === 'opening') out.push(['entry', 'first launch']);
     if (id === 'cat_base') out.push(['hub', 'home']);
     if (s.reactive) out.push(['reactive', 'reactive']);
-    if (s.forbidden) out.push(['forbidden', '⊘ off limits']);
+    if (s.forbidden) out.push(['forbidden', '\u2298 off limits']);
     return out.map(([c, t]) => h('span', 'flag ' + c, t));
   }
   function recognitionRows(s) {
     return [
-      ['Title (OCR)', s.title ? `“${s.title}”` : '—'],
-      ['Needs text', s.marks.length ? s.marks.join(', ') : '—'],
-      ['Must lack', s.absent_marks.length ? s.absent_marks.join(', ') : '—'],
-      ['Needs shape', s.shapes.length ? s.shapes.join(', ') : '—'],
+      ['Title (OCR)', s.title ? `\u201c${s.title}\u201d` : '\u2014'],
+      ['Needs text', s.marks.length ? s.marks.join(', ') : '\u2014'],
+      ['Must lack', s.absent_marks.length ? s.absent_marks.join(', ') : '\u2014'],
+      ['Needs shape', s.shapes.length ? s.shapes.join(', ') : '\u2014'],
     ];
   }
   function kv(rows) {
@@ -247,7 +247,7 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
       const t = T[i];
       const item = h('div', 'tip-item',
         h('div', 'tip-log', `${t.src} --${t.label}--> ${t.dst}`),
-        h('div', 'tip-sub', `${how(t)} · settle ${t.settle.toFixed(1)} s`));
+        h('div', 'tip-sub', `${how(t)} \u00b7 settle ${t.settle.toFixed(1)} s`));
       if (S[t.dst].forbidden) item.append(h('p', 'note', 'Never planned: route() skips every edge into an off-limits screen.'));
       box.append(item);
     }
@@ -330,7 +330,7 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
     const t = T[i];
     const body = h('div', null,
       h('div', 'step-log', `${t.src} --`, h('b', null, t.label), `--> ${t.dst}`),
-      h('div', 'step-meta', `${how(t)} · settle ${t.settle.toFixed(1)} s`));
+      h('div', 'step-meta', `${how(t)} \u00b7 settle ${t.settle.toFixed(1)} s`));
     const sib = D.siblings[i];
     if (sib && sib.length) {
       body.append(h('p', 'fork-note', 'The same tap can land on ', mono(sib.map(j => T[j].dst).join(', ')),
@@ -348,10 +348,10 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
       kv([
         ...recognitionRows(s),
         ['Way home', homeText(id)],
-        [`Leaves by (${out.length})`, out.length ? list(out.map(t => `${t.label} → ${t.dst}`)) : '—'],
+        [`Leaves by (${out.length})`, out.length ? list(out.map(t => `${t.label} \u2192 ${t.dst}`)) : '\u2014'],
         [`Reached from (${inc.length})`, inc.length
           ? list(inc.map(t => `${t.src} (${t.label})`))
-          : (s.reactive ? 'nothing: it appears on its own' : '—')],
+          : (s.reactive ? 'nothing: it appears on its own' : '\u2014')],
       ]),
     );
   }
@@ -361,7 +361,7 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
     svg.querySelectorAll('.on-route').forEach(e => e.classList.remove('on-route'));
     badges.replaceChildren();
     stepsEl.replaceChildren();
-    routeName.textContent = `${from} → ${to}`;
+    routeName.textContent = `${from} \u2192 ${to}`;
     showScreen(from);
     if (from === to) {
       nodes.get(from).classList.add('on-route');
@@ -385,7 +385,7 @@ td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-alig
       stepsEl.append(stepItem(i, k + 1));
     });
     const routines = path.filter(i => T[i].action).length;
-    summary.replaceChildren(h('b', null, plural(path.length, 'step')), routines ? ` · ${plural(routines, 'routine')}` : '');
+    summary.replaceChildren(h('b', null, plural(path.length, 'step')), routines ? ` \u00b7 ${plural(routines, 'routine')}` : '');
   }
 
   // -- wiring ------------------------------------------------------------------------

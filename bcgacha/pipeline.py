@@ -263,13 +263,15 @@ def stage_seed(ctx: Context):
 
 
 def build_plan(ctx: Context, account, owned: set[int], events, platinum_tickets: int, prefer,
-               goal_events=None, legends: bool = True):
+               goal_events=None, legends: bool = True, targets=(), event_units: bool = True):
     """The goal and a planner for it. Refuses an owned list that is not whole:
     everything missing from it would look like a target.
 
     `goal_events` narrows the wanted units to those events' (None: every live
     one); the route may still roll on any banner, and the Platinum picks are
-    wanted whatever it names, slotted into the same route."""
+    wanted whatever it names, slotted into the same route. `targets` are
+    units named outright, most wanted first; `event_units` False wants them
+    alone."""
     from . import goals
     from .planner import Planner
     from .scoring import Scorer
@@ -287,7 +289,9 @@ def build_plan(ctx: Context, account, owned: set[int], events, platinum_tickets:
     goal = goals.build(ctx.dataset, tiers, owned, normal, platinum,
                        platinum_tickets=PLATINUM_CHOICE * platinum_tickets,
                        preferred_banner=prefer.key if prefer else None,
-                       only={e.key for e in goal_events} if goal_events else None, legends=legends)
+                       only={e.key for e in goal_events} if goal_events else None, legends=legends,
+                       targets=targets, event_units=event_units,
+                       labels={e.key: e.label for e in events})
     scorer = Scorer(owned=set(owned), tiers=tiers, priority=goal.priority)
     planner = Planner(ctx.dataset, normal, scorer, platinum_banner=platinum,
                       platinum_tickets=platinum_tickets, platinum_wanted=set(goal.platinum))
@@ -302,17 +306,19 @@ def goal_json(goal, dataset, tiers, owned, events) -> dict:
 
     def row(c):
         return dict(id=c, name=dataset.cat_name(c), tier=tiers.tier_of(c) if tiers else "?",
-                    event=where.get(c, "Platinum"), owned=c in owned,
-                    priority=round(goal.priority.get(c, 0)))
+                    event=where.get(c, "Platinum"), owned=c in owned, why=goal.reason(c),
+                    priority=round(goal.priority.get(c, 0)), platinum=c in goal.platinum)
 
     order = lambda s: sorted(s, key=lambda c: -goal.priority.get(c, 0))
-    return dict(legendaries=[row(c) for c in order(goal.legendaries)],
+    return dict(targets=[row(c) for c in goal.targets],
+                legendaries=[row(c) for c in order(goal.legendaries)],
                 ubers=[row(c) for c in order(goal.ubers)],
-                platinum=[row(c) for c in order(goal.platinum)],
+                platinum=[row(c) for c in order(goal.platinum - set(goal.targets))],
+                unreachable=[row(c) for c in goal.unreachable],
                 remaining=len(goal.remaining(owned)))
 
 
-def plan_json(plan, dataset, events) -> list[dict]:
+def plan_json(plan, dataset, events, goal=None, tiers=None) -> list[dict]:
     from . import events as live
     from .planner import PLATINUM_TICKET
 
@@ -322,17 +328,21 @@ def plan_json(plan, dataset, events) -> list[dict]:
         out.append(dict(n=n, position=s.position, event=e.label if e else s.banner_key,
                         platinum=s.currency == PLATINUM_TICKET, cat=dataset.cat_name(s.cat_id), cat_id=s.cat_id,
                         rarity=s.rarity, new=s.is_new, score=round(s.score, 1),
+                        tier=tiers.tier_of(s.cat_id) if tiers and s.rarity >= UBER else None,
+                        wanted=bool(goal and s.cat_id in goal.wanted and s.is_new),
+                        why=goal.reason(s.cat_id) if goal and s.is_new else "",
                         rerolled_from=dataset.cat_name(s.rerolled_from) if s.rerolled_from else None))
     return out
 
 
 def simulate(ctx: Context, account, owned, events, rare: int, platinum: int, prefer,
-             goal_events=None, legends: bool = True) -> dict:
+             goal_events=None, legends: bool = True, targets=(), event_units: bool = True) -> dict:
     """Play the run out on paper on a planner of its own, so nothing the real
     run relies on is touched. Platinum draws cost Platinum, not rare tickets."""
     from .planner import PLATINUM_TICKET
 
-    planner, goal, tiers = build_plan(ctx, account, owned, events, platinum, prefer, goal_events, legends)
+    planner, goal, tiers = build_plan(ctx, account, owned, events, platinum, prefer, goal_events, legends,
+                                      targets, event_units)
     have = set(owned)
     index, track, prev = account.index, account.track, account.last_cat_id
     rolls, unlocked = [], []
@@ -671,7 +681,7 @@ class GoalRun:
                 else:
                     plan = self.planner.plan(self.account.seed, rolls=PLAN_ROLLS, index=self.account.index,
                                              track=self.account.track, previous_cat=self.account.last_cat_id)
-                    ctx.put("plan", plan_json(plan, ctx.dataset, self.events))
+                    ctx.put("plan", plan_json(plan, ctx.dataset, self.events, self.goal, self.tiers))
                     step = plan.steps[0]
                 self.planner.platinum_tickets = spare
                 if step.currency == PLATINUM_TICKET and s.platinum_left <= 0:
