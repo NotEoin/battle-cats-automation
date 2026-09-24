@@ -51,9 +51,11 @@ LAYOUT = {
     "cat_capsules": (C4, 800), "lucky_capsules": (C4, 884), "lucky_capsules_g": (C4, 968),
     "roll_result": (C4, 1060), "normal_result": (C4, 1136), "sent_to_storage": (C5, 1098),
     "legend_stage_select": (C2, 158), "cat_base_select": (C1, 462),
+    "battle_victory": (C1, 152), "battle_defeat": (C1, 192),
 }
 # Screens drawn smaller than a full box, to fit between their neighbours.
-SMALL = {"legend_stage_select": (NW, 40), "cat_base_select": (NW, 44)}
+SMALL = {"legend_stage_select": (NW, 40), "cat_base_select": (NW, 44),
+         "battle_victory": (NW, 32), "battle_defeat": (NW, 32)}
 # The live events are cards of Rare Capsules, stacked under it.
 EVENT_TOP, EVENT_STEP, EVENT_H, EVENT_SPAN = 692, 38, 30, 114
 HUB = "cat_base"
@@ -76,7 +78,7 @@ ORDER = ["opening", "title", "settings", "saga_select", "base_select", "cat_base
          "gamatoto", "gamatoto_ongoing", "gamatoto_report", "storage", "rare_capsules",
          "platinum_capsules", "cat_capsules", "lucky_capsules", "lucky_capsules_g",
          "roll_result", "normal_result", "sent_to_storage", "legend_stage_select",
-         "cat_base_select", "purchase_offer"]
+         "cat_base_select", "battle_victory", "battle_defeat", "purchase_offer"]
 
 
 @dataclass
@@ -166,6 +168,10 @@ def _layout_edges(find) -> list[Edge]:
         label="enter the centred card", at=(360, 476))
     add(find("cat_base_select", "title"), [(98, 484), (98, 490)],
         label="Back \u2192 title", at=(110, 494), anchor="start", stub=True)
+
+    # A battle's end: Ok, won or lost, returns to the Cat Base
+    add(find("battle_victory", "cat_base"), [(172, 146), (206, 146), (206, 204), (548, 204)])
+    add(find("battle_defeat", "cat_base"), [(172, 196), (548, 196)], label="Ok", at=(474, 190))
     return E
 
 

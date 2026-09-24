@@ -17,6 +17,26 @@
    ]
   },
   {
+   "name": "battle_defeat",
+   "title": null,
+   "marks": [
+    "Defeat"
+   ],
+   "forbidden": false,
+   "reactive": true,
+   "note": "A battle lost. First an offer to continue for 30 Cat Food, always answered No; then a tip whose Ok returns to the Cat Base."
+  },
+  {
+   "name": "battle_victory",
+   "title": null,
+   "marks": [
+    "Victory!"
+   ],
+   "forbidden": false,
+   "reactive": true,
+   "note": "A battle won: notices over it (drops, materials) go at a tap anywhere, then Ok beside Post to SNS returns to the Cat Base. Post to SNS is never pressed."
+  },
+  {
    "name": "cat_base",
    "title": "Cat Base",
    "marks": [
@@ -1007,6 +1027,24 @@
    "settle": 2.2,
    "action": null,
    "target": "@back"
+  },
+  {
+   "src": "battle_victory",
+   "dst": "cat_base",
+   "x": 0.498,
+   "y": 0.88,
+   "label": "Ok",
+   "settle": 3.0,
+   "action": null
+  },
+  {
+   "src": "battle_defeat",
+   "dst": "cat_base",
+   "x": 0.498,
+   "y": 0.88,
+   "label": "Ok",
+   "settle": 3.0,
+   "action": null
   }
  ]
 }
