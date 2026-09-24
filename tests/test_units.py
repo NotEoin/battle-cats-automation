@@ -57,8 +57,9 @@ def test_nothing_is_offered_for_nothing(cat):
 
 def test_a_unit_says_where_it_can_be_rolled():
     ds = load()
-    from bcgacha import events as live
     import datetime as dt
+
+    from bcgacha import events as live
 
     events = live.live_events(ds, dt.date(2026, 9, 24))
     iron = next(e for e in events if e.label == "Iron Legion")
@@ -66,3 +67,9 @@ def test_a_unit_says_where_it_can_be_rolled():
     unit = cat.unit(iron.ubers[0])
     assert "Iron Legion" in unit.events and unit.obtainable
     assert cat.unit(800).owned is True
+
+
+def test_a_chosen_unit_is_named_so_it_is_found_again(cat):
+    bane, _ = cat.resolve("Dark Kasli")
+    assert cat.query_for(bane) == "Kasli the Bane"
+    assert cat.resolve(cat.query_for(bane))[0].id == bane.id

@@ -147,6 +147,12 @@ class Catalogue:
                                                        self.dataset.cat_name(kv[0])))
         return [self.unit(cat_id, name, score) for cat_id, (score, name) in order[:limit]]
 
+    def query_for(self, unit: Unit) -> str:
+        """What to call a unit so that it is found again: its name, when the
+        name alone finds it, else its #id."""
+        found, _ = self.resolve(unit.name)
+        return unit.name if found is not None and found.id == unit.id else f"#{unit.id}"
+
     def resolve(self, query: str) -> tuple[Unit | None, list[Unit]]:
         """(the one unit `query` means, or None; the candidates weighed)."""
         hits = self.search(query, limit=6)
@@ -176,4 +182,4 @@ def load(dataset: Dataset | None = None, owned: set[int] | None = None, events=N
     if owned is None:
         index = OwnedIndex.load()
         owned = index.owned if index.complete else None
-    return Catalogue(dataset, tiers, owned, events if events is not None else live.live_events(dataset))
+    return Catalogue(dataset, tiers, owned, events if events is not None else live.shown(live.live_events(dataset)))

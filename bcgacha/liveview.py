@@ -1,6 +1,6 @@
 """The live page: what the bot sees and does, and the one place to drive it from.
 
-Serves a local page showing the live iPhone screen with what recognition finds
+Serves a local page showing the live phone screen with what recognition finds
 on it -- the screen it settles on and the candidates it weighed, the title it
 read, the controls it knows, the Cat Base door, the taps leaving the screen --
 beside everything a run does: its tasks, the goal and the route to it, the run
@@ -10,12 +10,16 @@ choices the command line takes (jobs.Request); `bcgacha run` serves this page
 too, so a run started either way can be watched and stopped from the browser.
 
     bcgacha ui                          # then open http://127.0.0.1:8765
-    bcgacha ui --replay captures/       # no device: cycle saved frames
+    bcgacha ui --replay FOLDER          # no device: cycle saved frames
 
 One device session is shared. While a job runs the page shows the frames the
 job itself takes rather than competing with it for the screen. Replayed
 frames learn into a fresh temporary folder unless --profiles says otherwise,
 never into state/devices, where a running bot keeps what it has learned.
+
+The page answers only this computer: the server listens on 127.0.0.1, refuses
+a request naming any other host (a DNS-rebinding page), and refuses a POST
+from any other site's page, which a browser would otherwise send unasked.
 """
 from __future__ import annotations
 
@@ -34,6 +38,7 @@ import cv2
 import numpy as np
 
 from . import bases, carousel, jobs, mapdraw, vision
+from .console import Console
 from .pipeline import Stopped
 from .profile import DEVICES_DIR, MARK_PAD
 from .uigraph import Navigator, NoRoute, UIGraph, find_buttons
@@ -45,6 +50,8 @@ FRAME_SUFFIXES = {".png", ".jpg", ".jpeg"}
 LOG_LINES = 1500
 # The saved state is summarised again at most this often, in seconds.
 STATUS_EVERY = 20.0
+# The names this computer goes by; a request for any other is not the page's.
+LOCAL_HOSTS = ("127.0.0.1", "localhost")
 
 
 class SharedSession:
@@ -64,7 +71,11 @@ class SharedSession:
         self.version = 0
         self.stop_requested = threading.Event()
 
+    # The lock is waited on without a timeout: every call made under it has
+    # its own (session.py), so no holder keeps it for long.
+
     def screenshot(self) -> np.ndarray:
+        """A frame from the phone, kept for the page too."""
         with self._lock:
             frame = self._session.screenshot()
         with self._fresh:
@@ -77,16 +88,19 @@ class SharedSession:
             raise Stopped("stopped by request")
 
     def tap(self, *args, **kwargs):
+        """`DeviceSession.tap`, unless a stop was asked for."""
         self._guard()
         with self._lock:
             return self._session.tap(*args, **kwargs)
 
     def swipe(self, *args, **kwargs):
+        """`DeviceSession.swipe`, unless a stop was asked for."""
         self._guard()
         with self._lock:
             return self._session.swipe(*args, **kwargs)
 
     def drag(self, *args, **kwargs):
+        """`DeviceSession.drag`, unless a stop was asked for."""
         self._guard()
         with self._lock:
             return self._session.drag(*args, **kwargs)
@@ -111,19 +125,23 @@ class ReplaySession:
         self._next = 0
 
     def screenshot(self) -> np.ndarray:
+        """The next saved frame, round and round."""
         path = self.frames[self._next % len(self.frames)]
         self._next += 1
         return vision.load(path)
 
     def tap(self, *_a, **_k):
+        """Refused: there is no device."""
         raise RuntimeError("replay mode has no device to tap")
 
     swipe = drag = tap
 
 
 class LiveView:
+    """The page's state: frames, their analysis, the job driving the phone and what it found."""
+
     def __init__(self, session, replay: bool, interval: float, profile_root: Path | None = None,
-                 echo=None, speed: float = 1.0):
+                 echo: Console | None = None, speed: float = 1.0):
         self.shared = SharedSession(session)
         self.replay = replay
         self.interval = interval
@@ -196,6 +214,7 @@ class LiveView:
             self.page = build_page(self.map).encode()
 
     def log(self, line: str) -> None:
+        """A line for the page's log, stamped."""
         with self._lock:
             for part in str(line).split("\n"):
                 self.log_lines.append(f"{time.strftime('%H:%M:%S')} {part}")
@@ -210,6 +229,7 @@ class LiveView:
     # -- frames -----------------------------------------------------------------
 
     def start(self) -> None:
+        """Start the frame, analysis, encoding and learning loops."""
         threading.Thread(target=self._grab, daemon=True).start()
         threading.Thread(target=self._analyse_loop, daemon=True).start()
         threading.Thread(target=self._encode_loop, daemon=True).start()
@@ -406,6 +426,7 @@ class LiveView:
         )
 
     def state(self) -> dict:
+        """What the page polls: the newest analysis, the job, the route and the log."""
         with self._lock:
             snap = self._snaps.get(self._latest)
             log = list(self.log_lines)[-400:]
@@ -427,6 +448,7 @@ class LiveView:
                     log=log, log_seq=self.log_seq)
 
     def jpeg(self, version: int | None) -> bytes | None:
+        """A kept frame as a JPEG: the newest, or the one of that version."""
         with self._lock:
             live = self._live
             if live and version is None:
@@ -440,7 +462,7 @@ class LiveView:
         if fresh or self._status is None or time.time() - self._status_at > STATUS_EVERY:
             try:
                 status = jobs.status()
-            except Exception as exc:
+            except Exception as exc:  # shown on the page, which must stay up whatever broke
                 status = dict(error=f"{type(exc).__name__}: {exc}", next=[])
             status["phone"] = dict(ok=not self.replay and self.grab_error is None,
                                    mode="replay" if self.replay else "device", error=self.grab_error)
@@ -448,11 +470,13 @@ class LiveView:
         return self._status
 
     def search(self, query: str) -> list[dict]:
+        """Units like the query, for the page's search box."""
         from . import units
 
         if self._catalogue is None or time.time() - self._catalogue[1] > STATUS_EVERY:
             self._catalogue = (units.load(), time.time())
-        return [u.to_json() for u in self._catalogue[0].search(query, limit=12)]
+        catalogue = self._catalogue[0]
+        return [dict(u.to_json(), query=catalogue.query_for(u)) for u in catalogue.search(query, limit=12)]
 
     # -- jobs -------------------------------------------------------------------
 
@@ -480,6 +504,7 @@ class LiveView:
         self.done.set()
 
     def goto(self, dst: str) -> tuple[bool, str]:
+        """Walk the phone to a screen of the map in the background."""
         if self.replay:
             return False, "Replay mode has no device, so it cannot navigate."
         screen = self.graph.screens.get(dst)
@@ -594,7 +619,8 @@ class LiveView:
 
     # -- what a job publishes -------------------------------------------------------
 
-    def publish(self, section: str, payload) -> None:
+    def publish(self, section: str, payload: object) -> None:
+        """Keep a section a job published, for the page and the terminal."""
         with self._lock:
             if section == "roll":
                 self.rolls.append(payload)
@@ -609,6 +635,7 @@ class LiveView:
             self.echo.publish(section, payload)
 
     def pipeline_state(self) -> dict:
+        """Everything the current job has published, for the page."""
         with self._lock:
             return dict(version=self.pipeline_version, sections=dict(self.pipeline),
                         rolls=list(self.rolls), capsules=list(self.capsules)[-60:],
@@ -640,6 +667,7 @@ class LiveView:
         return True, kind
 
     def stop(self) -> None:
+        """Ask the job to stop before its next tap."""
         if self.job["running"]:
             self.shared.stop_requested.set()
             self.log("stop requested: the job ends before its next tap")
@@ -661,9 +689,10 @@ def map_payload(graph: UIGraph, version: int) -> dict:
 
 
 def build_page(payload: dict) -> str:
-    page = PAGE.read_text()
+    """The page's HTML with the map, its data and its styles filled in."""
+    page = PAGE.read_text(encoding="utf-8")
     for key, value in {
-        "CSS": mapdraw.CSS_FILE.read_text(),
+        "CSS": mapdraw.CSS_FILE.read_text(encoding="utf-8"),
         "SVG": payload["svg"],
         "DATA": json.dumps(payload["data"], separators=(",", ":")).replace("</", "<\\/"),
     }.items():
@@ -671,10 +700,24 @@ def build_page(payload: dict) -> str:
     return page
 
 
-def make_handler(view: LiveView):
+def make_handler(view: LiveView) -> type[BaseHTTPRequestHandler]:
+    """The request handler for the page and its API, bound to `view`."""
+
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_args) -> None:
-            pass
+            """Silent: the page polls several times a second."""
+
+        def _local(self, post: bool) -> bool:
+            """True when this computer's own page asked. A Host naming another
+            name is a DNS-rebinding page; a POST's Origin naming another site is
+            that site's page, whose form or fetch a browser sends unasked."""
+            if urlparse(f"//{self.headers.get('Host', '')}").hostname not in LOCAL_HOSTS:
+                return False
+            origin = self.headers.get("Origin")
+            if origin is None:
+                return not post or self.headers.get("Sec-Fetch-Site") in (None, "same-origin", "none")
+            site = urlparse(origin)
+            return site.hostname in LOCAL_HOSTS and site.port == self.server.server_address[1]
 
         def _send(self, code: int, body: bytes, ctype: str) -> None:
             self.send_response(code)
@@ -688,6 +731,9 @@ def make_handler(view: LiveView):
             self._send(code, json.dumps(obj).encode(), "application/json")
 
         def do_GET(self) -> None:
+            if not self._local(post=False):
+                self._send(403, b"this page answers only this computer", "text/plain")
+                return
             url = urlparse(self.path)
             query = parse_qs(url.query)
             if url.path == "/":
@@ -726,6 +772,9 @@ def make_handler(view: LiveView):
                 self._send(404, b"not found", "text/plain")
 
         def do_POST(self) -> None:
+            if not self._local(post=True):
+                self._send(403, b"this page answers only this computer", "text/plain")
+                return
             url = urlparse(self.path)
             length = int(self.headers.get("Content-Length") or 0)
             try:

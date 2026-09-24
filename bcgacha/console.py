@@ -24,6 +24,7 @@ class Console:
         self.quiet = quiet
         self._tasks: dict[str, str] = {}
         self._said: set[str] = set()
+        self.announced = False              # the run's summary was said before it started
 
     # -- text --
 
@@ -44,8 +45,8 @@ class Console:
     def log(self, line: str) -> None:
         if line.startswith("== "):
             return                          # the task header says it
-        if line.startswith("!! "):
-            return                          # the error section says it
+        if line.startswith(("!! ", "run finished", "run ended")):
+            return                          # the error section and the summary say it
         if "Traceback" in line or line.startswith("  File "):
             self.say(self.dim(line))
             return
@@ -86,6 +87,8 @@ class Console:
             self.say(f"  what to do: {e['hint']}")
 
     def _on_request(self, r) -> None:
+        if self.announced:
+            return
         self.say(self.bold("This run will:"))
         for line in r["summary"]:
             self.say(f"  • {line}")

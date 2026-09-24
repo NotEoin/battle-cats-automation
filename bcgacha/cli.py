@@ -317,6 +317,7 @@ def cmd_run(args) -> int:
     con.say(con.bold("This run will:"))
     for line in request.summary():
         con.say(f"  • {line}")
+    con.announced = True
     if request.spends and not args.yes:
         if not sys.stdin.isatty():
             con.say(con.bad("It spends tickets: add --yes to go ahead without being asked."))
@@ -426,7 +427,7 @@ def _guided(con: Console, units, args) -> int:
                     continue
                 ids.append(u)
                 con.say(con.good(f"    + {u.name}") + (" (already owned)" if u.owned else ""))
-        req.targets = [f"#{u.id}" for u in ids]
+        req.targets = [catalogue.query_for(u) for u in ids]
         events = [e for e in jobs.status()["events"] if not e["platinum"] and e.get("on_phone") is not False]
         default = "none" if ids else "all"
         con.say()
@@ -460,6 +461,7 @@ def _guided(con: Console, units, args) -> int:
     for line in req.summary():
         con.say(f"  • {line}")
     con.say(con.dim(f"  next time, straight from the command line: {req.command()}"))
+    con.announced = True
     run_args = argparse.Namespace(port=PORT, serial=None, speed=1.0, no_page=False, open=False,
                                   stay=False, quiet=False, yes=True)
     if not req.spends:

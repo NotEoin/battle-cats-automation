@@ -12,7 +12,10 @@ platinum_capsules, with its own title.
 from __future__ import annotations
 
 import datetime as dt
+import json
+import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from .data import LEGEND, UBER, Banner, Dataset
 
@@ -28,6 +31,11 @@ SUBTITLE_BOX = (0.16, 0.545, 0.84, 0.610)
 # a pool still listed as live are superseded re-listings, and legend-ticket
 # capsules hide among them.
 RECENT_DAYS = 45
+# What the last look at the capsule screen found: which events it shows. The
+# schedule lists some the game does not.
+SCREEN_FILE = Path(__file__).resolve().parent.parent / "state" / "capsule_screen.json"
+# A look older than this, in hours, no longer says what the screen shows.
+SCREEN_FRESH = 12
 
 
 @dataclass(frozen=True)
@@ -143,3 +151,26 @@ def selected(frame, graph, events: list[Event]) -> Event | None:
     """The event the capsule screen in `frame` shows, if it is one."""
     here = graph.identify(frame)
     return next((e for e in events if e.screen == here), None)
+
+
+def save_screen(seen: dict) -> None:
+    """Keep what a look at the capsule screen found: {event key: shown}."""
+    SCREEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SCREEN_FILE.write_text(json.dumps(dict(checked_at=time.time(), seen=seen), indent=1))
+
+
+def last_screen() -> tuple[dict, str | None]:
+    """{event key: shown on the phone} from the last look, if fresh, and when."""
+    try:
+        raw = json.loads(SCREEN_FILE.read_text())
+    except (FileNotFoundError, ValueError):
+        return {}, None
+    if time.time() - raw.get("checked_at", 0) > SCREEN_FRESH * 3600:
+        return {}, None
+    return raw.get("seen", {}), time.strftime("%H:%M", time.localtime(raw["checked_at"]))
+
+
+def shown(events: list[Event]) -> list[Event]:
+    """The events, less those the last fresh look found the game not showing."""
+    seen, _ = last_screen()
+    return [e for e in events if seen.get(e.key) is not False]

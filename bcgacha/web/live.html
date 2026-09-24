@@ -944,7 +944,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     const capsules = {};
     for (const m of ['cat', 'lucky', 'lucky_g']) if ($('m-' + m).checked) capsules[m] = num('n-' + m) || 0;
     return {
-      targets: targets.map(u => `#${u.id}`),
+      targets: targets.map(u => u.query || `#${u.id}`),
       events: [...$('events').querySelectorAll('input:checked')].map(i => i.value),
       legend_rares: $('legend-rares').checked, prefer: $('prefer').value || null,
       roll: $('roll').checked, rare: num('rare'), platinum: num('platinum') || 0,
