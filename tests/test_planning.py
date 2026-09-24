@@ -379,3 +379,50 @@ def test_goal_named_events_want_their_ubers_and_the_platinum_picks_alone():
     assert goal.ubers == named - fate
     assert not goal.legendaries
     assert len(goal.platinum) == 7, "the Platinum picks are wanted whatever the events"
+
+
+def test_goal_targets_outrank_everything_in_the_order_named():
+    from bcgacha import goals
+
+    ds, tier_list, owned, normal, platinum, _goal = _goal_fixture()
+    iron = ds.find_banner("2026-09-21_979")
+    legend = (iron.slots.get(LEGEND) or [])[0]
+    first, second = (iron.slots.get(UBER) or [])[:2]
+    goal = goals.build(ds, tier_list, owned, normal, platinum, targets=[second, first])
+    assert goal.targets == [second, first]
+    assert goal.priority[second] > goal.priority[first] > goal.priority[legend]
+    assert goal.reason(second) == "target #1"
+    assert second not in goal.ubers, "a target is wanted as a target, not twice"
+
+
+def test_goal_of_targets_alone_wants_nothing_else():
+    from bcgacha import goals
+
+    ds, tier_list, owned, normal, platinum, _goal = _goal_fixture()
+    cat = (ds.find_banner("2026-09-21_1021").slots.get(UBER) or [])[0]
+    goal = goals.build(ds, tier_list, owned, normal, platinum, platinum_tickets=4,
+                       targets=[cat], event_units=False)
+    assert goal.wanted == {cat}
+    assert not goal.platinum, "no tier-list pick when only targets are wanted"
+
+
+def test_goal_spends_platinum_on_a_named_target_first():
+    from bcgacha import goals
+
+    ds, tier_list, owned, normal, platinum, _goal = _goal_fixture()
+    pool = sorted(platinum.slots.get(UBER) or [], key=lambda c: -tier_list.rank_of(c))
+    weakest = pool[0]                       # never a tier-list pick on its own
+    goal = goals.build(ds, tier_list, owned, normal, platinum, platinum_tickets=2,
+                       targets=[weakest])
+    assert weakest in goal.platinum and len(goal.platinum) == 2
+
+
+def test_goal_names_a_target_no_live_event_rolls():
+    from bcgacha import goals
+
+    ds, tier_list, owned, normal, platinum, _goal = _goal_fixture()
+    rolled = {c for b in normal + [platinum] for r in (2, 3, 4, 5) for c in b.slots.get(r) or []}
+    stray = next(c for c, e in ds.cats.items() if e.get("rarity") == UBER and c not in rolled)
+    goal = goals.build(ds, tier_list, owned, normal, platinum, targets=[stray])
+    assert goal.unreachable == [stray] and stray not in goal.wanted
+    assert "no live event" in goal.reason(stray)
