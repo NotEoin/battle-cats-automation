@@ -221,6 +221,7 @@ button.stop { border-color: var(--critical); }
   // carousel scan, after every saga and chapter it reads.
   let D = JSON.parse($('map-data').textContent);
   let map, nodes, edges;
+  const LAG_LIMIT = 1.0;     // seconds analysis may trail the newest frame
   let state = null, shownVersion = 0, mapVersion = D.version, fetchingMap = false;
   let overlaidVersion = 0, panelVersion = 0, loading = false;
 
@@ -402,24 +403,28 @@ button.stop { border-color: var(--critical); }
     $('log').textContent = state.log.join('\n');
     drawMap(state);
     const live = state.live;
-    if (live) $('frame-age').textContent = `${Math.max(0, state.now - live.taken_at).toFixed(1)} s old`;
     if (v) $('analysis-ms').textContent = `${v.analysis_ms} ms`;
-    // The picture is always the newest frame taken; the overlay is drawn only
-    // on the frame it was worked out from, so boxes never sit on another one.
-    if (live && live.version !== shownVersion && !loading) {
+    // The picture is the frame analysis last worked on, drawn with what it
+    // found, so the boxes move with the picture. Only if analysis falls
+    // behind (or fails) is the newest frame shown bare instead.
+    const synced = v && live && live.taken_at - v.taken_at < LAG_LIMIT;
+    const want = synced ? v.version : live ? live.version : 0;
+    const shown = synced ? v : live;
+    if (shown) $('frame-age').textContent = `${Math.max(0, state.now - shown.taken_at).toFixed(1)} s old${synced ? '' : ' (analysis behind)'}`;
+    if (want && want !== shownVersion && !loading) {
       loading = true;
       const next = new Image();
       next.onload = () => {
         img.src = next.src;
         $('empty').hidden = true;
-        shownVersion = live.version;
+        shownVersion = want;
         overlaidVersion = 0;
-        overlay.replaceChildren();
+        if (!synced) overlay.replaceChildren();
         loading = false;
         fitOverlay();
       };
       next.onerror = () => { loading = false; };
-      next.src = `/frame.jpg?v=${live.version}`;
+      next.src = `/frame.jpg?v=${want}`;
     }
     fitOverlay();
   }
@@ -443,7 +448,7 @@ button.stop { border-color: var(--critical); }
       $('conn').className = 'pill bad';
       $('conn-text').textContent = 'debug server not responding';
     }
-    setTimeout(poll, 350);
+    setTimeout(poll, 150);
   }
 
   async function post(path, body) {

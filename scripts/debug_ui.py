@@ -46,10 +46,7 @@ import draw_ui_graph  # noqa: E402
 
 PAGE = HERE / "debug_ui.html"
 VIEW_WIDTH = 1280           # frames are downscaled to this for the browser
-KEEP_SNAPSHOTS = 4
-# While a job drives the phone, a frame is analysed at most this often. The
-# picture itself is sent as soon as it is taken, whatever this is.
-BUSY_ANALYSIS = 0.8
+KEEP_SNAPSHOTS = 8
 FRAME_SUFFIXES = {".png", ".jpg", ".jpeg"}
 
 
@@ -220,16 +217,26 @@ class Debugger:
             if frame is None or version == seen:
                 continue
             seen = version
-            h, w = frame.shape[:2]
-            scale = VIEW_WIDTH / w if w > VIEW_WIDTH else 1.0
-            small = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-            ok, jpeg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 82])
-            if ok:
-                with self._lock:
-                    self._live = (version, taken_at, jpeg.tobytes())
-                    self._recent[version] = self._live[2]
-                    for old in sorted(self._recent)[:-KEEP_SNAPSHOTS]:
-                        del self._recent[old]
+            self._encode(frame, version, taken_at)
+
+    def _encode(self, frame: np.ndarray, version: int, taken_at: float, live: bool = True) -> None:
+        """Keep `frame` as a JPEG for the page, by version; `live` also makes
+        it the newest picture."""
+        with self._lock:
+            if version in self._recent:
+                return
+        h, w = frame.shape[:2]
+        scale = VIEW_WIDTH / w if w > VIEW_WIDTH else 1.0
+        small = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        ok, jpeg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 82])
+        if not ok:
+            return
+        with self._lock:
+            self._recent[version] = jpeg.tobytes()
+            if live and (self._live is None or version > self._live[0]):
+                self._live = (version, taken_at, self._recent[version])
+            for old in sorted(self._recent)[:-KEEP_SNAPSHOTS]:
+                del self._recent[old]
 
     def _grab(self) -> None:
         while not self._quit.is_set():
@@ -252,9 +259,6 @@ class Debugger:
             if frame is None or version == seen:
                 continue
             seen = version
-            if self.nav["running"] and time.monotonic() - getattr(self, "_last_busy", 0.0) < BUSY_ANALYSIS:
-                continue        # a job is driving: analyse a frame now and then, not every one
-            self._last_busy = time.monotonic()
             try:
                 snap = self.analyse(frame)
             except Exception as exc:
@@ -262,6 +266,9 @@ class Debugger:
                 continue
             self.analysis_error = None
             snap["version"], snap["taken_at"] = version, taken_at
+            # The page shows the analysed frame under its analysis, so its
+            # picture is kept even if the encoder has moved past it.
+            self._encode(frame, version, taken_at, live=False)
             with self._lock:
                 self._snaps[version] = snap
                 for old in sorted(self._snaps)[:-KEEP_SNAPSHOTS]:
@@ -637,6 +644,31 @@ class Debugger:
                 self.nav = dict(running=False, target=None, job="pipeline", result=result)
             self.shared.stop_requested.clear()
 
+    def touch(self, kind: str, body: dict) -> tuple[bool, str]:
+        """One tap, swipe or drag by hand, at landscape screen fractions, while no
+        job drives the phone: for looking round screens the map lacks."""
+        from bcgacha.layout import landscape_to_hid
+
+        if self.replay:
+            return False, "Replay mode has no device."
+        if self.nav["running"]:
+            return False, f"{self._busy()}. Stop it first."
+        try:
+            if kind == "tap":
+                self.shared.tap(*landscape_to_hid(float(body["x"]), float(body["y"])))
+            elif kind == "swipe":
+                self.shared.swipe(*landscape_to_hid(float(body["x1"]), float(body["y1"])),
+                                  *landscape_to_hid(float(body["x2"]), float(body["y2"])),
+                                  duration=float(body.get("duration", 0.28)))
+            else:
+                self.shared.drag(*landscape_to_hid(float(body["x1"]), float(body["y1"])),
+                                 *landscape_to_hid(float(body["x2"]), float(body["y2"])),
+                                 duration=float(body.get("duration", 0.8)))
+        except (KeyError, ValueError) as exc:
+            return False, f"bad {kind}: {exc}"
+        self.log(f"by hand: {kind} {body}")
+        return True, kind
+
     def stop(self) -> None:
         if self.nav["running"]:
             self.shared.stop_requested.set()
@@ -732,6 +764,9 @@ def make_handler(dbg: Debugger):
             elif url.path == "/api/options":
                 dbg.options.update({k: bool(v) for k, v in body.items() if k in dbg.options})
                 self._json(200, dict(ok=True, message="", options=dbg.options))
+            elif url.path in ("/api/tap", "/api/drag", "/api/swipe"):
+                ok, message = dbg.touch(url.path[5:], body)
+                self._json(200 if ok else 409, dict(ok=ok, message=message))
             elif url.path == "/api/stop":
                 dbg.stop()
                 self._json(200, dict(ok=True, message="Stopping."))
