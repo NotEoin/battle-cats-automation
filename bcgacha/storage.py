@@ -170,6 +170,11 @@ class Storage:
         if not self.nav.goto("storage", log=ctx.log):
             return "could not reach Cat Storage"
         frame, texts = self._look(0.3)
+        from .pipeline import storage_count
+
+        held = storage_count(texts)
+        if held is not None and held[0] == 0:
+            return "Storage is empty: nothing to exchange"
         button = _find(texts, "exchangeall")
         if button is None:
             return "no Exchange all on the Storage screen: nothing left"
