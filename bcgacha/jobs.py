@@ -70,7 +70,7 @@ class Request:
     prefer: str | None = None                           # event whose Legend Rare comes first
     roll: bool = False                                  # draw towards the goal
     rare: int | None = None                             # rare tickets to spend; None: all
-    platinum: int = 0                                   # Platinum tickets to spend
+    platinum: int | None = None                         # Platinum tickets to spend; None: all
     capsules: dict = field(default_factory=dict)        # machine -> capsules to open, 0: all
     uncanny: bool = False                               # play the Uncanny Legends
     storage: bool = False                               # empty Cat Storage first
@@ -85,7 +85,7 @@ class Request:
         req.targets = [str(t).strip() for t in req.targets if str(t).strip()]
         req.events = [str(e).strip() for e in req.events if str(e).strip()]
         req.rare = None if req.rare in (None, "", "all") else max(0, int(req.rare))
-        req.platinum = max(0, int(req.platinum or 0))
+        req.platinum = None if req.platinum in (None, "", "all") else max(0, int(req.platinum))
         req.capsules = {m: max(0, int(n or 0)) for m, n in (req.capsules or {}).items() if m in MACHINE_NAMES}
         return req
 
@@ -125,7 +125,7 @@ class Request:
             words += ["--prefer", self.prefer]
         if self.roll:
             words += ["--roll"] + (["--rare", str(self.rare)] if self.rare is not None else [])
-        if self.platinum:
+        if self.platinum is not None:
             words += ["--platinum", str(self.platinum)]
         for machine, n in self.capsules.items():
             words += ["--capsules", f"{machine}:{n}" if n else machine]
@@ -138,7 +138,7 @@ class Request:
         if self.rescan_map:
             words.append("--rescan-map")
         if self.only:
-            words = ["bcgacha", "tools", "upkeep", *self.only]
+            words = ["bcgacha", "tools", "upkeep", *("tickets" if t == "capsule" else t for t in self.only)]
         return " ".join(shlex.quote(w) for w in words)
 
     def summary(self) -> list[str]:
@@ -157,7 +157,8 @@ class Request:
                          + (" and their Legend Rares" if self.legend_rares else ""))
         if self.roll:
             lines.append(f"draw with {'every rare ticket held' if self.rare is None else f'up to {self.rare} rare tickets'}"
-                         + (f" and up to {self.platinum} Platinum" if self.platinum else ", no Platinum")
+                         + (" and every Platinum ticket held" if self.platinum is None else
+                            f" and up to {self.platinum} Platinum" if self.platinum else ", no Platinum")
                          + "; it stops once everything wanted is unlocked")
         else:
             lines.append("plan only: no rare ticket is spent")
@@ -182,6 +183,8 @@ class Job:
         self.planner = self.goal = self.tiers = None
         self.rare_held: int | None = None
         self.rare_source = ""
+        self.plat_held: int | None = None
+        self.plat_source = ""
 
     # -- reporting --
 
@@ -276,6 +279,7 @@ class Job:
         if STATE_PATH.exists():
             account = Account.load()
             account.storage_used = getattr(self.ctx, "storage_left", 0)
+            account.storage_capacity = getattr(self.ctx, "storage_capacity", account.storage_capacity)
             account.save()
         return f"{getattr(self.ctx, 'storage_left', 0)} left in storage"
 
@@ -320,28 +324,73 @@ class Job:
         ctx.graph.events = [e for e in events if seen.get(e.key)]
         live.save_screen(seen)
 
-        held = None
-        if nav.goto("rare_capsules", log=ctx.log):
-            frame = nav.arrival[1]
-            first = P.read_number(frame, P.TICKETS_BOX, ctx.ocr)
-            again = P.read_number(ctx.session.screenshot(), P.TICKETS_BOX, ctx.ocr)
-            held = first if first == again else None
-        saved = Account.load().tickets if STATE_PATH.exists() else None
-        if held is not None:
-            self.rare_held, self.rare_source = held, "read off the screen"
-            if STATE_PATH.exists():
-                account = Account.load()
-                account.tickets = held
-                account.save()
-        elif saved is not None:
-            self.rare_held, self.rare_source = saved, "saved by the last run (the counter did not read)"
-        else:
-            self.rare_held, self.rare_source = None, "unknown: drawing until the button asks for Cat Food"
-        ctx.put("tickets", dict(held=self.rare_held, source=self.rare_source,
-                                rare=self._rare_budget(), platinum=self.req.platinum))
+        # The counters, each read twice on fresh frames and trusted only when
+        # both reads agree. Cat Food and XP are read too: every number read
+        # teaches the digit reader the glyphs a lone Platinum count needs.
+        rare = self._counter(nav, "rare_capsules", P.TICKETS_BOX, also=(P.CAT_FOOD_BOX,))
+        plat = self._counter(nav, "platinum_capsules", P.TICKETS_BOX)
+        account = Account.load() if STATE_PATH.exists() else None
+        self.rare_held, self.rare_source = self._held(rare, account.tickets if account else None,
+                                                      "drawing until the button asks for Cat Food")
+        self.plat_held, self.plat_source = self._held(plat, account.platinum_tickets if account else None,
+                                                      "no Platinum ticket is spent")
+        if account is not None and (rare is not None or plat is not None):
+            account.tickets = rare if rare is not None else account.tickets
+            account.platinum_tickets = plat if plat is not None else account.platinum_tickets
+            account.save()
+        ctx.put("tickets", dict(held=self.rare_held, source=self.rare_source, rare=self._rare_budget(),
+                                platinum_held=self.plat_held, platinum_source=self.plat_source,
+                                platinum=self._platinum_budget()))
         gone = f"; not shown: {', '.join(e.label for e in missing)}" if missing else ""
         return (f"{len(events) - len(missing)} events on screen{gone}; "
-                f"{self.rare_held if self.rare_held is not None else '?'} rare held ({self.rare_source})")
+                f"{self.rare_held if self.rare_held is not None else '?'} rare held ({self.rare_source}), "
+                f"{self.plat_held if self.plat_held is not None else '?'} Platinum held ({self.plat_source})")
+
+    def _counter(self, nav, screen: str, box, also=()) -> int | None:
+        """The ticket counter on `screen`, when two fresh reads agree. A read
+        both frames agree on teaches the digit reader its glyphs -- the
+        ticket counter's, and those of the counters `also` names."""
+        from . import digits
+
+        ctx = self.ctx
+        if not nav.goto(screen, log=ctx.log):
+            ctx.log(f"  could not reach {screen} to read its counter")
+            return None
+        atlas = digits.Atlas()
+        frames = (nav.arrival[1], ctx.session.screenshot())
+        for extra in also:
+            reads = [digits.read(f, extra, ctx.ocr, atlas)[0] for f in frames]
+            if reads[0] is not None and reads[0] == reads[1]:
+                digits.teach(frames[0], extra, reads[0], atlas)
+        first, how = digits.read(frames[0], box, ctx.ocr, atlas)
+        # The same pixels read the same: a second read is only worth making
+        # when the counter's picture has changed between the two frames.
+        same = (digits.ink(frames[0], box) == digits.ink(frames[1], box)).all()
+        again = first if same else digits.read(frames[1], box, ctx.ocr, atlas)[0]
+        name = ctx.graph.screens[screen].title or screen
+        if first is None or first != again:
+            ctx.log(f"  {name}: ticket counter not read ({how if first is None else f'{first} then {again}'})")
+            return None
+        if how == "read":
+            digits.teach(frames[0], box, first, atlas)
+        ctx.log(f"  {name}: {first} ticket{'s' if first != 1 else ''} ({how})")
+        return first
+
+    @staticmethod
+    def _held(read, saved, unknown: str) -> tuple[int | None, str]:
+        if read is not None:
+            return read, "read off the screen"
+        if saved is not None:
+            return saved, "as the last run left them: the counter did not read"
+        return None, f"unknown: {unknown}"
+
+    def _platinum_budget(self) -> int:
+        """Platinum tickets this run may spend: as many as asked, never more
+        than are held, and none when the count is not known."""
+        held = self.plat_held
+        if held is None:
+            return 0
+        return held if self.req.platinum is None else min(self.req.platinum, held)
 
     def _rare_budget(self) -> int | None:
         if self.req.rare is None:
@@ -410,7 +459,11 @@ class Job:
         prefer = live.find(self.events, self.req.prefer) if self.req.prefer else None
         targets = self.resolve_targets()
         event_units = not targets or bool(wanted_events)
-        platinum = self.req.platinum
+        if "capsule" not in self.req.tasks():
+            # No look at the counter this run: what the last one read.
+            self.plat_held, self.plat_source = self._held(None, self.account.platinum_tickets,
+                                                          "no Platinum ticket is planned")
+        platinum = self._platinum_budget()
         rare = self._rare_budget()
         source = ("as asked" if self.req.rare is not None and rare == self.req.rare
                   else self.rare_source or "")
@@ -430,6 +483,8 @@ class Job:
         sim["assumed"] = assumed
         sim["rare_given"] = sim_rare
         sim["rare_source"] = source
+        sim["platinum_given"] = platinum
+        sim["platinum_source"] = self.plat_source
         ctx.put("simulation", sim)
         plan = self.planner.plan(self.account.seed, rolls=P.PLAN_ROLLS, index=self.account.index,
                                  track=self.account.track, previous_cat=self.account.last_cat_id)
@@ -445,10 +500,11 @@ class Job:
         if self.goal.complete(self.owned.owned):
             return "skipped: nothing wanted is left to draw for -- name a unit, or give Platinum tickets"
         rare = self._rare_budget()
-        if rare == 0 and not self.req.platinum:
+        platinum = self._platinum_budget()
+        if rare == 0 and not platinum:
             return "skipped: no rare tickets to spend"
         run = P.GoalRun(self.ctx, self.account, self.planner, self.goal, self.owned, self.events, self.tiers,
-                        rare, self.req.platinum)
+                        rare, platinum)
         self.ctx.put("stage", dict(name="roll", state="rolling"))
         reason = run.run()
         s = run.state

@@ -33,6 +33,7 @@ CAPTURES = ROOT / "captures"
 # draw button's own face is what guards a draw (see draw.py).
 TICKETS_BOX = (0.635, 0.865, 0.745, 0.950)
 CAT_FOOD_BOX = (0.845, 0.865, 0.955, 0.950)
+XP_BOX = (0.800, 0.005, 0.945, 0.075)
 # Tier-list picks reserved per platinum ticket held.
 PLATINUM_CHOICE = 2
 # A draw paid in Cat Food costs exactly this much.
@@ -85,19 +86,11 @@ class Context:
 # -- reading numbers off the screen -------------------------------------------------
 
 def read_number(frame: np.ndarray, box, ocr) -> int | None:
-    """A counter in the game's yellow-and-white digits, or None if unsure."""
-    h, w = frame.shape[:2]
-    x0, y0, x1, y1 = box
-    crop = frame[int(y0 * h): int(y1 * h), int(x0 * w): int(x1 * w)]
-    if crop.size == 0:
-        return None
-    hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-    ink = cv2.inRange(hsv, (15, 80, 150), (40, 255, 255)) | cv2.inRange(hsv, (0, 0, 200), (180, 60, 255))
-    page = cv2.copyMakeBorder(255 - ink, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=255)
-    page = cv2.cvtColor(cv2.resize(page, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC), cv2.COLOR_GRAY2BGR)
-    result, _ = ocr(page)
-    digits = [str(r[1]) for r in result or [] if str(r[1]).strip().isdigit()]
-    return int(digits[0]) if len(digits) == 1 else None
+    """A counter in the game's yellow-and-white digits, or None if unsure
+    (digits.py; every number read teaches it the glyphs)."""
+    from . import digits
+
+    return digits.read(frame, box, ocr)[0]
 
 
 # -- stages -----------------------------------------------------------------------
@@ -130,6 +123,8 @@ def drain_storage(ctx: Context) -> bool:
     if use_all is None:
         ctx.log("  no Use all on the Storage screen: nothing to redeem")
         ctx.storage_left = before[0] if before else 0
+        if before:
+            ctx.storage_capacity = before[1]
         return True
     ctx.log(f"  Cat Storage{f' {before[0]}/{before[1]}' if before else ''}: Use all")
     nav._tap(*use_all.tap, 1.5)
@@ -184,6 +179,7 @@ def drain_storage(ctx: Context) -> bool:
         ctx.log(f"  Use all did not empty Storage (read {after}): stopping rather than overfill it")
         return False
     ctx.storage_left = after[0]
+    ctx.storage_capacity = after[1]             # 64, or 128 after Cats of the Cosmos Ch.3
     ctx.log(f"  Cat Storage now {after[0]}/{after[1]}")
     ctx.put("storage", dict(drained_at=dt.datetime.now().isoformat(timespec="seconds"), left=after[0]))
     return True
@@ -403,6 +399,9 @@ class GoalRun:
             self.account.confirmed = False
         self.planner.platinum_tickets = platinum_tickets
         self.nav = ctx.navigator()
+        from . import digits
+
+        self.atlas = digits.Atlas()
         ctx.captures.mkdir(parents=True, exist_ok=True)
 
     # -- helpers --
@@ -418,6 +417,23 @@ class GoalRun:
                                  cat_food=s.cat_food, unlocked=s.unlocked, reason=s.reason,
                                  remaining=len(self.goal.remaining(self.owned_index.owned))))
         self.ctx.put("account", self.account.to_json())
+
+    def _teach_counter(self, frame) -> None:
+        """Read the rare ticket counter against the count this run keeps: a
+        match teaches the digit reader every glyph of it -- each draw shows it
+        a new last digit -- and a mismatch is said. Every draw until all ten
+        digits are known, then every tenth."""
+        from . import digits
+
+        s = self.state
+        if s.rare_left is None or (len(self.atlas.known()) == 10 and s.rolled % 10):
+            return
+        seen, how = digits.read(frame, TICKETS_BOX, self.ctx.ocr, self.atlas)
+        if seen == s.rare_left:
+            if digits.teach(frame, TICKETS_BOX, seen, self.atlas):
+                self.ctx.log(f"    learned the digits of {seen}: knows {self.atlas.known()}")
+        elif seen is not None:
+            self.ctx.log(f"    the rare counter reads {seen} ({how}); this run counts {s.rare_left}")
 
     def _draw_button(self, frame, screen):
         from .perception import perceive
@@ -526,6 +542,7 @@ class GoalRun:
             if gate.red and gate.red > draw.RED_LIMIT:
                 return "rare tickets depleted: the draw button now spends Cat Food"
             return f"draw refused: {gate.reason}"
+        self._teach_counter(frame)
         food = read_number(frame, CAT_FOOD_BOX, ctx.ocr) if s.rolled % 10 == 0 else None
         if food is not None:
             if s.cat_food is None:
@@ -671,6 +688,7 @@ class GoalRun:
                         s.reason = "could not empty Cat Storage"
                         break
                     self.account.storage_used = getattr(ctx, "storage_left", 0)
+                    self.account.storage_capacity = getattr(ctx, "storage_capacity", self.account.storage_capacity)
                     self.account.save()
                 reason = self.roll_once(step)
                 self._publish_state()

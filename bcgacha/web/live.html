@@ -260,8 +260,8 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
             <input type="number" id="rare" min="0" placeholder="all"> <span class="dim">blank: every one held; also sets the paper run</span>
           </div>
           <div class="machine">
-            <label for="platinum">Platinum tickets</label>
-            <input type="number" id="platinum" min="0" value="0"> <span class="dim">targets first, then best by tier</span>
+            <label for="platinum">Platinum: at most</label>
+            <input type="number" id="platinum" min="0" placeholder="all"> <span class="dim">blank: every one held, read off the screen; 0: none</span>
           </div>
         </div>
         <div class="field">
@@ -305,6 +305,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       <button type="button" class="small" data-only="map" title="Read this save's sagas and chapters again">Re-read map</button>
       <button type="button" class="small" data-only="owned" title="Read every Cat Guide entry again">Re-read owned cats</button>
       <button type="button" class="small" data-only="storage" title="Press Use all on Cat Storage">Empty storage</button>
+      <button type="button" class="small" data-only="capsule" title="Which events the capsule screen shows, and the rare and Platinum ticket counters">Read tickets</button>
     </div>
   </section>
 
@@ -778,7 +779,8 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     const sim = S.simulation;
     if (sim) {
       const unlocked = new Set(sim.unlocked.map(u => u.n));
-      stats($('sim-stats'), [[`rare tickets used, of ${sim.rare_given}` + (sim.rare_source ? ` (${sim.rare_source})` : ''), sim.rare_used], ['Platinum used', sim.platinum_used],
+      stats($('sim-stats'), [[`rare tickets used, of ${sim.rare_given}` + (sim.rare_source ? ` (${sim.rare_source})` : ''), sim.rare_used],
+        [`Platinum used, of ${sim.platinum_given ?? '?'}` + (sim.platinum_source ? ` (${sim.platinum_source})` : ''), sim.platinum_used],
         ['new Ubers / Legends', sim.unlocked.length], ['still wanted after', sim.left.length]]);
       table($('sim-table'), [['draw', x => x.n], ['position', x => x.position], ['event', x => x.event], ['ticket', x => x.platinum ? 'Platinum' : 'rare'],
         ['rarity', x => RARITY[x.rarity]], ['cat', x => x.cat], ['new', x => x.new ? 'NEW' : ''], ['unlocks', x => unlocked.has(x.n) ? '★ unlocks' : '']],
@@ -788,7 +790,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     // Draws
     const rolls = pipe.rolls || [];
     const r = S.run || {}, t = S.tickets || {};
-    stats($('run-stats'), [['drawn', r.rolled ?? rolls.length], ['rare left', r.rare_left ?? t.held ?? '?'], ['Platinum left', r.platinum_left ?? t.platinum],
+    stats($('run-stats'), [['drawn', r.rolled ?? rolls.length], ['rare left', r.rare_left ?? t.held ?? '?'], ['Platinum left', r.platinum_left ?? t.platinum_held ?? '?'],
       ['Cat Food', r.cat_food], ['goal units left', r.remaining], ['new Ubers', (r.unlocked || []).length],
       ['matched the plan', rolls.filter(x => x.verdict === 'match').length + ' / ' + rolls.length]]);
     table($('rolls-table'), [['#', x => x.n], ['position', x => x.position], ['event', x => x.event], ['ticket', x => x.platinum ? 'Platinum' : 'rare'],
@@ -853,8 +855,8 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     if (!st || st.error) { $('idle-status').replaceChildren(h('p', 'bad', st ? st.error : 'loading…')); return; }
     const a = st.account || {}, o = st.owned || {};
     const yes = (ok, text) => h('span', ok ? 'ok' : 'bad', (ok ? '✓ ' : '✗ ') + text);
-    stats($('ov-stats'), [['owned cats', o.ok ? o.owned : '?'], ['position', a.ok ? a.position : '?'], ['rare tickets (saved)', a.rare ?? '?'],
-      ['Platinum (saved)', a.platinum ?? '?'], ['saved result screens', st.captures]]);
+    stats($('ov-stats'), [['owned cats', o.ok ? o.owned : '?'], ['position', a.ok ? a.position : '?'], ['rare tickets (last read)', a.rare ?? '?'],
+      ['Platinum (last read)', a.platinum ?? '?'], ['saved result screens', st.captures]]);
     facts($('ov-account'), [['seed', a.ok ? yes(true, `${a.seed} at ${a.position}`) : yes(false, 'unknown')],
       ['confirmed', a.ok ? (a.confirmed ? 'by a draw since it was saved' : 'not yet: no Platinum ticket is spent until a draw matches') : undefined],
       ['position from', a.source], ['saved', a.saved], ['storage', a.storage]]);
@@ -873,7 +875,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       ['Phone', st.phone && st.phone.ok ? 'connected' : st.phone && st.phone.mode === 'replay' ? 'replay: plans only' : 'not connected'],
       ['Seed', a.ok ? `${a.position}${a.confirmed ? ', confirmed' : ''}` : 'found on the first run, free'],
       ['Owned cats', o.ok ? `${o.owned}` : 'read on the first run'],
-      ['Tickets', a.ok ? `${a.rare ?? '?'} rare, ${a.platinum ?? '?'} Platinum (last run)` : '?']].flatMap(([k, v]) => [h('dt', '', k), h('dd', '', v)])));
+      ['Tickets', a.ok ? `${a.rare ?? '?'} rare, ${a.platinum ?? '?'} Platinum (last read off the screen)` : '?']].flatMap(([k, v]) => [h('dt', '', k), h('dd', '', v)])));
     // The event choices follow what is live.
     const box = $('events');
     const have = new Set([...box.querySelectorAll('input:checked')].map(i => i.value));
@@ -947,7 +949,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       targets: targets.map(u => u.query || `#${u.id}`),
       events: [...$('events').querySelectorAll('input:checked')].map(i => i.value),
       legend_rares: $('legend-rares').checked, prefer: $('prefer').value || null,
-      roll: $('roll').checked, rare: num('rare'), platinum: num('platinum') || 0,
+      roll: $('roll').checked, rare: num('rare'), platinum: num('platinum'),
       capsules, uncanny: $('uncanny').checked, storage: $('storage').checked,
       rescan_owned: $('rescan-owned').checked, rescan_map: $('rescan-map').checked,
     };

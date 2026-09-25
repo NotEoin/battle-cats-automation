@@ -224,12 +224,14 @@ class CapsuleRun:
         if not drain_storage(self.ctx):
             return False
         self.stored = getattr(self.ctx, "storage_left", 0)
+        self.capacity = getattr(self.ctx, "storage_capacity", self.capacity)
         self._save_storage()
         return True
 
     def _save_storage(self) -> None:
         if self.account is not None and self.stored is not None:
             self.account.storage_used = self.stored
+            self.account.storage_capacity = self.capacity
             self.account.save()
 
     def press_once(self) -> str | None:

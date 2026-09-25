@@ -13,10 +13,14 @@ import time
 
 from .data import RARITY_NAMES
 
-MARKS = {"done": "✓", "skipped": "–", "failed": "✗", "stopped": "■", "not run": "·"}
+# A check, a dash, a cross, a square and a dot.
+MARKS = {"done": "\u2713", "skipped": "\u2013", "failed": "\u2717", "stopped": "\u25a0", "not run": "\u00b7"}
+BULLET = "\u2022"
 
 
 class Console:
+    """Prints a run's log and sections for a person, in colour on a terminal."""
+
     def __init__(self, out=None, colour: bool | None = None, quiet: bool = False):
         self.out = out or sys.stdout
         tty = hasattr(self.out, "isatty") and self.out.isatty()
@@ -29,20 +33,37 @@ class Console:
     # -- text --
 
     def paint(self, text: str, code: str) -> str:
+        """The text in an ANSI style, or as it is when colour is off."""
         return f"\033[{code}m{text}\033[0m" if self.colour else text
 
-    def bold(self, t): return self.paint(t, "1")
-    def dim(self, t): return self.paint(t, "2")
-    def good(self, t): return self.paint(t, "32")
-    def bad(self, t): return self.paint(t, "31;1")
-    def note(self, t): return self.paint(t, "36")
+    def bold(self, t: str) -> str:
+        """Bold."""
+        return self.paint(t, "1")
+
+    def dim(self, t: str) -> str:
+        """Faint, for detail."""
+        return self.paint(t, "2")
+
+    def good(self, t: str) -> str:
+        """Green, for what worked."""
+        return self.paint(t, "32")
+
+    def bad(self, t: str) -> str:
+        """Bold red, for what failed."""
+        return self.paint(t, "31;1")
+
+    def note(self, t: str) -> str:
+        """Cyan, for a command to type."""
+        return self.paint(t, "36")
 
     def say(self, text: str = "") -> None:
+        """One line out, flushed at once."""
         print(text, file=self.out, flush=True)
 
     # -- what a run hears --
 
     def log(self, line: str) -> None:
+        """A run's log line, stamped, unless a section says it better."""
         if line.startswith("== "):
             return                          # the task header says it
         if line.startswith(("!! ", "run finished", "run ended")):
@@ -57,7 +78,8 @@ class Console:
         text = f"  {self.dim(stamp)} {line}"
         self.say(self.dim(text) if indented else text)
 
-    def publish(self, section: str, payload) -> None:
+    def publish(self, section: str, payload: object) -> None:
+        """A run's section, printed by its `_on_<section>` if it has one."""
         show = getattr(self, f"_on_{section}", None)
         if show and payload is not None:
             show(payload)
@@ -82,7 +104,7 @@ class Console:
 
     def _on_error(self, e) -> None:
         self.say()
-        self.say(self.bad(f"✗ {e['title']} failed: {e['message']}"))
+        self.say(self.bad(f"{MARKS['failed']} {e['title']} failed: {e['message']}"))
         if e.get("hint"):
             self.say(f"  what to do: {e['hint']}")
 
@@ -91,7 +113,7 @@ class Console:
             return
         self.say(self.bold("This run will:"))
         for line in r["summary"]:
-            self.say(f"  • {line}")
+            self.say(f"  {BULLET} {line}")
         self.say(self.dim(f"  (as a command: {r['command']})"))
 
     def _on_targets(self, rows) -> None:
@@ -120,6 +142,9 @@ class Console:
         given = f"{sim['rare_given']} rare ticket{'s' if sim['rare_given'] != 1 else ''}"
         if sim.get("rare_source"):
             given += f" ({sim['rare_source']})"
+        if sim.get("platinum_given") is not None:
+            given += (f" and {sim['platinum_given']} Platinum"
+                      + (f" ({sim['platinum_source']})" if sim.get("platinum_source") else ""))
         self.say(f"  on paper, {given} would unlock {len(got)}:")
         for u in got[:15]:
             plat = " with a Platinum ticket" if u["platinum"] else ""

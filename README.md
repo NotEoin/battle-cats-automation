@@ -23,7 +23,7 @@ can stop it. Either one can do anything the other can:
 | find a unit | `bcgacha search dark kasli` | search box under Start a run |
 | see the plan, spending nothing | `bcgacha plan -t "Dark Kasli"` | Plan |
 | draw for units, most wanted first | `bcgacha run -t "Dark Kasli" -t Gunduros --roll` | tick Draw, Start |
-| use Platinum tickets too | `--platinum 2` | Platinum tickets |
+| limit Platinum spending | `--platinum 2` (default: every one held, read off the screen) | Platinum: at most |
 | want every Uber of an event | `-e "Iron Legion"` (`--legend-rares` for its Legend Rares) | tick the event |
 | open Cat or Lucky Capsules | `--capsules cat:30` (`lucky`, `lucky_g`; no count: until out) | Normal capsules |
 | play the Uncanny Legends | `--play-legends` | Battles |
@@ -122,7 +122,7 @@ terminal and the page as it starts and ends (`jobs.py`):
 | map | this save's sagas and chapters, and this phone's Cat Base doors: once per save and phone |
 | storage | Use all on Cat Storage, when asked |
 | owned | reads every Cat Guide entry for what the account owns: once, or when asked |
-| capsule | before drawing: puts each live event on screen -- the schedule lists some the game does not show -- and reads the rare ticket counter |
+| capsule | before drawing: puts each live event on screen -- the schedule lists some the game does not show -- and reads the rare and Platinum ticket counters |
 | seed | the seed and position, found from the saved result screens in `captures/`, spending nothing |
 | goal | what is wanted and why, the route to it, and the whole run played out on paper |
 | roll | draws along the route, every result read and checked against the plan |
@@ -134,6 +134,11 @@ terminal and the page as it starts and ends (`jobs.py`):
   live event. Platinum tickets go on named units first, then the best unowned
   Platinum Ubers by tier -- twice as many are earmarked as tickets held, so
   one that never comes up on the route does not strand a ticket.
+- Nothing the screen shows is typed in: the rare and Platinum ticket counts,
+  Cat Food and Cat Storage's size are all read off it. OCR cannot see a lone
+  digit -- the Platinum count, usually -- so `digits.py` reads one three ways
+  and trusts it only when they agree: by the glyphs of numbers it has read for
+  certain, set among those digits as a number, and drawn as a run of itself.
 - Each live event is a screen of the map: `goto("event:979")` selects Iron
   Legion from anywhere, in one call. An event the tab strip does not show is
   noted after one sweep of the tabs and left out of every plan that day.
@@ -278,6 +283,7 @@ bc.godfat.org output saved under `tests/fixtures`.
 | `catindex` | reads the Cat Guide to learn what is owned |
 | `events` | the live gacha events, each a screen of the map, and which the phone shows |
 | `results` | the cat on a result screen, or "unsure" |
+| `digits` | counters off the screen, down to a lone Platinum digit |
 | `draw` | whether the draw button spends a ticket or Cat Food |
 | `session` | one persistent tunnel for taps and frames |
 | `device` | what the phone supports, and whether one is plugged in |

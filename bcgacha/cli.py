@@ -65,9 +65,9 @@ def _want_options(p: argparse.ArgumentParser) -> None:
     g.add_argument("--legend-rares", action="store_true",
                    help="want those events' Legend Rares too")
     g.add_argument("--prefer", metavar="EVENT", help="the event whose Legend Rare comes first")
-    g.add_argument("--platinum", type=int, default=0, metavar="N",
-                   help="Platinum tickets it may spend (default 0), on targets first, "
-                        "then the best unowned Ubers by tier")
+    g.add_argument("--platinum", type=_count_or_all, default=None, metavar="N|all",
+                   help="Platinum tickets it may spend (default: all it holds, as read off "
+                        "the screen), on targets first, then the best unowned Ubers by tier")
 
 
 def _do_options(p: argparse.ArgumentParser) -> None:
@@ -239,7 +239,8 @@ def cmd_status(args) -> int:
             con.say(f"  {ok} seed        {a['seed']} at {a['position']}"
                     f"{', confirmed by a draw' if a['confirmed'] else ', not yet confirmed by a draw'}")
             con.say(f"    tickets     {a['rare'] if a['rare'] is not None else '?'} rare, "
-                    f"{a['platinum'] if a['platinum'] is not None else '?'} Platinum (as the last run left them)")
+                    f"{a['platinum'] if a['platinum'] is not None else '?'} Platinum "
+                    "(as last read off the screen; a draw run reads them again)")
             con.say(f"    storage     {a['storage']}")
         else:
             con.say(f"  {no} seed        unknown ({s['captures']} saved result screens to find it from)")
@@ -440,7 +441,8 @@ def _guided(con: Console, units, args) -> int:
         elif answer != "none":
             req.events = [events[int(p) - 1]["key"] for p in answer.replace(" ", ",").split(",")
                           if p.isdigit() and 1 <= int(p) <= len(events)]
-        req.platinum = int(_ask("How many Platinum tickets may it spend?", "0") or 0)
+        req.platinum = _count_or_all(_ask("How many Platinum tickets may it spend? (a number or 'all';"
+                                          " the count held is read off the screen)", "all"))
         if "roll" in picked:
             req.roll = True
             req.rare = _count_or_all(_ask("How many rare tickets may it spend? (a number or 'all')", "all"))
@@ -624,7 +626,7 @@ def cmd_map(args) -> int:
 def cmd_upkeep(args) -> int:
     """One task alone, read afresh: the map, the owned list, or Use all."""
     con = Console(quiet=args.quiet)
-    tasks = [t for t in args.tasks]
+    tasks = ["capsule" if t == "tickets" else t for t in args.tasks]
     request = jobs.Request(only=tasks, rescan_map="map" in tasks, rescan_owned="owned" in tasks,
                            storage="storage" in tasks)
     return _run_on_phone(con, request, args)
@@ -678,8 +680,9 @@ def parser() -> argparse.ArgumentParser:
     p = ts.add_parser("screenshot", help="save the phone's screen as a PNG")
     p.add_argument("output")
     p.set_defaults(func=cmd_screenshot)
-    p = ts.add_parser("upkeep", help="read one thing afresh on the phone: map, owned, storage")
-    p.add_argument("tasks", nargs="+", choices=["map", "owned", "storage"])
+    p = ts.add_parser("upkeep", help="read one thing afresh on the phone: map, owned, storage, tickets")
+    p.add_argument("tasks", nargs="+", choices=["map", "owned", "storage", "tickets"],
+                   help="tickets: which events the capsule screen shows, and the rare and Platinum counters")
     for flag, kw in (("--port", dict(type=int, default=PORT)), ("--serial", {}),
                      ("--speed", dict(type=float, default=1.0))):
         p.add_argument(flag, **kw)

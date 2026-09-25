@@ -59,3 +59,11 @@ def test_a_task_needing_the_phone_says_so_without_one():
 def test_a_draw_run_says_it_stops_at_the_goal():
     assert any("stops once everything wanted is unlocked" in line
                for line in jobs.Request(roll=True).summary())
+
+
+def test_platinum_is_every_ticket_held_unless_limited():
+    assert jobs.Request.from_json({}).platinum is None
+    assert jobs.Request.from_json(dict(platinum="all")).platinum is None
+    assert jobs.Request.from_json(dict(platinum="0")).platinum == 0
+    assert "--platinum" not in jobs.Request(roll=True).command()
+    assert any("every Platinum ticket held" in line for line in jobs.Request(roll=True).summary())
