@@ -938,6 +938,7 @@ class Navigator:
         # reach its screen in the game's present state, so stop trying it.
         tries: dict[tuple, int] = {}
         forgiven = False
+        frozen = 0                      # presses in a row that changed nothing at all
         settled = None                  # the frame a tap was watched settling on
         for _ in range(max_steps):
             if self._missing(destination):
@@ -974,7 +975,19 @@ class Navigator:
                     if log:
                         log("  lost: backing out is not reaching a known screen")
                     return False
-                self._tap(*self._way_out(frame), 1.6)
+                point = self._way_out(frame)
+                if log:
+                    log(f"    not a screen on the map: pressing ({point[0]:.2f}, {point[1]:.2f}) to leave it")
+                self._tap(*point, 1.6)
+                if not frame_changed(frame, self.session.screenshot(), fraction=0.001):
+                    frozen += 1
+                    if frozen >= 3:
+                        if log:
+                            log("  the screen is not answering: three presses changed not one pixel "
+                                "-- the phone may be locked, or the game stuck")
+                        return False
+                else:
+                    frozen = 0
                 continue
 
             lost = 0
