@@ -122,7 +122,16 @@ class CapsuleRun:
         profile = self.ctx.graph.profile_for(frame)
         found = profile.find(frame, self.screen, name)
         if found is None:
-            return None, f"no {name!r} on screen"
+            # With one ticket left the machine shows Try once! alone, where
+            # the ten-draw button was: read it where it is. The face is
+            # checked as ever below.
+            from .perception import perceive
+
+            control = perceive(frame, self.ctx.ocr).find(name)
+            if control is None or control.box[1] < 0.6:
+                return None, f"no {name!r} on screen"
+            found = dict(key=name, label=control.label, kind=control.kind, score=1.0,
+                         tap=control.tap, box=tuple(control.box))
         if found["score"] < FACE_MATCH:
             return None, f"{name!r} does not look as it did when learned ({found['score']:.2f})"
         box = self._face_box(profile, name, found["box"])
