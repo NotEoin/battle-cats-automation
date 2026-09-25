@@ -37,6 +37,9 @@ SKIP_AFTER_OK = 0.8
 # A draw button's height, as a share of the frame; a learned box much shorter
 # than this holds only the label.
 FACE_HEIGHT = 0.117
+# A draw button's width, and how far its face reaches below its label's top.
+FACE_WIDTH = 0.168
+FACE_DEPTH = 0.146
 # The Cat Food can sits in the lower part of the face, with the cost; the
 # label above it prints the 10 of "Try 10 times!" in red.
 FACE_LOWER = 0.45
@@ -158,7 +161,12 @@ class CapsuleRun:
                 # Only if the label sits inside that button.
                 if x0 <= (box[0] + box[2]) / 2 <= x1 and y0 - 0.03 <= box[1] <= y1:
                     return tuple(entry["box"])
-        return None
+        # No tab has the whole button where this label is -- the Cat Capsules
+        # button moves over when its tickets run out -- so it is drawn from
+        # the label: the face hangs below it, as wide as a draw button is.
+        # The face is still checked, digits and all, before any press.
+        cx = (box[0] + box[2]) / 2
+        return (cx - FACE_WIDTH / 2, box[1], cx + FACE_WIDTH / 2, min(box[1] + FACE_DEPTH, 0.87))
 
     # -- one press ---------------------------------------------------------------
 
