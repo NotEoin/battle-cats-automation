@@ -269,6 +269,9 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
           <div class="machine"><label><input type="checkbox" id="m-cat"> Cat Capsules</label><input type="number" id="n-cat" min="0" placeholder="all"></div>
           <div class="machine"><label><input type="checkbox" id="m-lucky"> Lucky Capsules</label><input type="number" id="n-lucky" min="0" placeholder="all"></div>
           <div class="machine"><label><input type="checkbox" id="m-lucky_g"> Lucky Capsules G</label><input type="number" id="n-lucky_g" min="0" placeholder="all"></div>
+          <div class="checks" style="margin-top: 6px">
+            <label><input type="checkbox" id="trade-in"> Trade what Use all can't use <span class="m">maxed capsules: Rare Tickets (5 a ticket), the rest NP</span></label>
+          </div>
         </div>
       </div>
       <div>
@@ -842,6 +845,9 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     if (c) stats($('cap-stats'), [['presses', c.presses], ['capsules opened', c.capsules], ['seconds each', c.per_capsule], ['Cat Food', c.cat_food], ['minutes', c.seconds !== undefined ? (c.seconds / 60).toFixed(1) : '']]);
     $('cap-runs').replaceChildren(...(S.capsule_runs || []).map(x => h('li', '', x)), ...(c && c.reason ? [h('li', '', `stopped: ${c.reason}`)] : []));
     table($('cap-table'), [['#', x => x.n], ['machine', x => x.screen], ['read off the name plate', x => x.name]], (pipe.capsules || []).slice().reverse(), null, 'No capsules opened in this run.');
+    const ti = S.trade_in;
+    if (ti) $('cap-runs').append(h('li', '', `traded for Rare Tickets: ${ti.traded} capsules, ${ti.tickets} ticket(s)`
+      + (ti.exchange ? `; ${ti.exchange}` : '') + (ti.skipped && ti.skipped.length ? ` · not tradeable: ${ti.skipped.join(', ')}` : '')));
     if ((pipe.capsules || []).length) badge('capsules', pipe.capsules.length, true);
     // Uncanny Legends
     const L = S.legends;
@@ -959,7 +965,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       events: [...$('events').querySelectorAll('input:checked')].map(i => i.value),
       legend_rares: $('legend-rares').checked, prefer: $('prefer').value || null,
       roll: $('roll').checked, rare: num('rare'), platinum: num('platinum'),
-      capsules, uncanny: $('uncanny').checked, storage: $('storage').checked, update: $('update').checked,
+      capsules, trade_in: $('trade-in').checked, uncanny: $('uncanny').checked, storage: $('storage').checked, update: $('update').checked,
       rescan_owned: $('rescan-owned').checked, rescan_map: $('rescan-map').checked,
     };
   }

@@ -69,12 +69,15 @@ class CapsuleRun:
     """Press one machine's draw button until told to stop, `limit` capsules
     are open, or a check refuses."""
 
-    def __init__(self, ctx, machine: str, limit: int | None = None, multi: bool = True):
+    def __init__(self, ctx, machine: str, limit: int | None = None, multi: bool = True,
+                 trade_in: bool = False):
         from .state import STATE_PATH, Account
 
         if machine not in MACHINES:
             raise ValueError(f"unknown machine {machine!r}: one of {', '.join(MACHINES)}")
         self.ctx, self.screen, self.limit, self.multi = ctx, MACHINES[machine], limit, multi
+        # What Use all cannot use: traded for Rare Tickets, the rest for NP.
+        self.trade_in = trade_in
         self.nav = ctx.navigator()
         self.state = CapsuleState()
         self.account = Account.load() if STATE_PATH.exists() else None
@@ -221,7 +224,16 @@ class CapsuleRun:
         from .pipeline import drain_storage
 
         self.ctx.log("  Cat Storage nearly full: Use all")
-        if not drain_storage(self.ctx):
+        drained = drain_storage(self.ctx)
+        if self.trade_in:
+            from .storage import Storage, clear_unusable
+
+            clear_unusable(self.ctx)
+            left = Storage(self.ctx).count()
+            if left is None or left[0] > left[1] - 2 * STORAGE_MARGIN - COST[MULTI]:
+                return False
+            self.ctx.storage_left, self.ctx.storage_capacity = left
+        elif not drained:
             return False
         self.stored = getattr(self.ctx, "storage_left", 0)
         self.capacity = getattr(self.ctx, "storage_capacity", self.capacity)

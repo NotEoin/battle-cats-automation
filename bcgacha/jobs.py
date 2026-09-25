@@ -75,6 +75,7 @@ class Request:
     rare: int | None = None                             # rare tickets to spend; None: all
     platinum: int | None = None                         # Platinum tickets to spend; None: all
     capsules: dict = field(default_factory=dict)        # machine -> capsules to open, 0: all
+    trade_in: bool = False                              # what Use all leaves: Rare Tickets, then NP
     uncanny: bool = False                               # play the Uncanny Legends
     storage: bool = False                               # empty Cat Storage first
     rescan_owned: bool = False
@@ -133,6 +134,8 @@ class Request:
             words += ["--platinum", str(self.platinum)]
         for machine, n in self.capsules.items():
             words += ["--capsules", f"{machine}:{n}" if n else machine]
+        if self.trade_in and self.capsules:
+            words.append("--trade-in")
         if self.uncanny:
             words.append("--play-legends")
         if self.storage:
@@ -173,6 +176,8 @@ class Request:
         for machine, n in self.capsules.items():
             lines.append(f"open {MACHINE_NAMES[machine]}: "
                          + (f"{n} capsule{'s' if n != 1 else ''}" if n else "until its tickets run out"))
+        if self.capsules and self.trade_in:
+            lines.append("whatever Use all cannot use: traded for Rare Tickets, the rest exchanged for NP")
         if self.uncanny:
             lines.append("play the Uncanny Legends with the Cat CPU until one stage is lost 3 times")
         return lines
@@ -617,7 +622,7 @@ class Job:
         for machine, n in self.req.capsules.items():
             self.ctx.check()
             self.ctx.log(f"-- {MACHINE_NAMES[machine]}: {n or 'until out of tickets'}")
-            run = CapsuleRun(self.ctx, machine, limit=n or None)
+            run = CapsuleRun(self.ctx, machine, limit=n or None, trade_in=self.req.trade_in)
             reason = run.run()
             done.append(f"{MACHINE_NAMES[machine]} {run.state.capsules} ({reason})")
             self.ctx.put("capsule_runs", done)
