@@ -154,8 +154,12 @@ class CapsuleRun:
         and only its label is learned; the three machines are tabs of one
         screen with their buttons in one place, so take it from a tab where the
         whole button was found."""
-        if box[3] - box[1] >= 0.8 * FACE_HEIGHT:
+        if 0.8 * FACE_HEIGHT <= box[3] - box[1] <= 1.4 * FACE_HEIGHT:
             return tuple(box)
+        if box[3] - box[1] > 1.4 * FACE_HEIGHT:
+            # Learned with the bar below it: the face is the button's own.
+            cx = (box[0] + box[2]) / 2
+            return (cx - FACE_WIDTH / 2, box[1], cx + FACE_WIDTH / 2, min(box[1] + FACE_DEPTH, 0.87))
         for screen in MACHINES.values():
             entry = profile.controls(screen).get(name)
             if entry and entry["box"][3] - entry["box"][1] >= 0.8 * FACE_HEIGHT:
