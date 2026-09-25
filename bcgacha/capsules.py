@@ -38,8 +38,10 @@ SKIP_AFTER_OK = 0.8
 # than this holds only the label.
 FACE_HEIGHT = 0.117
 # A draw button's width, and how far its face reaches below its label's top.
-FACE_WIDTH = 0.168
+FACE_WIDTH = 0.176
 FACE_DEPTH = 0.146
+# The label sits a little left of its button's middle.
+FACE_SHIFT = 0.008
 # The Cat Food can sits in the lower part of the face, with the cost; the
 # label above it prints the 10 of "Try 10 times!" in red.
 FACE_LOWER = 0.45
@@ -165,7 +167,7 @@ class CapsuleRun:
         # button moves over when its tickets run out -- so it is drawn from
         # the label: the face hangs below it, as wide as a draw button is.
         # The face is still checked, digits and all, before any press.
-        cx = (box[0] + box[2]) / 2
+        cx = (box[0] + box[2]) / 2 + FACE_SHIFT
         return (cx - FACE_WIDTH / 2, box[1], cx + FACE_WIDTH / 2, min(box[1] + FACE_DEPTH, 0.87))
 
     # -- one press ---------------------------------------------------------------
