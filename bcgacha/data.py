@@ -23,6 +23,8 @@ from dataclasses import dataclass, field
 import yaml
 
 DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
+# godfat's dataset, one YAML per game language, rebuilt as events are announced.
+SOURCE = "https://gitlab.com/godfat/battle-cats-rolls/-/raw/master/build/bc-{lang}.yaml"
 
 # Rarity codes as the dataset stores them.
 BASIC, EX, RARE, SUPER_RARE, UBER, LEGEND = range(6)
@@ -170,3 +172,25 @@ def load(lang: str = "en") -> Dataset:
     with open(cache, "wb") as fh:
         pickle.dump(ds, fh, protocol=pickle.HIGHEST_PROTOCOL)
     return ds
+
+
+def fetch(lang: str = "en") -> pathlib.Path:
+    """Download the newest dataset -- the event schedule with it -- in place of
+    the one kept. Written aside and swapped in, so a dropped connection leaves
+    the old file whole; load() rebuilds its cache from the new one."""
+    import os
+
+    import httpx
+
+    DATA_DIR.mkdir(exist_ok=True)
+    out = DATA_DIR / f"bc-{lang}.yaml"
+    tmp = out.with_suffix(".yaml.part")
+    with httpx.stream("GET", SOURCE.format(lang=lang), follow_redirects=True, timeout=120) as r:
+        r.raise_for_status()
+        with open(tmp, "wb") as fh:
+            for chunk in r.iter_bytes():
+                fh.write(chunk)
+    yaml.load(tmp.read_text(), Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader))["events"]   # whole, or raises
+    os.replace(tmp, out)
+    load.cache_clear()
+    return out

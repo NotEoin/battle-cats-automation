@@ -1,34 +1,17 @@
 #!/usr/bin/env python3
-"""Fetch godfat's Battle Cats dataset, the source of truth for cat pools and rates.
+"""Download godfat's Battle Cats dataset for one game language.
 
-The file is tracked in the battle-cats-rolls repository, so we pull the single
-YAML we need rather than cloning the whole project.
+`bcgacha tools update` does this for English, together with the tier list;
+this is for the other languages. Run it with bcgacha installed.
 """
+
 import argparse
-import pathlib
 import sys
 
-import httpx
-
-RAW = "https://gitlab.com/godfat/battle-cats-rolls/-/raw/master/build/bc-{lang}.yaml"
-DEST = pathlib.Path(__file__).resolve().parent.parent / "data"
-
-
-def fetch(lang: str) -> pathlib.Path:
-    DEST.mkdir(exist_ok=True)
-    out = DEST / f"bc-{lang}.yaml"
-    url = RAW.format(lang=lang)
-    with httpx.stream("GET", url, follow_redirects=True, timeout=120) as r:
-        r.raise_for_status()
-        with open(out, "wb") as fh:
-            for chunk in r.iter_bytes():
-                fh.write(chunk)
-    return out
-
+from bcgacha.data import fetch
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--lang", default="en", choices=["en", "jp", "kr", "tw"])
-    args = ap.parse_args()
-    path = fetch(args.lang)
+    path = fetch(ap.parse_args().lang)
     print(f"{path} ({path.stat().st_size:,} bytes)", file=sys.stderr)

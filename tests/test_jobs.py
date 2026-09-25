@@ -67,3 +67,14 @@ def test_platinum_is_every_ticket_held_unless_limited():
     assert jobs.Request.from_json(dict(platinum="0")).platinum == 0
     assert "--platinum" not in jobs.Request(roll=True).command()
     assert any("every Platinum ticket held" in line for line in jobs.Request(roll=True).summary())
+
+
+def test_an_update_comes_before_everything_else():
+    assert jobs.Request(update=True, roll=True).tasks()[:2] == ["update", "map"]
+    assert jobs.Request(only=["update"]).tasks() == ["update"]
+
+
+def test_an_update_has_its_own_command():
+    assert jobs.Request(only=["update"]).command() == "bcgacha tools update"
+    assert "--update" in jobs.Request(update=True, roll=True).command()
+    assert jobs.Request(update=True).summary()[0].startswith("first download")

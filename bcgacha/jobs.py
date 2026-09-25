@@ -7,6 +7,7 @@ starts and ends (the "tasks" section), with what each found along the way.
 
 The tasks, in the order they run, each only when needed:
 
+  update    the newest event schedule and tier list, downloaded  (if asked)
   map       this save's sagas and chapters, and this phone's Cat Base doors
   storage   empty Cat Storage with Use all                      (if asked)
   owned     read the Cat Guide for the cats this account has    (once, or if asked)
@@ -31,6 +32,7 @@ from . import pipeline as P
 SIM_ASSUMED = 50
 MACHINE_NAMES = {"cat": "Cat Capsules", "lucky": "Lucky Capsules", "lucky_g": "Lucky Capsules G"}
 TITLES = {
+    "update": "Events and tier list",
     "map": "Map of this save",
     "storage": "Empty Cat Storage",
     "owned": "Owned cats",
@@ -42,6 +44,7 @@ TITLES = {
     "legends": "Uncanny Legends",
 }
 DOES = {
+    "update": "downloading the newest event schedule and the community tier list",
     "map": "the save's sagas and chapters, and this phone's Cat Base doors",
     "storage": "Use all on Cat Storage, so everything drawn joins the roster",
     "owned": "reading every Cat Guide entry for what this account owns",
@@ -76,6 +79,7 @@ class Request:
     storage: bool = False                               # empty Cat Storage first
     rescan_owned: bool = False
     rescan_map: bool = False
+    update: bool = False                                # download events and tiers first
     only: list | None = None                            # just these tasks: upkeep from the page
 
     @classmethod
@@ -99,7 +103,7 @@ class Request:
     def tasks(self) -> list[str]:
         if self.only:
             return [t for t in TITLES if t in self.only]
-        out = ["map"]
+        out = (["update"] if self.update else []) + ["map"]
         if self.storage:
             out.append("storage")
         if self.roll or self.targets or self.events or not self.spends:
@@ -137,7 +141,11 @@ class Request:
             words.append("--rescan-owned")
         if self.rescan_map:
             words.append("--rescan-map")
-        if self.only:
+        if self.update:
+            words.append("--update")
+        if self.only == ["update"]:
+            words = ["bcgacha", "tools", "update"]
+        elif self.only:
             words = ["bcgacha", "tools", "upkeep", *("tickets" if t == "capsule" else t for t in self.only)]
         return " ".join(shlex.quote(w) for w in words)
 
@@ -146,7 +154,7 @@ class Request:
         if self.only:
             return ["only: " + ", ".join(TITLES[t].lower() for t in self.tasks())
                     + (" (read afresh)" if self.rescan_map or self.rescan_owned else "")]
-        lines = []
+        lines = ["first download the newest events and tier list"] if self.update else []
         if self.targets:
             lines.append("want, most first: " + ", ".join(self.targets))
         if self.events:
@@ -252,6 +260,61 @@ class Job:
             self.ctx.log(f"!! {TITLES.get(name, name)} failed: {message}" + (f" -- {hint}" if hint else ""))
 
     # -- the tasks --
+
+    def _do_update(self):
+        """The newest schedule and tier list. Needs no phone; the map is built
+        again after, so a new event is a screen at once."""
+        from . import data
+        from . import events as live
+        from . import tiers as T
+        from .uigraph import UIGraph
+
+        ctx = self.ctx
+
+        def live_now():
+            try:
+                return {e.key: e for e in live.live_events(data.load())}
+            except FileNotFoundError:
+                return {}
+
+        before = live_now()
+        ctx.log("  downloading the event schedule (godfat's dataset)")
+        try:
+            path = data.fetch()
+        except Exception as exc:
+            raise Refused(f"the event schedule did not download: {exc}",
+                          "check the internet connection; the schedule kept is unchanged") from None
+        ctx.dataset = data.load()
+        after = live_now()
+        new = [e for k, e in after.items() if k not in before]
+        ended = [e for k, e in before.items() if k not in after]
+        ctx.log(f"  {path.name}: {path.stat().st_size:,} bytes, {len(after)} events live today")
+        for e in new:
+            ctx.log(f"  new: {e.label} ({e.start} to {e.end})")
+        for e in ended:
+            ctx.log(f"  gone: {e.label}")
+        ctx.log("  downloading the tier list")
+        try:
+            tier_list = T.match(T.parse(T.fetch_text()), ctx.dataset)
+            tier_list.save()
+            tiers = f"{len(tier_list.by_cat)} cats ranked"
+        except Exception as exc:
+            tiers = f"tier list kept as it was ({type(exc).__name__}: {exc})"
+            ctx.log(f"  {tiers}")
+        ctx.graph = self.reload() if self.reload else UIGraph.load()
+        self.events = None
+        from .catindex import OwnedIndex
+
+        index = OwnedIndex.load()
+        seen, _ = live.last_screen()
+        ctx.put("events", [dict(e.to_json(ctx.dataset, index.owned if index.complete else None), seen=seen.get(e.key))
+                           for e in after.values()])
+        ctx.put("update", dict(at=time.strftime("%Y-%m-%d %H:%M"), events=[e.label for e in after.values()],
+                               new=[dict(label=e.label, start=e.start, end=e.end) for e in new],
+                               ended=[e.label for e in ended], tiers=tiers))
+        changes = (f"; new: {', '.join(e.label for e in new)}" if new else "") + \
+                  (f"; ended: {', '.join(e.label for e in ended)}" if ended else "")
+        return f"{len(after)} events live{changes or ', none new'}; {tiers}"
 
     def _do_map(self):
         from . import carousel

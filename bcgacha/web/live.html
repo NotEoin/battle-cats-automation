@@ -281,6 +281,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
         <div class="field">
           <span class="label">Before starting</span>
           <div class="checks">
+            <label><input type="checkbox" id="update"> Update events and tier list <span class="m">download the newest schedule</span></label>
             <label><input type="checkbox" id="storage"> Empty Cat Storage (Use all)</label>
             <label><input type="checkbox" id="rescan-owned"> Read the Cat Guide again <span class="m">after drawing by hand</span></label>
             <label><input type="checkbox" id="rescan-map"> Read the sagas and chapters again</label>
@@ -302,6 +303,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       <button type="button" class="primary" id="start-btn">Start</button>
       <span class="spacer"></span>
       <span class="dim" style="font-size: 12.5px">Upkeep:</span>
+      <button type="button" class="small" data-only="update" title="Download the newest event schedule and tier list; no phone needed">Update events &amp; tiers</button>
       <button type="button" class="small" data-only="map" title="Read this save's sagas and chapters again">Re-read map</button>
       <button type="button" class="small" data-only="owned" title="Read every Cat Guide entry again">Re-read owned cats</button>
       <button type="button" class="small" data-only="storage" title="Press Use all on Cat Storage">Empty storage</button>
@@ -345,6 +347,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       </div>
     </div>
     <div class="panel" id="tab-events" role="tabpanel" hidden>
+      <div id="update-note"></div>
       <div class="ptable" id="events-table"></div>
     </div>
     <div class="panel" id="tab-collection" role="tabpanel" hidden>
@@ -719,7 +722,8 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     const err = S.error;
     $('error').replaceChildren(err ? h('div', 'error-box', h('b', '', `${err.title} failed`), err.message, err.hint ? h('div', '', h('b', '', 'What to do: '), err.hint) : null) : '');
     for (const b of ['plan-btn', 'start-btn']) $(b).disabled = running;
-    document.querySelectorAll('[data-only]').forEach(b => { b.disabled = running || state.mode === 'replay'; });
+    // Updating needs no phone; the rest of upkeep does.
+    document.querySelectorAll('[data-only]').forEach(b => { b.disabled = running || (state.mode === 'replay' && b.dataset.only !== 'update'); });
   }
   function drawTasks() {
     const S = (pipe && pipe.sections) || {};
@@ -811,6 +815,11 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
         ['missing Ubers', e => Array.isArray(e.ubers) ? e.ubers.filter(u => u.owned === false).map(u => u.name).join(', ') : '', () => 'wrap'],
         ['key', e => e.key]], S.events, e => e.seen === false ? 'bad-row' : '');
     }
+    const up = S.update;
+    $('update-note').replaceChildren(up ? h('dl', 'facts', ...[
+      ['Updated', up.at], ['New events', up.new.length ? up.new.map(e => `${e.label} (${e.start} to ${e.end})`).join(', ') : 'none'],
+      ['Ended since', up.ended.length ? up.ended.join(', ') : 'none'], ['Tier list', up.tiers]].flatMap(([k, v]) => [h('dt', '', k), h('dd', '', v)])) : '');
+    if (up) $('update-note').append(h('p', 'hint', 'Which of these the phone shows is checked before a draw run, or with Read tickets.'));
     // Collection and seed
     const o = S.owned || {}, oe = (pipe.owned_entries || []).slice(-1)[0] || {};
     facts($('owned-facts'), [['owned', o.owned ?? oe.owned], ['complete', o.complete === undefined ? undefined : o.complete ? 'yes' : 'no'], ['read', o.scanned_at],
@@ -950,7 +959,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       events: [...$('events').querySelectorAll('input:checked')].map(i => i.value),
       legend_rares: $('legend-rares').checked, prefer: $('prefer').value || null,
       roll: $('roll').checked, rare: num('rare'), platinum: num('platinum'),
-      capsules, uncanny: $('uncanny').checked, storage: $('storage').checked,
+      capsules, uncanny: $('uncanny').checked, storage: $('storage').checked, update: $('update').checked,
       rescan_owned: $('rescan-owned').checked, rescan_map: $('rescan-map').checked,
     };
   }
@@ -976,7 +985,8 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
   async function start(r) {
     const out = await post('/api/run', r);
     if (out.ok) {
-      showTab(r.roll ? 'draws' : Object.keys(r.capsules || {}).length ? 'capsules' : r.uncanny ? 'legends' : r.only ? 'log' : 'goal');
+      showTab(r.roll ? 'draws' : Object.keys(r.capsules || {}).length ? 'capsules' : r.uncanny ? 'legends'
+        : r.only ? (r.only[0] === 'update' ? 'events' : 'log') : 'goal');
       pipeVersion = -1;
     }
   }

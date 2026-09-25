@@ -65,6 +65,8 @@ def _want_options(p: argparse.ArgumentParser) -> None:
     g.add_argument("--legend-rares", action="store_true",
                    help="want those events' Legend Rares too")
     g.add_argument("--prefer", metavar="EVENT", help="the event whose Legend Rare comes first")
+    g.add_argument("--update", action="store_true",
+                   help="download the newest events and tier list first (bcgacha tools update)")
     g.add_argument("--platinum", type=_count_or_all, default=None, metavar="N|all",
                    help="Platinum tickets it may spend (default: all it holds, as read off "
                         "the screen), on targets first, then the best unowned Ubers by tier")
@@ -102,6 +104,7 @@ def request_from_args(args) -> jobs.Request:
         platinum=args.platinum, capsules=dict(getattr(args, "capsules", []) or []),
         uncanny=getattr(args, "play_legends", False), storage=getattr(args, "empty_storage", False),
         rescan_owned=getattr(args, "rescan_owned", False), rescan_map=getattr(args, "rescan_map", False),
+        update=getattr(args, "update", False),
     )
 
 
@@ -283,27 +286,48 @@ def cmd_search(args) -> int:
     return 0
 
 
-def cmd_plan(args) -> int:
-    """A run with nothing spent: from what is saved, no phone needed."""
+def _run_offline(con: Console, request: jobs.Request) -> bool:
+    """A run needing no phone: a plan, an update."""
     from . import pipeline as P
     from .data import load
     from .uigraph import UIGraph
 
-    con = Console(quiet=args.quiet)
-    request = request_from_args(args)
     graph = UIGraph.load()
 
     class LazyOCR:                   # only finding the seed from captures reads text
         def __call__(self, *a, **k):
             return graph.ocr(*a, **k)
 
-    ctx = P.Context(session=None, graph=graph, ocr=LazyOCR(), dataset=load(),
+    try:
+        dataset = load()
+    except FileNotFoundError:
+        dataset = None               # an update fetches it
+    ctx = P.Context(session=None, graph=graph, ocr=LazyOCR(), dataset=dataset,
                     log=con.log, publish=con.publish)
-    ok, message = jobs.run(ctx, request)
+    return jobs.run(ctx, request)[0]
+
+
+def cmd_update(args) -> int:
+    """The newest events and tier list, downloaded; no phone needed."""
+    con = Console()
+    ok = _run_offline(con, jobs.Request(only=["update"]))
+    if ok:
+        con.say()
+        con.say(con.good("✓ Up to date.") + " See what is live: " + con.note("bcgacha status"))
+        con.say(con.dim("  (a draw run checks which of the events the phone shows; "
+                        "bcgacha tools upkeep tickets does it on its own)"))
+    return 0 if ok else 1
+
+
+def cmd_plan(args) -> int:
+    """A run with nothing spent: from what is saved, no phone needed."""
+    con = Console(quiet=args.quiet)
+    request = request_from_args(args)
+    ok = _run_offline(con, request)
     con.say()
     if ok:
         con.say(con.good("✓ Planned; nothing was spent.") + " To draw it: "
-                + con.note(request.command().replace("bcgacha run", "bcgacha run --roll", 1)))
+                + con.note(request.command().replace(" --update", "").replace("bcgacha run", "bcgacha run --roll", 1)))
         con.say(con.dim("  (the plan is from the schedule: a run checks which events the phone shows first)"))
     return 0 if ok else 1
 
@@ -689,6 +713,8 @@ def parser() -> argparse.ArgumentParser:
     for flag in ("--no-page", "--open", "--stay", "--quiet"):
         p.add_argument(flag, action="store_true")
     p.set_defaults(func=cmd_upkeep)
+    ts.add_parser("update", help="download the newest events and tier list (no phone needed)") \
+        .set_defaults(func=cmd_update)
     ts.add_parser("tiers", help="fetch the community tier list again").set_defaults(func=cmd_tiers)
     p = ts.add_parser("resync", help="fix the position after draws made by hand")
     p.add_argument("--cat", required=True, help="the cat the last draw actually gave")
