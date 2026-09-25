@@ -374,7 +374,7 @@ class Job:
         ctx = self.ctx
         nav = ctx.navigator()
         self.owned = self.owned or OwnedIndex.load()
-        if not nav.goto("rare_capsules", log=ctx.log):
+        if not self._to_capsules(nav):
             raise Refused("could not reach the Rare Capsule screen", "look at the phone: something is in the way")
         # Which events are on screen is read off the tabs, not taken from the
         # schedule: the phone's clock decides what the game shows, and it can
@@ -432,6 +432,15 @@ class Job:
                 f"{self.rare_held if self.rare_held is not None else '?'} rare held ({self.rare_source}), "
                 f"{self.plat_held if self.plat_held is not None else '?'} Platinum held ({self.plat_source})")
 
+    def _to_capsules(self, nav) -> bool:
+        """Onto the capsule screen by an event's tab where one can be tapped:
+        Back on the Platinum screen has been seen to leave an info panel up
+        that synthetic taps cannot close."""
+        for e in self.ctx.graph.events:
+            if not e.platinum and nav.goto(e.screen, log=self.ctx.log):
+                return True
+        return nav.goto("rare_capsules", log=self.ctx.log)
+
     def _counter(self, nav, screen: str, box, also=()) -> int | None:
         """The ticket counter on `screen`, when two fresh reads agree. A read
         both frames agree on teaches the digit reader its glyphs -- the
@@ -439,7 +448,7 @@ class Job:
         from . import digits
 
         ctx = self.ctx
-        if not nav.goto(screen, log=ctx.log):
+        if not (self._to_capsules(nav) if screen == "rare_capsules" else nav.goto(screen, log=ctx.log)):
             ctx.log(f"  could not reach {screen} to read its counter")
             return None
         atlas = digits.Atlas()

@@ -21,6 +21,7 @@ planned through it.
 from __future__ import annotations
 
 import json
+import os
 import re
 import threading
 import time
@@ -32,13 +33,18 @@ import cv2
 import numpy as np
 from rapidfuzz import fuzz
 
-GRAPH_FILE = Path(__file__).resolve().parent.parent / "data" / "ui_graph.json"
+from .paths import RESOURCES
+
+GRAPH_FILE = RESOURCES / "ui_graph.json"
 # Two threads meeting a new resolution at once must share one Profile.
 _PROFILES_LOCK = threading.Lock()
 
 # Most screens print their name here.
 TITLE_BOX = (0.015, 0.005, 0.260, 0.060)
 TITLE_SCALE = 2
+# The frame width TITLE_SCALE was tuned on (the 2532x1170 phone the map was
+# drawn on); other widths are scaled to read as that one did.
+TITLE_REFERENCE_WIDTH = 2532
 TITLE_MATCH = 78
 # A title found inside a longer reading must line up with whole words and
 # match this closely. Loosely, "Storage" passes for the "Stage S" of
@@ -130,6 +136,8 @@ class Transition:
 
 @dataclass(frozen=True)
 class Candidate:
+    """One screen the frame might be, and how sure the evidence makes it."""
+
     score: float
     name: str
     verified: bool          # every piece of evidence was checked, none assumed
@@ -140,6 +148,8 @@ class Candidate:
 
 @dataclass
 class Recognition:
+    """What a look at the frame concluded: the screen, and what was weighed."""
+
     here: str | None
     candidates: list
     percept: object | None  # the full look, when one was needed
@@ -148,15 +158,17 @@ class Recognition:
 
 
 class UnknownScreen(RuntimeError):
-    pass
+    """The frame matches no screen in the map."""
 
 
 class NoRoute(RuntimeError):
-    pass
+    """No chain of transitions leads from here to the destination."""
 
 
 @dataclass
 class UIGraph:
+    """The screen map: what each screen reads, and what each transition presses."""
+
     screens: dict[str, Screen] = field(default_factory=dict)
     transitions: list[Transition] = field(default_factory=list)
     _ocr: object | None = field(default=None, repr=False)
@@ -183,7 +195,7 @@ class UIGraph:
         path = Path(path or GRAPH_FILE)
         if not path.exists():
             return cls()
-        raw = json.loads(path.read_text())
+        raw = json.loads(path.read_text(encoding="utf-8"))
         graph = cls(
             screens={
                 s["name"]: Screen(
@@ -221,9 +233,11 @@ class UIGraph:
         return graph
 
     def save(self, path: Path | None = None) -> Path:
+        """Write the base map back out, written aside and swapped in whole."""
         path = Path(path or GRAPH_FILE)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(json.dumps({
             "screens": [
                 {
                     "name": s.name, "title": s.title,
@@ -240,13 +254,15 @@ class UIGraph:
             ],
             "transitions": [{k: v for k, v in vars(t).items() if k != "target" or v}
                             for t in self.transitions],
-        }, indent=1))
+        }, indent=1), encoding="utf-8")
+        os.replace(tmp, path)
         return path
 
     # -- recognition --------------------------------------------------------
 
     @property
-    def ocr(self):
+    def ocr(self) -> object:
+        """The OCR engine, loaded on first use: it takes a second to start."""
         if self._ocr is None:
             from rapidocr_onnxruntime import RapidOCR
 
@@ -261,8 +277,8 @@ class UIGraph:
         crop = frame[int(y0 * h): int(y1 * h), int(x0 * w): int(x1 * w)]
         if crop.size == 0:
             return ""
-        # Scaled against a 2532-wide frame, so small and large screens read alike.
-        scale = TITLE_SCALE * 2532 / w
+        # Scaled against the reference width, so small and large screens read alike.
+        scale = TITLE_SCALE * TITLE_REFERENCE_WIDTH / w
         crop = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
         result, _ = self.ocr(crop)
         result = result or []
@@ -307,7 +323,7 @@ class UIGraph:
         return self.recognise(frame, title=title).here
 
     def recognise(self, frame: np.ndarray, title: str | None = None, slow: bool = True,
-                  ocr: bool = True):
+                  ocr: bool = True) -> Recognition:
         """Identify the screen, learning about this device when that takes a full look.
 
         The fast path uses only what the device profile already knows: the
@@ -718,6 +734,9 @@ def result_ok(graph: "UIGraph", frame: np.ndarray) -> tuple[float, float] | None
 # give a cat away, start a battle, or play an advert.
 NEVER_PRESS = ("Store", "Buy", "Attack!", "Draw for Free!", "Trade for Ticket",
                "Change to XP", "Exchange", "Exchange all", "Cat Food")
+# A label reading this much like one of them is refused: a misread must not
+# slip a purchase past the list.
+NEVER_PRESS_MATCH = 85
 # How long a tapped event tab has to show its event.
 TAB_CONFIRM = 4.0
 # A person takes this long, jittered, to find the button on a new screen.
@@ -728,7 +747,8 @@ MIN_WATCH = 2.5
 
 
 def never_press(label: str) -> bool:
-    return any(title_match(n, label, within=False) >= 85 for n in NEVER_PRESS)
+    """True when `label` names a control no run may press, whatever the map says."""
+    return any(title_match(n, label, within=False) >= NEVER_PRESS_MATCH for n in NEVER_PRESS)
 
 
 class Navigator:
@@ -747,6 +767,7 @@ class Navigator:
         self.human = humaniser or Humaniser()
 
     def where(self, frame: np.ndarray | None = None) -> str | None:
+        """The screen the game is on, from `frame` or a fresh screenshot."""
         frame = frame if frame is not None else self.session.screenshot()
         return self.graph.identify(frame)
 
@@ -984,7 +1005,8 @@ class Navigator:
                     if frozen >= 3:
                         if log:
                             log("  the screen is not answering: three presses changed not one pixel "
-                                "-- the phone may be locked, or the game stuck")
+                                "-- a panel synthetic taps cannot close, a locked phone, or a stuck game: "
+                                "close it on the phone")
                         return False
                 else:
                     frozen = 0
@@ -1118,6 +1140,7 @@ class Button:
 
     @property
     def centre(self) -> tuple[float, float]:
+        """Where to tap it."""
         return self.x, self.y
 
 
