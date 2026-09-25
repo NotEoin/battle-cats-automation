@@ -133,3 +133,18 @@ def test_a_tap_that_never_leaves_is_reported_after_the_watch(tmp_path, monkeypat
 
     landed, frame = nav._settle("cat_base", 1.0)
     assert landed is None and frame is not None
+
+
+def test_a_tap_follows_the_way_the_phone_is_turned(monkeypatch):
+    """Held the other way round, the top right is where the bottom left was:
+    a panel's X must not land on Back."""
+    from bcgacha import layout
+
+    monkeypatch.setattr(layout, "orientation", layout.LANDSCAPE)
+    one_way = layout.landscape_to_hid(0.894, 0.110)
+    monkeypatch.setattr(layout, "orientation", layout.LANDSCAPE_OTHER_WAY)
+    other_way = layout.landscape_to_hid(0.894, 0.110)
+    assert other_way == layout.landscape_to_hid(0.894, 0.110)
+    monkeypatch.setattr(layout, "orientation", layout.LANDSCAPE)
+    assert other_way == layout.landscape_to_hid(1 - 0.894, 1 - 0.110), "the mirror image"
+    assert one_way != other_way
