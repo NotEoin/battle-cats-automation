@@ -563,7 +563,7 @@ class Job:
         opts = dict(goal_events=wanted_events or None, legends=self.req.legend_rares,
                     targets=targets, event_units=event_units)
         self.planner, self.goal, self.tiers = P.build_plan(ctx, self.account, owned, self.events, platinum,
-                                                           prefer, **opts)
+                                                           prefer, rare=sim_rare, **opts)
         ctx.put("goal", P.goal_json(self.goal, ctx.dataset, self.tiers, owned, self.events))
         sim = P.simulate(ctx, self.account, owned, self.events, sim_rare, platinum, prefer, **opts)
         sim["assumed"] = assumed

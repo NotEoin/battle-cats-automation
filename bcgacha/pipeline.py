@@ -233,7 +233,8 @@ def stage_seed(ctx: Context):
 
 
 def build_plan(ctx: Context, account, owned: set[int], events, platinum_tickets: int, prefer,
-               goal_events=None, legends: bool = True, targets=(), event_units: bool = True):
+               goal_events=None, legends: bool = True, targets=(), event_units: bool = True,
+               rare: int | None = None):
     """The goal and a planner for it. Refuses an owned list that is not whole:
     everything missing from it would look like a target.
 
@@ -265,7 +266,54 @@ def build_plan(ctx: Context, account, owned: set[int], events, platinum_tickets:
     scorer = Scorer(owned=set(owned), tiers=tiers, priority=goal.priority)
     planner = Planner(ctx.dataset, normal, scorer, platinum_banner=platinum,
                       platinum_tickets=platinum_tickets, platinum_wanted=set(goal.platinum))
+    schedule_platinum(planner, goal, tiers, account, rare, platinum_tickets, event_units)
     return planner, goal, tiers
+
+
+# Rare tickets assumed for allocating Platinum ones when the count is unknown.
+PLATINUM_HORIZON = 300
+
+
+def schedule_platinum(planner, goal, tiers, account, rare, tickets, tier_picks=True,
+                      index=None, track=None, previous=None) -> dict:
+    """Allocate the Platinum tickets over the whole run: named units first, in
+    the order named, then the best unowned Platinum Ubers by tier -- each at
+    a position the rare route passes. The goal's Platinum picks become just
+    those, with the position each is drawn at."""
+    from .goals import UBER_BONUS
+    from .tiers import UNRANKED
+
+    targets = {c: n for n, c in enumerate(goal.targets)}
+
+    def rank(cat):
+        if cat in targets:
+            return (0, targets[cat])
+        if not tier_picks:
+            return None
+        return (1, tiers.rank_of(cat) if tiers else UNRANKED)
+
+    planner.platinum_tier_picks = tier_picks
+    before = set(goal.platinum)
+    at = planner.schedule_platinum(account.seed, account.index if index is None else index,
+                                   account.track if track is None else track,
+                                   account.last_cat_id if previous is None else previous,
+                                   rare if rare is not None else PLATINUM_HORIZON, tickets, rank)
+    where = {cat: f"{i}{'AB'[t]}" for (i, t), cat in at.items()}
+    goal.platinum = set(where)
+    planner.platinum_wanted = set(where)
+    for cat in before - goal.platinum - set(goal.targets) - goal.ubers - goal.legendaries:
+        goal.priority.pop(cat, None)
+        goal.why.pop(cat, None)
+    for cat, pos in where.items():
+        tier = tiers.tier_of(cat) if tiers else "?"
+        goal.why[cat] = (f"{goal.why[cat]}, Platinum ticket at {pos}" if cat in targets
+                         else f"Platinum pick, tier {tier}, at {pos}")
+        goal.priority.setdefault(cat, UBER_BONUS)
+    for cat in goal.targets:
+        if cat not in where and cat in (planner.platinum_banner.slots.get(4) or [] if planner.platinum_banner else []) \
+                and cat not in planner.scorer.owned and tickets:
+            goal.why[cat] = f"{goal.why.get(cat, 'target')}; the Platinum machine does not give it on this route"
+    return at
 
 
 def goal_json(goal, dataset, tiers, owned, events) -> dict:
@@ -316,7 +364,7 @@ def simulate(ctx: Context, account, owned, events, rare: int, platinum: int, pre
     from .planner import PLATINUM_TICKET
 
     planner, goal, tiers = build_plan(ctx, account, owned, events, platinum, prefer, goal_events, legends,
-                                      targets, event_units)
+                                      targets, event_units, rare=rare)
     have = set(owned)
     index, track, prev = account.index, account.track, account.last_cat_id
     rolls, unlocked = [], []
@@ -673,6 +721,7 @@ class GoalRun:
                 if (s.rare_left is not None and s.rare_left <= 0) and s.platinum_left <= 0:
                     s.reason = "out of rare and platinum tickets"
                     break
+                self._keep_schedule()
                 # Until a live draw has matched the saved position, only rare
                 # tickets are spent: a platinum ticket on a wrong position is
                 # an uber lost.
@@ -711,6 +760,28 @@ class GoalRun:
         self._publish_state()
         ctx.log(f"run over: {s.reason}")
         return s.reason
+
+    def _keep_schedule(self) -> None:
+        """Keep the Platinum allocation true to where the run is: a spot drawn
+        is done with; the run off the path it was made for, or a spot gone by
+        unspent (before a draw had confirmed the position), allocates the
+        tickets left afresh from here."""
+        planner, s, a = self.planner, self.state, self.account
+        if planner.platinum_at is None or s.platinum_left <= 0:
+            return
+        owned = self.owned_index.owned
+        planner.platinum_at = {p: c for p, c in planner.platinum_at.items() if c not in owned}
+        path, here = planner.platinum_path, (a.index, a.track)
+        at = path.index(here) if here in path else None
+        passed = at is None or any(p in path and path.index(p) < at for p in planner.platinum_at)
+        if not passed and planner.platinum_at:
+            return
+        if not passed and not planner.platinum_at:
+            return
+        self.ctx.log("  allocating the Platinum tickets left afresh from here")
+        schedule_platinum(planner, self.goal, self.tiers, a, s.rare_left or PLATINUM_HORIZON, s.platinum_left,
+                          getattr(planner, "platinum_tier_picks", True))
+        self.ctx.put("goal", goal_json(self.goal, self.ctx.dataset, self.tiers, owned, self.events))
 
     def _platinum_only_step(self):
         """With the rare tickets gone, a platinum draw here -- only if it lands

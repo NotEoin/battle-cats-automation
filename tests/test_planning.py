@@ -396,3 +396,22 @@ def test_goal_names_a_target_no_live_event_rolls():
     goal = goals.build(ds, tier_list, owned, normal, platinum, targets=[stray])
     assert goal.unreachable == [stray] and stray not in goal.wanted
     assert "no live event" in goal.reason(stray)
+
+
+def test_the_route_is_bent_to_pass_a_platinum_spot_on_the_other_track():
+    """A unit only the Platinum machine gives, at a position on the track the
+    route is not on: the planner makes banner choices that put it there."""
+    from bcgacha.gacha import Gacha
+
+    ds, tier_list, owned, normal, platinum, _goal = _goal_fixture()
+    seed = 3728687165
+    planner = Planner(ds, normal, Scorer(owned=set(owned), tiers=tier_list), platinum_banner=platinum,
+                      platinum_wanted=set())
+    base = [(s.index, s.track) for s in planner.plan(seed, rolls=150).steps]
+    plat = Gacha(platinum, seed, ds)
+    off = next((i, t) for i in range(40, 150) for t in (0, 1)
+               if (i, t) not in base and planner.toward(seed, 1, 0, None, (i, t)))
+    assert off not in base
+    bent = [(s.index, s.track) for s in planner.plan(seed, rolls=off[0] + 2).steps]
+    assert off in bent, "the waypoint is passed"
+    assert plat.cell(*off).cat_id >= 0

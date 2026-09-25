@@ -143,6 +143,16 @@ class Planner:
         self.scorer = scorer
         self.platinum_banner = platinum_banner
         self.platinum_tickets = platinum_tickets
+        # Where each Platinum ticket goes, when allocated over the whole run
+        # (schedule_platinum): {(index, track): cat}. None spends one wherever
+        # a reserved unit comes up, first come first served.
+        self.platinum_at: dict | None = None
+        self.platinum_path: list = []
+        # A position to be on, (index, track), and the states -- (index,
+        # track, previous cat) -- from which it can still be reached: banner
+        # choices that would leave them are not made (see toward()).
+        self.waypoint: tuple | None = None
+        self._toward: set = set()
         # Reserved in advance; a ticket is spent only on one of these.
         self.platinum_wanted = (
             platinum_wanted
@@ -194,13 +204,25 @@ class Planner:
             for banner in self.banners:
                 roll = self._evaluate(self._gacha(seed, banner, cache), index, track, previous_cat)
                 options.append((banner, roll, RARE_TICKET))
-            if self.platinum_banner is not None and platinum_left > 0:
+            if self.platinum_at is not None:
+                # Allocated in advance: a ticket goes where the schedule says,
+                # and nowhere else.
+                if platinum_left > 0 and (index, track) in self.platinum_at:
+                    roll = self._evaluate(
+                        self._gacha(seed, self.platinum_banner, cache), index, track, previous_cat
+                    )
+                    if self.scorer.is_new(roll.cat_id):
+                        options = [(self.platinum_banner, roll, PLATINUM_TICKET)]
+            elif self.platinum_banner is not None and platinum_left > 0:
                 roll = self._evaluate(
                     self._gacha(seed, self.platinum_banner, cache), index, track, previous_cat
                 )
                 if self._platinum_worth_it(roll.cat_id):
                     options.append((self.platinum_banner, roll, PLATINUM_TICKET))
 
+            if self.waypoint is not None and index < self.waypoint[0]:
+                keep = [o for o in options if self._keeps_waypoint(index, track, o[1], o[2])]
+                options = keep or options
             best = None
             for banner, roll, currency in options:
                 value = self.scorer.value(roll.cat_id, roll.rarity)
@@ -236,6 +258,106 @@ class Planner:
 
         self.scorer.owned = owned_snapshot
         return plan
+
+    def _next(self, index, track, roll, currency):
+        steps = 0 if currency == PLATINUM_TICKET else roll.reroll_steps
+        delta, nxt = next_position(track, steps)
+        return index + delta, nxt, roll.cat_id
+
+    def _keeps_waypoint(self, index, track, roll, currency) -> bool:
+        return self._next(index, track, roll, currency) in self._toward
+
+    def toward(self, seed: int, index: int, track: int, previous_cat, waypoint: tuple) -> bool:
+        """Make `waypoint` a position the route must pass: every state from
+        which some run of banner choices -- Platinum draws included -- reaches
+        it. False, and no waypoint, if none from here does."""
+        cache: dict = {}
+        banners = list(self.banners) + ([self.platinum_banner] if self.platinum_banner else [])
+        start = (index, track, previous_cat)
+        edges: dict = {}
+        frontier, seen = [start], {start}
+        while frontier:
+            nxt_frontier = []
+            for st in frontier:
+                i, t, prev = st
+                if i >= waypoint[0]:
+                    continue
+                outs = set()
+                for banner in banners:
+                    roll = self._evaluate(self._gacha(seed, banner, cache), i, t, prev)
+                    cur = PLATINUM_TICKET if banner is self.platinum_banner else RARE_TICKET
+                    ns = self._next(i, t, roll, cur)
+                    outs.add(ns)
+                    if ns not in seen:
+                        seen.add(ns)
+                        nxt_frontier.append(ns)
+                edges[st] = outs
+            frontier = nxt_frontier
+        good = {st for st in seen if (st[0], st[1]) == waypoint}
+        changed = True
+        while changed:
+            changed = False
+            for st, outs in edges.items():
+                if st not in good and outs & good:
+                    good.add(st)
+                    changed = True
+        if start not in good:
+            self.waypoint, self._toward = None, set()
+            return False
+        self.waypoint, self._toward = waypoint, good
+        return True
+
+    def schedule_platinum(self, seed: int, index: int, track: int, previous_cat, rare: int,
+                          tickets: int, rank) -> dict:
+        """Allocate `tickets` Platinum tickets over the whole run, not first
+        come first served: along the route the rare tickets take, what the
+        Platinum machine would give at each position, and the best of those
+        by `rank(cat)` (lower first; None: not wanted) -- one position per cat.
+
+        A ticket does not go where the rare draw is itself new and wanted, nor
+        where the rare draw rerolls a duplicate: that moves the track, and
+        every position after would change. Sets and returns platinum_at."""
+        self.platinum_at, self.platinum_path = {}, []
+        self.waypoint, self._toward = None, set()
+        if self.platinum_banner is None or tickets <= 0:
+            return self.platinum_at
+        gacha = self._gacha(seed, self.platinum_banner, {})
+        # The most wanted unit only the Platinum machine gives: the earliest
+        # of its positions the route can be made to pass, on either track.
+        pool = {c for b in self.banners for r in (RARE, SUPER_RARE, UBER, LEGEND) for c in b.slots.get(r) or []}
+        firsts = sorted((rank(c), c) for c in set(self.platinum_banner.slots.get(UBER) or [])
+                        if self.scorer.is_new(c) and c not in pool and rank(c) is not None and rank(c)[0] == 0)
+        if firsts:
+            spots = sorted((i, t) for i in range(index, index + rare + tickets) for t in (TRACK_A, 1)
+                           if (i, t) >= (index, track) and gacha.cell(i, t).cat_id == firsts[0][1])
+            for spot in spots:
+                if self.toward(seed, index, track, previous_cat, spot):
+                    break
+        base = self.plan(seed, rolls=rare + tickets, index=index, track=track, previous_cat=previous_cat)
+        self.platinum_path = [(s.index, s.track) for s in base.steps]
+        rare_gets = {s.cat_id for s in base.steps if s.is_new}
+        spots = []
+        for n, s in enumerate(base.steps):
+            if s.reroll_steps or (s.is_new and (self.scorer.priority or {}).get(s.cat_id)):
+                continue
+            after = base.steps[n + 1] if n + 1 < len(base.steps) else None
+            if after is not None and after.reroll_steps and after.rerolled_from == s.cat_id:
+                continue            # the next draw's reroll hangs on this cat
+            cat = self._evaluate(gacha, s.index, s.track, None).cat_id
+            if self.waypoint and s.index < self.waypoint[0] and \
+                    (s.index + 1, s.track, cat) not in self._toward:
+                continue            # a Platinum draw here would lose the waypoint
+            order = rank(cat) if self.scorer.is_new(cat) and cat not in rare_gets else None
+            if order is not None:
+                spots.append((order, n, cat, (s.index, s.track)))
+        taken: set[int] = set()
+        for _order, _n, cat, where in sorted(spots):
+            if cat not in taken:
+                self.platinum_at[where] = cat
+                taken.add(cat)
+                if len(taken) == tickets:
+                    break
+        return self.platinum_at
 
     def _best_ahead(self, seed, cache, index, track, previous_cat, depth) -> float:
         """Best discounted value reachable within `depth` further rolls.
