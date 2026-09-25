@@ -342,7 +342,16 @@ class Job:
         from .state import STATE_PATH, Account
 
         self._needs_device("Emptying Cat Storage")
-        if not P.drain_storage(self.ctx):
+        drained = P.drain_storage(self.ctx)
+        if self.req.trade_in and self.req.capsules:
+            # What Use all leaves is maxed: traded, then exchanged for NP.
+            from .storage import Storage, clear_unusable
+
+            clear_unusable(self.ctx)
+            left = Storage(self.ctx).count()
+            if left:
+                self.ctx.storage_left, self.ctx.storage_capacity = left
+        elif not drained:
             raise Refused("Cat Storage was not emptied", "look at the phone: a question may be waiting")
         if STATE_PATH.exists():
             account = Account.load()
