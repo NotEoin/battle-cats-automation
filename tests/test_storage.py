@@ -18,3 +18,10 @@ def test_the_storage_field_is_not_a_panel():
     """Its own Use all and Exchange all sit lower, along the bottom bar."""
     texts = [_t("Storage", 0.1, 0.04), _t("Use all", 0.47, 0.91), _t("Exchange all for NP/XP", 0.64, 0.91)]
     assert not storage.is_panel(texts)
+
+
+def test_the_cat_food_counter_is_not_part_of_a_question():
+    texts = [_t("All units in Storage will be exchanged for NP.", 0.5, 0.45), _t("Are you sure? (3880→3956)", 0.5, 0.52),
+             _t("Yes", 0.39, 0.67), _t("No", 0.61, 0.67), _t("Cat Food", 0.78, 0.93)]
+    assert "catfood" not in storage._dialog(texts)
+    assert "areyousure" in storage._dialog(texts)

@@ -51,6 +51,12 @@ def _flat(texts) -> str:
     return " ".join(t.text for t in texts).lower().replace(" ", "")
 
 
+def _dialog(texts) -> str:
+    """Only a dialog's own words: the Cat Food counter along the bottom bar
+    must not make every question look like one about spending."""
+    return _flat([t for t in texts if 0.1 < t.centre[1] < 0.72 and 0.15 < t.centre[0] < 0.85])
+
+
 def _find(texts, *words):
     return next((t for t in texts if all(w in t.text.lower().replace(" ", "") for w in words)), None)
 
@@ -178,12 +184,22 @@ class Storage:
         for _ in range(8):
             frame, texts = self._look(1.2)
             said = _flat(texts)
-            ok = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("ok", "yes")), None)
-            if ok is not None and not re.search(r"cat ?food|purchase|buy", said):
-                ctx.log(f"  confirming: {said[:90]!r}")
-                self._tap(ok.centre)
+            # "Are you sure? (3880→3946)": the NP before and after. OCR does
+            # not read its Yes; the dialog is centred, so Yes mirrors the No.
+            no = next((t for t in texts if t.text.strip().lower() == "no"), None)
+            yes = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("yes", "ok")), None)
+            asked = _dialog(texts)
+            if "areyousure" in said and re.search(r"\d+\D{1,3}\d+", said) and (yes or no):
+                if re.search(r"catfood|purchase|buy", asked):
+                    self._tap(no.centre if no else NOTICE_TAP)
+                    return f"refused a question that mentions spending: {said[:90]!r}"
+                ctx.log(f"  confirming the exchange: {said[:90]!r}")
+                self._tap(yes.centre if yes else (1.0 - no.centre[0], no.centre[1]))
                 continue
-            if "youhave" in said or "exchanged" in said:
+            if yes is not None and not re.search(r"catfood|purchase|buy", asked):
+                self._tap(yes.centre)
+                continue
+            if is_panel(texts) or any(w in said for w in ("exchanged", "received", "npgot", "got")):
                 self._tap(NOTICE_TAP)
                 continue
             break
