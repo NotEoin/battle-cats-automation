@@ -349,8 +349,10 @@ class Job:
 
             clear_unusable(self.ctx)
             left = Storage(self.ctx).count()
-            if left:
-                self.ctx.storage_left, self.ctx.storage_capacity = left
+            if left is None:
+                raise Refused("Cat Storage's count did not read after trading",
+                              "look at the phone: a panel may be open")
+            self.ctx.storage_left, self.ctx.storage_capacity = left
         elif not drained:
             raise Refused("Cat Storage was not emptied", "look at the phone: a question may be waiting")
         if STATE_PATH.exists():

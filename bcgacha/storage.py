@@ -24,8 +24,16 @@ FIELD_YS = (0.26, 0.38, 0.50, 0.62, 0.72)
 # A notice with no button goes at a tap on it.
 NOTICE_TAP = (0.5, 0.44)
 # Taps in a row that trade nothing before the trading is called done: every
-# point of the field tried once.
-MISSES = len(FIELD_XS) * len(FIELD_YS)
+# point of the field tried twice -- the capsules drift, so a second pass
+# finds what the first missed.
+MISSES = 2 * len(FIELD_XS) * len(FIELD_YS)
+
+
+def is_panel(texts) -> bool:
+    """A stored capsule's panel is up: known by its buttons along the bottom.
+    Not every panel says how many of it there are."""
+    return any(0.7 < t.centre[1] < 0.84 and ("exchangefor" in t.text.lower().replace(" ", "")
+                                              or "trade" in t.text.lower()) for t in texts)
 
 
 @dataclass
@@ -72,6 +80,18 @@ class Storage:
             self._tap(best[1])
         time.sleep(1.0)
 
+    def settle(self) -> None:
+        """Close any capsule panel or notice left up, so the Storage screen
+        itself is showing."""
+        for _ in range(4):
+            frame, texts = self._look(0.4)
+            if is_panel(texts):
+                self._close(frame)
+            elif any(w in _flat(texts) for w in ("traded", "ticket!", "exchanged")):
+                self._tap(NOTICE_TAP)
+            else:
+                return
+
     def count(self):
         from .pipeline import storage_count
 
@@ -85,6 +105,7 @@ class Storage:
         if not self.nav.goto("storage", log=ctx.log):
             out.reason = "could not reach Cat Storage"
             return out
+        self.settle()
         points = [(x, y) for y in FIELD_YS for x in FIELD_XS]
         misses, n = 0, 0
         while misses < MISSES and (limit is None or out.traded < limit):
@@ -93,7 +114,7 @@ class Storage:
             n += 1
             self._tap(point)
             frame, texts = self._look()
-            if "youhave" not in _flat(texts):
+            if not is_panel(texts):
                 misses += 1                     # open water, or a notice to clear
                 if any(w in _flat(texts) for w in ("traded", "ticket!")):
                     self._tap(NOTICE_TAP)
@@ -132,12 +153,14 @@ class Storage:
             if progress:
                 progress(out)
             self._tap(NOTICE_TAP)
+        self.settle()
         out.reason = out.reason or ("as many as asked" if limit and out.traded >= limit else "nothing left with a Trade-in")
         return out
 
     def exchange_rest_for_np(self) -> str:
         """Exchange all that is left for NP. Returns what happened."""
         ctx = self.ctx
+        self.settle()
         if not self.nav.goto("storage", log=ctx.log):
             return "could not reach Cat Storage"
         frame, texts = self._look(0.3)
@@ -164,6 +187,7 @@ class Storage:
                 self._tap(NOTICE_TAP)
                 continue
             break
+        self.settle()
         left = self.count()
         return f"exchanged for NP; Storage now {left[0]}/{left[1]}" if left else "exchanged for NP"
 
