@@ -20,11 +20,10 @@ import numpy as np
 from rapidfuzz import fuzz, process
 
 from .data import Banner, Dataset
+from .events import SUBTITLE_BOX
 from .layout import landscape_to_hid
 from .session import DeviceSession
 
-# The event subtitle, directly under the banner artwork.
-SUBTITLE_BOX = (0.16, 0.545, 0.84, 0.610)
 # The tab strip. Tabs accept taps even though the side arrows beside them do
 # not, so switching is done by tapping a tab and confirming the subtitle.
 CAROUSEL_Y = 0.120
@@ -33,10 +32,14 @@ TAB_POSITIONS = [(x, CAROUSEL_Y) for x in (0.168, 0.295, 0.459, 0.605)]
 # strip a remembered tab is looked for in.
 TAB_HALF = (0.055, 0.028)
 TAB_STRIP = (0.03, 0.07, 0.75, 0.19)
+# The art sits this far below the row a tab is tapped on.
+TAB_ART_DROP = 0.005
 
 
 def tab_box(x: float, y: float = CAROUSEL_Y) -> tuple[float, float, float, float]:
-    return x - TAB_HALF[0], y - TAB_HALF[1] + 0.005, x + TAB_HALF[0], y + TAB_HALF[1] + 0.005
+    """The box around the art of the tab tapped at (`x`, `y`)."""
+    y += TAB_ART_DROP
+    return x - TAB_HALF[0], y - TAB_HALF[1], x + TAB_HALF[0], y + TAB_HALF[1]
 
 
 def _squash(text: str) -> str:
@@ -46,6 +49,8 @@ def _squash(text: str) -> str:
 
 @dataclass
 class BannerPicker:
+    """Tells which event the capsule screen shows, and moves to another."""
+
     session: DeviceSession
     dataset: Dataset
     ocr: object | None = None
@@ -59,6 +64,7 @@ class BannerPicker:
         return self.ocr
 
     def read_subtitle(self, frame: np.ndarray) -> str | None:
+        """The event subtitle under the banner art, or None when nothing reads."""
         h, w = frame.shape[:2]
         x0, y0, x1, y1 = SUBTITLE_BOX
         crop = frame[int(y0 * h): int(y1 * h), int(x0 * w): int(x1 * w)]
@@ -147,10 +153,12 @@ class BannerPicker:
                 self.session.tap(*landscape_to_hid(*point))
                 time.sleep(1.5)
                 frame = self.session.screenshot()
-                if is_platinum(frame):
-                    key, banner, read = "platinum", None, "Platinum Capsules"
+                read = self.read_subtitle(frame) or ""
+                # The Platinum tab says so under its artwork, whether or not
+                # its title has been named yet this soon after the tap.
+                if is_platinum(frame) or "platinumcapsule" in _squash(read):
+                    key, banner = "platinum", None
                 else:
-                    read = self.read_subtitle(frame) or ""
                     banner = self.match(read, candidates)
                     key = banner.key if banner else None
                 if (key or read) in seen_keys:
