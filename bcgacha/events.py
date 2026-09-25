@@ -13,11 +13,18 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .data import LEGEND, UBER, Banner, Dataset
+from .paths import STATE
+
+if TYPE_CHECKING:
+    import numpy as np
+
+    from .uigraph import UIGraph
 
 # The dataset names an event by its newest unit ("Mighty Morta-Loncha
 # added!"); the game's tab art names the series. The series that matter here,
@@ -25,7 +32,10 @@ from .data import LEGEND, UBER, Banner, Dataset
 SERIES = {3: "Galaxy Gals", 24: "Iron Legion", 34: "Fate/stay night [HF]"}
 
 PLATINUM_SCREEN = "platinum_capsules"
-# The subtitle under the banner artwork on the capsule screen.
+# Rates are out of 10000, and the Platinum Capsules give an Uber every time.
+PLATINUM_UBER = 10000
+# The subtitle under the banner artwork on the capsule screen, as a fraction
+# of the landscape frame measured on a 2532x1170 iPhone.
 SUBTITLE_BOX = (0.16, 0.545, 0.84, 0.610)
 # A normal event is only one that started within this many days. Older runs of
 # a pool still listed as live are superseded re-listings, and legend-ticket
@@ -33,13 +43,20 @@ SUBTITLE_BOX = (0.16, 0.545, 0.84, 0.610)
 RECENT_DAYS = 45
 # What the last look at the capsule screen found: which events it shows. The
 # schedule lists some the game does not.
-SCREEN_FILE = Path(__file__).resolve().parent.parent / "state" / "capsule_screen.json"
+SCREEN_FILE = STATE / "capsule_screen.json"
 # A look older than this, in hours, no longer says what the screen shows.
 SCREEN_FRESH = 12
+SECONDS_PER_HOUR = 3600
+# The phone's clock need not be the computer's -- a time zone moved on puts an
+# event on screen a day early, or keeps one a day late -- so a tab is matched
+# against every event scheduled this many days either side of today.
+CLOCK_SLACK = 3
 
 
 @dataclass(frozen=True)
 class Event:
+    """One live gacha event, as the capsule screen offers it."""
+
     key: str                    # the dataset's banner key, e.g. "2026-09-21_979"
     gacha_id: int
     name: str                   # the subtitle the capsule screen shows
@@ -57,6 +74,7 @@ class Event:
         return PLATINUM_SCREEN if self.platinum else f"event:{self.gacha_id}"
 
     def to_json(self, dataset: Dataset | None = None, owned: set[int] | None = None) -> dict:
+        """The event as plain JSON, its cats named and marked owned when given."""
         def cats(ids):
             return [dict(id=c, name=dataset.cat_name(c) if dataset else str(c),
                          owned=None if owned is None else c in owned) for c in ids]
@@ -91,18 +109,53 @@ def live_events(dataset: Dataset, when: dt.date | None = None) -> list[Event]:
     live = dataset.live_banners(when)
     unique: dict[tuple, Banner] = {}
     for b in sorted(live, key=lambda b: b.start_on):
-        if b.uber >= 10000 or b.start_on < when - dt.timedelta(days=RECENT_DAYS):
+        if b.uber >= PLATINUM_UBER or b.start_on < when - dt.timedelta(days=RECENT_DAYS):
             continue
         unique[(b.gacha_id, b.rare, b.supa, b.uber, b.guaranteed, b.step_up)] = b
     events = [_event(b, False) for b in unique.values()]
-    platinum = [b for b in live if b.uber >= 10000]
+    platinum = [b for b in live if b.uber >= PLATINUM_UBER]
     if platinum:
         newest = max(platinum, key=lambda b: (b.start_on, len(b.slots.get(UBER) or [])))
         events.append(_event(newest, True))
     return events
 
 
+def candidates(dataset: Dataset, when: dt.date | None = None, slack: int = CLOCK_SLACK) -> list[Banner]:
+    """Every normal banner a tab on the capsule screen could be, whatever the
+    phone's clock says: scheduled within `slack` days of `when`. A pool listed
+    twice with the same rates is one tab; of two listings, the one running on
+    `when` is kept, else the later."""
+    when = when or dt.date.today()
+    lo, hi = when - dt.timedelta(days=slack), when + dt.timedelta(days=slack)
+    near = [b for b in dataset.banners.values()
+            if b.uber < PLATINUM_UBER and b.start_on <= hi and b.end_on >= lo
+            and b.start_on >= when - dt.timedelta(days=RECENT_DAYS)]
+    unique: dict[tuple, Banner] = {}
+    for b in sorted(near, key=lambda b: (b.is_live(when), b.start_on)):
+        unique[(b.gacha_id, b.rare, b.supa, b.uber, b.guaranteed, b.step_up)] = b
+    return list(unique.values())
+
+
+def platinum_event(dataset: Dataset, when: dt.date | None = None) -> Event | None:
+    """The live Platinum Capsules event, if there is one."""
+    return next((e for e in live_events(dataset, when) if e.platinum), None)
+
+
+def current(dataset: Dataset) -> list[Event]:
+    """The events to plan over: those the capsule screen's tabs showed at the
+    last fresh look -- which may lie outside their scheduled dates -- else the
+    schedule's own list for today. Platinum last."""
+    raw = _screen()
+    shown = raw.get("shown") if raw else None
+    if not shown:
+        return live_events(dataset)
+    events = [_event(dataset.banners[k], False) for k in shown if k in dataset.banners]
+    platinum = platinum_event(dataset)
+    return events + ([platinum] if platinum else [])
+
+
 def by_key(events: list[Event], key: str) -> Event | None:
+    """The event with the dataset key `key`, if among `events`."""
     return next((e for e in events if e.key == key), None)
 
 
@@ -118,7 +171,7 @@ def find(events: list[Event], query: str) -> Event | None:
     return None
 
 
-def extend(graph, events: list[Event]) -> None:
+def extend(graph: UIGraph, events: list[Event]) -> None:
     """Add each live event to the map as a screen, and the moves between them.
 
     Moving onto an event is a routine (tap its tab, read the subtitle back),
@@ -131,7 +184,6 @@ def extend(graph, events: list[Event]) -> None:
     graph.transitions = [t for t in graph.transitions
                          if not (t.action or "").startswith(("banner:", "event:"))]
     normal = [e for e in events if not e.platinum]
-    platinum = next((e for e in events if e.platinum), None)
     capsule = graph.screens.get("rare_capsules")
     for e in normal:
         graph.screens[e.screen] = Screen(
@@ -147,27 +199,42 @@ def extend(graph, events: list[Event]) -> None:
                     src, e.screen, label=f"select {e.label}", settle=1.5, action=f"event:{e.key}"))
 
 
-def selected(frame, graph, events: list[Event]) -> Event | None:
+def selected(frame: np.ndarray, graph: UIGraph, events: list[Event]) -> Event | None:
     """The event the capsule screen in `frame` shows, if it is one."""
     here = graph.identify(frame)
     return next((e for e in events if e.screen == here), None)
 
 
-def save_screen(seen: dict) -> None:
-    """Keep what a look at the capsule screen found: {event key: shown}."""
+def _screen() -> dict | None:
+    try:
+        raw = json.loads(SCREEN_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError):
+        return None
+    return raw if time.time() - raw.get("checked_at", 0) <= SCREEN_FRESH * SECONDS_PER_HOUR else None
+
+
+def save_screen(seen: dict, shown: list[str] | None = None, tabs: list | None = None) -> None:
+    """Keep what a look at the capsule screen found: {event key: shown}, the
+    normal events its tabs showed in order, and what each tab read."""
     SCREEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-    SCREEN_FILE.write_text(json.dumps(dict(checked_at=time.time(), seen=seen), indent=1))
+    tmp = SCREEN_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(dict(checked_at=time.time(), seen=seen, shown=shown, tabs=tabs or []),
+                              indent=1), encoding="utf-8")
+    os.replace(tmp, SCREEN_FILE)
 
 
 def last_screen() -> tuple[dict, str | None]:
     """{event key: shown on the phone} from the last look, if fresh, and when."""
-    try:
-        raw = json.loads(SCREEN_FILE.read_text())
-    except (FileNotFoundError, ValueError):
-        return {}, None
-    if time.time() - raw.get("checked_at", 0) > SCREEN_FRESH * 3600:
+    raw = _screen()
+    if raw is None:
         return {}, None
     return raw.get("seen", {}), time.strftime("%H:%M", time.localtime(raw["checked_at"]))
+
+
+def last_tabs() -> list:
+    """What each tab read at the last fresh look: [{key, label, read}, ...]."""
+    raw = _screen()
+    return raw.get("tabs", []) if raw else []
 
 
 def shown(events: list[Event]) -> list[Event]:

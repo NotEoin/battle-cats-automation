@@ -411,11 +411,21 @@ class GoalRun:
 
         return live.by_key(self.events, key)
 
+    def _left(self) -> set[int]:
+        """What is still wanted and can still be drawn: with no Platinum
+        ticket left, a unit only the Platinum machine gives is out of reach,
+        and the rare tickets are not spent chasing it."""
+        left = self.goal.remaining(self.owned_index.owned)
+        if self.state.platinum_left > 0:
+            return left
+        normal = {c for e in self.events if not e.platinum for r in (2, 3, 4, 5) for c in e.banner.slots.get(r) or []}
+        return {c for c in left if c in normal}
+
     def _publish_state(self) -> None:
         s = self.state
         self.ctx.put("run", dict(rolled=s.rolled, rare_left=s.rare_left, platinum_left=s.platinum_left,
                                  cat_food=s.cat_food, unlocked=s.unlocked, reason=s.reason,
-                                 remaining=len(self.goal.remaining(self.owned_index.owned))))
+                                 remaining=len(self._left())))
         self.ctx.put("account", self.account.to_json())
 
     def _teach_counter(self, frame) -> None:
@@ -655,9 +665,10 @@ class GoalRun:
         try:
             while True:
                 ctx.check()
-                owned = self.owned_index.owned
-                if self.goal.complete(owned):
+                if not self._left():
                     s.reason = "every wanted cat is unlocked"
+                    if self.goal.remaining(self.owned_index.owned):
+                        s.reason += " that the tickets left can reach"
                     break
                 if (s.rare_left is not None and s.rare_left <= 0) and s.platinum_left <= 0:
                     s.reason = "out of rare and platinum tickets"

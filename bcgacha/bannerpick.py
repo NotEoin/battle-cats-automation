@@ -81,6 +81,11 @@ class BannerPicker:
             # a third of a second and avoids a spurious "unknown banner".
             time.sleep(0.6)
             text = self.read_subtitle(self.session.screenshot())
+        return self.match(text, candidates)
+
+    @staticmethod
+    def match(text: str | None, candidates: list[Banner]) -> Banner | None:
+        """The candidate a subtitle names, spaces and all ignored."""
         if not text:
             return None
         squashed = {_squash(b.name): b for b in candidates}
@@ -127,3 +132,37 @@ class BannerPicker:
                     return True
             self.step(forward=True)
         return False
+
+
+    def sweep(self, candidates: list[Banner], is_platinum, log=print) -> list[dict]:
+        """Every tab of the capsule screen, left to right: tap each, and name
+        its event by the subtitle it puts up. Returns [{key, banner, read,
+        point, frame}] -- key None for a tab no candidate matches, and
+        "platinum" for the Platinum tab. The Platinum tab comes last, so the
+        strip is flicked on only while it has not been seen."""
+        tabs, seen_keys = [], set()
+        for _page in range(3):
+            fresh = 0
+            for point in TAB_POSITIONS:
+                self.session.tap(*landscape_to_hid(*point))
+                time.sleep(1.5)
+                frame = self.session.screenshot()
+                if is_platinum(frame):
+                    key, banner, read = "platinum", None, "Platinum Capsules"
+                else:
+                    read = self.read_subtitle(frame) or ""
+                    banner = self.match(read, candidates)
+                    key = banner.key if banner else None
+                if (key or read) in seen_keys:
+                    continue
+                seen_keys.add(key or read)
+                fresh += 1
+                tabs.append(dict(key=key, banner=banner, read=read, point=point, frame=frame))
+                log(f"  tab {len(tabs)}: {banner.name[:50] if banner else read[:50] or 'nothing read'}"
+                    f"{'' if key else '  -- not an event the schedule knows'}")
+                self.seen_tabs[key] = (point, frame) if key and key != "platinum" else None
+            if any(t["key"] == "platinum" for t in tabs) or not fresh:
+                break
+            self.step(forward=True)
+        self.seen_tabs = {k: v for k, v in self.seen_tabs.items() if v}
+        return tabs

@@ -182,4 +182,4 @@ def load(dataset: Dataset | None = None, owned: set[int] | None = None, events=N
     if owned is None:
         index = OwnedIndex.load()
         owned = index.owned if index.complete else None
-    return Catalogue(dataset, tiers, owned, events if events is not None else live.shown(live.live_events(dataset)))
+    return Catalogue(dataset, tiers, owned, events if events is not None else live.current(dataset))

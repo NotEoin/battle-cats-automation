@@ -360,32 +360,54 @@ class Job:
         return f"{len(self.owned.owned)} cats owned, read {self.owned.scanned_at}"
 
     def _do_capsule(self):
-        """Every live event checked on the phone by going to its tab -- the
-        schedule lists some the game does not show, and a route through one
-        of those could never be drawn -- then the rare tickets held, read off
-        the counter; else the count the last run left behind."""
+        """The events the capsule screen shows, read off its tabs -- the
+        schedule's dates go by the computer's clock, the game's by the
+        phone's -- then the rare and Platinum tickets held, read off the
+        counters; else the counts the last run left behind."""
         from . import events as live
         from .catindex import OwnedIndex
         from .state import STATE_PATH, Account
 
         self._needs_device("Checking the capsule screen")
+        from .bannerpick import BannerPicker, tab_box
+
         ctx = self.ctx
         nav = ctx.navigator()
-        events = ctx.graph.events
         self.owned = self.owned or OwnedIndex.load()
-        seen = {}
-        for e in events:
-            ctx.check()
-            seen[e.key] = nav.goto(e.screen, log=ctx.log)
-            ctx.log(f"  {e.label}: {'on the capsule screen' if seen[e.key] else 'NOT on the capsule screen'}")
-        ctx.put("events", [dict(e.to_json(ctx.dataset, self.owned.owned if self.owned else None),
-                                seen=seen.get(e.key)) for e in events])
-        missing = [e for e in events if not seen.get(e.key)]
-        if len(missing) == len(events):
-            raise Refused("no live event could be put on screen", "look at the phone: something is in the way")
+        if not nav.goto("rare_capsules", log=ctx.log):
+            raise Refused("could not reach the Rare Capsule screen", "look at the phone: something is in the way")
+        # Which events are on screen is read off the tabs, not taken from the
+        # schedule: the phone's clock decides what the game shows, and it can
+        # be a day or more from the computer's.
+        picker = BannerPicker(ctx.session, ctx.dataset, ocr=ctx.ocr)
+        tabs = picker.sweep(live.candidates(ctx.dataset),
+                            lambda f: ctx.graph.recognise(f, slow=False, ocr=False).here == live.PLATINUM_SCREEN,
+                            log=ctx.log)
+        for key, ((x, y), frame) in picker.seen_tabs.items():
+            ctx.graph.profile_for(frame).learn_image(f"tab {key}", frame, tab_box(x, y))
+        normal = [live._event(t["banner"], False) for t in tabs if t["banner"] is not None]
+        platinum = live.platinum_event(ctx.dataset) if any(t["key"] == "platinum" for t in tabs) else None
+        events = normal + ([platinum] if platinum else [])
+        if not normal:
+            raise Refused("no event on the capsule screen could be named",
+                          "update the events (bcgacha tools update), then check again")
+        scheduled = live.live_events(ctx.dataset)
+        seen = {e.key: True for e in events}
+        for e in scheduled:
+            seen.setdefault(e.key, False)
+        missing = [e for e in scheduled if not seen[e.key]]
+        unknown = [t["read"] for t in tabs if t["key"] is None]
+        for text in unknown:
+            ctx.log(f"  a tab the schedule does not know: {text[:60]!r} -- bcgacha tools update may add it")
         # The route is planned over the events the phone shows, and no other.
-        ctx.graph.events = [e for e in events if seen.get(e.key)]
-        live.save_screen(seen)
+        live.extend(ctx.graph, events)
+        live.save_screen(seen, shown=[e.key for e in normal],
+                         tabs=[dict(key=t["key"], label=(live._event(t["banner"], False).label if t["banner"]
+                                                         else "Platinum" if t["key"] == "platinum" else None),
+                                    read=t["read"]) for t in tabs])
+        ctx.put("events", [dict(e.to_json(ctx.dataset, self.owned.owned), seen=True) for e in events]
+                + [dict(e.to_json(ctx.dataset, self.owned.owned), seen=False) for e in missing])
+        ctx.put("tabs", [dict(n=n, key=t["key"], read=t["read"]) for n, t in enumerate(tabs, 1)])
 
         # The counters, each read twice on fresh frames and trusted only when
         # both reads agree. Cat Food and XP are read too: every number read
@@ -404,8 +426,9 @@ class Job:
         ctx.put("tickets", dict(held=self.rare_held, source=self.rare_source, rare=self._rare_budget(),
                                 platinum_held=self.plat_held, platinum_source=self.plat_source,
                                 platinum=self._platinum_budget()))
-        gone = f"; not shown: {', '.join(e.label for e in missing)}" if missing else ""
-        return (f"{len(events) - len(missing)} events on screen{gone}; "
+        gone = f"; scheduled but not shown: {', '.join(e.label for e in missing)}" if missing else ""
+        odd = f"; {len(unknown)} tab{'s' if len(unknown) != 1 else ''} not in the schedule" if unknown else ""
+        return (f"on screen: {', '.join(e.label for e in events)}{gone}{odd}; "
                 f"{self.rare_held if self.rare_held is not None else '?'} rare held ({self.rare_source}), "
                 f"{self.plat_held if self.plat_held is not None else '?'} Platinum held ({self.plat_source})")
 
@@ -572,8 +595,8 @@ class Job:
         reason = run.run()
         s = run.state
         detail = f"{s.rolled} drawn, {len(s.unlocked)} new Uber{'s' if len(s.unlocked) != 1 else ''}: {reason}"
-        if reason not in ("every wanted cat is unlocked", "out of rare and platinum tickets") and \
-                not reason.startswith("rare tickets depleted"):
+        if not reason.startswith(("every wanted cat is unlocked", "out of rare and platinum tickets",
+                                  "rare tickets depleted")):
             raise Refused(detail, "the position is saved after every draw: fix what stopped it, then run again")
         return detail
 
@@ -654,7 +677,7 @@ def status(dataset=None) -> dict:
         out["next"].append("find the seed: any run finds it from captures/, spending nothing")
     captures = list(P.CAPTURES.glob("roll_*.png")) if P.CAPTURES.exists() else []
     out["captures"] = len(captures)
-    events = live.live_events(dataset)
+    events = live.current(dataset)
     owned = index.owned if index.complete else set()
     seen, out["screen_checked"] = live.last_screen()
     out["events"] = []

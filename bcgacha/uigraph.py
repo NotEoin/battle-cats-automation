@@ -215,7 +215,7 @@ class UIGraph:
             from .data import load as load_dataset
 
             try:
-                live.extend(graph, live.live_events(load_dataset()))
+                live.extend(graph, live.current(load_dataset()))
             except FileNotFoundError:
                 pass                    # no dataset fetched yet: no event screens
         return graph
