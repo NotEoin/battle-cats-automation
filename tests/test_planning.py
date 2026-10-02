@@ -1,17 +1,18 @@
 """Tests for scoring, tier parsing and the roll planner."""
 
 import pathlib
-import sys
 
 import pytest
 
-sys.path.insert(0, str(pathlib.Path(__file__).parent))
+from bcgacha import tiers as T
+from bcgacha.catindex import LOCKED_RE, clean_name
+from bcgacha.data import LEGEND, RARE, UBER, load
+from bcgacha.planner import PLATINUM_TICKET, Planner
+from bcgacha.scoring import Scorer, tier_multiplier
 
-from bcgacha import tiers as T  # noqa: E402
-from bcgacha.catindex import LOCKED_RE, clean_name  # noqa: E402
-from bcgacha.data import LEGEND, RARE, SUPER_RARE, UBER, load  # noqa: E402
-from bcgacha.planner import PLATINUM_TICKET, RARE_TICKET, Planner  # noqa: E402
-from bcgacha.scoring import Scorer, tier_multiplier  # noqa: E402
+# A real result screen, kept out of git with every other game screenshot; the
+# two tests that read it run only where a local copy has been put back.
+VIKING_FRAME = pathlib.Path(__file__).parent / "fixtures" / "result_viking_cat.png"
 
 
 def test_new_units_always_beat_duplicates():
@@ -89,7 +90,7 @@ def test_name_matching_rejects_ambiguous_readings():
 
 
 def test_clean_name_strips_game_brackets():
-    assert clean_name("【Shitakiri Sparrow】") == "Shitakiri Sparrow"
+    assert clean_name("\u3010Shitakiri Sparrow\u3011") == "Shitakiri Sparrow"
     assert clean_name("[Lesser Demon Cat]") == "Lesser Demon Cat"
 
 
@@ -236,12 +237,14 @@ def test_deeper_lookahead_keeps_the_uber_route():
 
 
 def _read_viking(candidates):
+    if not VIKING_FRAME.exists():
+        pytest.skip(f"{VIKING_FRAME.name} is a game screenshot kept out of git; no local copy")
     from rapidocr_onnxruntime import RapidOCR
 
     from bcgacha import vision
     from bcgacha.results import read_result
 
-    frame = vision.load(pathlib.Path(__file__).parent / "fixtures" / "result_viking_cat.png")
+    frame = vision.load(VIKING_FRAME)
     return read_result(frame, RapidOCR(), load(), candidates)
 
 
@@ -373,7 +376,7 @@ def test_goal_of_targets_alone_wants_nothing_else():
     goal = goals.build(ds, tier_list, owned, normal, platinum, platinum_tickets=4,
                        targets=[cat], event_units=False)
     assert goal.wanted == {cat}
-    assert not goal.platinum, "no tier-list pick when only targets are wanted"
+    assert goal.platinum <= {cat}, "no tier-list pick when only targets are wanted"
 
 
 def test_goal_spends_platinum_on_a_named_target_first():
@@ -415,3 +418,76 @@ def test_the_route_is_bent_to_pass_a_platinum_spot_on_the_other_track():
     bent = [(s.index, s.track) for s in planner.plan(seed, rolls=off[0] + 2).steps]
     assert off in bent, "the waypoint is passed"
     assert plat.cell(*off).cat_id >= 0
+
+
+def _filler_banners():
+    ds = load()
+    banners = [ds.find_banner(k) for k in
+               ("2026-09-21_1081", "2026-09-21_1021", "2026-09-21_979")]
+    everything = {c for b in banners for ids in b.slots.values() for c in ids}
+    return ds, banners, everything
+
+
+def test_filler_draws_stay_on_the_banner_already_up():
+    """With nothing new to win, every draw is a filler: no switch is made
+    but to dodge a duplicate Rare's reroll, and none is let through that a
+    switch would have dodged."""
+    ds, banners, everything = _filler_banners()
+    for start in banners:
+        planner = Planner(ds, banners, Scorer(owned=set(everything), tiers=T.TierList.load()))
+        planner.on = start.key
+        plan = planner.plan(3728687165, rolls=80)
+        on, previous = start.key, None
+        for step in plan.steps:
+            rerolls = {b.key: planner._evaluate(planner._gacha(3728687165, b, {}), step.index, step.track,
+                                                previous).reroll_steps for b in banners}
+            if step.banner_key != on:
+                assert rerolls[on] and not step.reroll_steps, f"switched at {step.position} for nothing"
+            if step.reroll_steps:
+                assert all(rerolls.values()), f"rerolled at {step.position} when a switch dodged it"
+            on, previous = step.banner_key, step.cat_id
+        assert plan.banner_switches() == 0
+
+
+def test_a_switch_is_still_made_for_a_new_uber():
+    """Stickiness gives way to a new unit on another banner."""
+    ds, banners, everything = _filler_banners()
+    planner = Planner(ds, banners, Scorer(owned=set(everything), tiers=T.TierList.load()))
+    uber_step = None
+    for i in range(1, 400):
+        cells = {b.key: planner._gacha(3728687165, b, {}).cell(i, 0) for b in banners}
+        if all(c.rarity == UBER for c in cells.values()):
+            uber_step = i, cells
+            break
+    assert uber_step, "no Uber position on track A in 400 rolls"
+    index, cells = uber_step
+    want_key = banners[-1].key
+    planner.scorer.owned.discard(cells[want_key].cat_id)
+    planner.on = banners[0].key
+    step = planner.plan(3728687165, rolls=1, index=index, track=0).steps[0]
+    assert step.banner_key == want_key and step.is_new
+
+
+def test_filler_after_a_forced_switch_goes_to_the_banner_with_most_to_get():
+    """Off a banner that cannot be stayed on, the filler goes where the most
+    Ubers and Legends are still missing."""
+    ds, banners, everything = _filler_banners()
+    target = banners[1]
+    owned = everything - set(target.slots.get(UBER) or [])
+    planner = Planner(ds, banners, Scorer(owned=owned, tiers=T.TierList.load()))
+    planner.on = "platinum"
+    step = planner.plan(3728687165, rolls=1, index=3, track=0).steps[0]
+    assert step.rarity == RARE and not step.is_new          # a filler, not a win
+    assert step.banner_key == target.key != banners[0].key
+
+
+def test_uber_positions_lists_every_uber_on_track_a():
+    """Regression: `bcgacha tools ubers` imported uber_positions after it was deleted."""
+    from bcgacha.gacha import TRACK_A, Gacha
+    from bcgacha.planner import uber_positions
+
+    ds = load()
+    banner = ds.find_banner("2026-09-21_1081")
+    hits = uber_positions(123456789, banner, 100, ds)
+    gacha = Gacha(banner, 123456789, ds)
+    assert hits and all(gacha.cell(n, TRACK_A).rarity >= UBER for n, _cat, _name in hits)

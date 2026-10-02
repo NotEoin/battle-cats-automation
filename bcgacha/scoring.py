@@ -18,8 +18,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .data import LEGEND, RARE, SUPER_RARE, UBER
-from .tiers import TIER_ORDER, TierList, UNRANKED
+from .data import LEGEND, RARE, SUPER_RARE, UBER, Dataset
+from .tiers import TIER_ORDER, UNRANKED, TierList
 
 # A brand-new unit of each rarity, before any tier adjustment.
 NEW_VALUE = {RARE: 12.0, SUPER_RARE: 45.0, UBER: 600.0, LEGEND: 900.0}
@@ -44,6 +44,8 @@ def tier_multiplier(rank: int) -> float:
 
 @dataclass
 class Scorer:
+    """What any one outcome is worth, given what is owned and what is wanted."""
+
     owned: set[int]
     tiers: TierList | None = None
     targets: set[int] | None = None
@@ -54,9 +56,12 @@ class Scorer:
     priority: dict[int, float] | None = None
 
     def is_new(self, cat_id: int) -> bool:
+        """True when the unit is not owned yet."""
         return cat_id not in self.owned
 
     def value(self, cat_id: int, rarity: int) -> float:
+        """The outcome's worth: rarity, scaled by tier, cut for a duplicate,
+        raised for a target or a goal's priority. 0 for no cat."""
         if cat_id < 0:
             return 0.0
         base = NEW_VALUE.get(rarity, 0.0)
@@ -70,7 +75,14 @@ class Scorer:
             base += self.priority.get(cat_id, 0.0)
         return base
 
-    def describe(self, cat_id: int, rarity: int, dataset) -> str:
+    def gain(self, cat_id: int, rarity: int) -> float:
+        """What a roll adds to the collection: a new unit's value, nothing for
+        a duplicate. Banner choice is steered by this, so a duplicate never
+        pulls the route onto another banner."""
+        return self.value(cat_id, rarity) if self.is_new(cat_id) else 0.0
+
+    def describe(self, cat_id: int, rarity: int, dataset: Dataset) -> str:
+        """One line for a person: name, tier and whether it is new."""
         tier = self.tiers.tier_of(cat_id) if self.tiers else "?"
         flag = "NEW" if self.is_new(cat_id) else "dup"
         return f"{dataset.cat_name(cat_id)} [{tier}] {flag}"

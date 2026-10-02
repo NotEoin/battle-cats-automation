@@ -18,9 +18,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .data import LEGEND, RARE, SUPER_RARE, UBER, Banner, Dataset
-from .tiers import TierList
 from .gacha import TRACK_A, Gacha, next_position
 from .scoring import Scorer
+from .tiers import TierList
 
 RARE_TICKET = "rare_ticket"
 PLATINUM_TICKET = "platinum_ticket"
@@ -41,6 +41,29 @@ DEFAULT_LOOKAHEAD = 60
 # sixty rolls away is still worth ~140, comfortably more than the new Rares it
 # would otherwise stop for, so the route bends towards it.
 DISCOUNT = 0.97
+
+# Totals closer than this are the same route: the choice between them is a
+# filler draw, made by the tie-breaks in Planner.plan rather than by value.
+TIE = 1e-6
+
+
+def uber_positions(
+    seed: int, banner: Banner, count: int, dataset: Dataset
+) -> list[tuple[int, int, str]]:
+    """Positions in the next `count` draws on track A that give an Uber or
+    Legend, with the cat each gives.
+
+    Rarity comes from the seed alone, compared against the banner's weights,
+    so on banners that share rates an Uber position is one on all of them and
+    only the cat differs.
+    """
+    gacha = Gacha(banner, seed, dataset)
+    out = []
+    for n in range(1, count + 1):
+        roll = gacha.cell(n, TRACK_A)
+        if roll.rarity >= UBER:
+            out.append((n, roll.cat_id, dataset.cat_name(roll.cat_id)))
+    return out
 
 
 def platinum_targets(
@@ -72,6 +95,8 @@ def platinum_targets(
 
 @dataclass
 class PlanStep:
+    """One draw of a plan: where, on which banner, with what, for what."""
+
     index: int
     track: int
     banner_key: str
@@ -88,35 +113,44 @@ class PlanStep:
 
     @property
     def track_name(self) -> str:
+        """The track as the tracker writes it: "A" or "B"."""
         return "AB"[self.track]
 
     @property
     def position(self) -> str:
+        """The position as the tracker writes it, such as "46A"."""
         return f"{self.index}{self.track_name}"
 
 
 @dataclass
 class Plan:
+    """The draws a planner chose, in order."""
+
     steps: list[PlanStep] = field(default_factory=list)
 
     @property
     def total_score(self) -> float:
+        """What the whole plan is worth."""
         return sum(s.score for s in self.steps)
 
     @property
     def new_units(self) -> list[PlanStep]:
+        """The steps that give a unit not owned yet."""
         return [s for s in self.steps if s.is_new]
 
     @property
     def platinum_spent(self) -> int:
+        """Platinum Tickets the plan spends."""
         return sum(1 for s in self.steps if s.currency == PLATINUM_TICKET)
 
     def banner_switches(self) -> int:
+        """Times the plan changes banner between one draw and the next."""
         return sum(
             1 for a, b in zip(self.steps, self.steps[1:]) if a.banner_key != b.banner_key
         )
 
     def summary(self, dataset: Dataset) -> str:
+        """The plan as a table, one line a draw."""
         lines = []
         for n, s in enumerate(self.steps, 1):
             tag = "NEW" if s.is_new else "dup"
@@ -129,6 +163,8 @@ class Plan:
 
 
 class Planner:
+    """Chooses which banner to draw on at each position, and when to spend Platinum."""
+
     def __init__(
         self,
         dataset: Dataset,
@@ -153,6 +189,9 @@ class Planner:
         # choices that would leave them are not made (see toward()).
         self.waypoint: tuple | None = None
         self._toward: set = set()
+        # The banner the last draw was made on, by key: filler draws stay on
+        # it, since every switch is a tab tap and a screen read.
+        self.on: str | None = None
         # Reserved in advance; a ticket is spent only on one of these.
         self.platinum_wanted = (
             platinum_wanted
@@ -178,6 +217,12 @@ class Planner:
             gacha._reroll(roll)
         return roll
 
+    def _unowned_counts(self) -> dict[str, int]:
+        """Ubers and Legends each banner still has to give, by banner key."""
+        return {b.key: sum(1 for r in (UBER, LEGEND) for c in b.slots.get(r) or []
+                           if self.scorer.is_new(c))
+                for b in self.banners}
+
     def _platinum_worth_it(self, cat_id: int) -> bool:
         """A ticket is only ever spent on one of the reserved units."""
         return self.scorer.is_new(cat_id) and cat_id in self.platinum_wanted
@@ -191,6 +236,8 @@ class Planner:
         previous_cat: int | None = None,
         lookahead: int = DEFAULT_LOOKAHEAD,
     ) -> Plan:
+        """The best `rolls` draws from a position, each banner choice looking
+        `lookahead` draws ahead, assuming every pull is kept."""
         cache: dict = {}
         # Cleared per call: values depend on what is owned, which shifts as the
         # plan assumes each pull.
@@ -198,6 +245,7 @@ class Planner:
         plan = Plan()
         platinum_left = self.platinum_tickets
         owned_snapshot = set(self.scorer.owned)
+        on = self.on
 
         for _ in range(rolls):
             options = []
@@ -223,22 +271,33 @@ class Planner:
             if self.waypoint is not None and index < self.waypoint[0]:
                 keep = [o for o in options if self._keeps_waypoint(index, track, o[1], o[2])]
                 options = keep or options
-            best = None
+            scored = []
             for banner, roll, currency in options:
-                value = self.scorer.value(roll.cat_id, roll.rarity)
+                gain = self.scorer.gain(roll.cat_id, roll.rarity)
                 # A Platinum ticket must clearly beat simply rolling normally.
                 if currency == PLATINUM_TICKET:
-                    value *= 0.9
+                    gain *= 0.9
                 delta, nxt_track = next_position(track, roll.reroll_steps)
                 future = self._best_ahead(
                     seed, cache, index + delta, nxt_track, roll.cat_id, lookahead
                 )
-                total = value + DISCOUNT * future
-                if best is None or total > best[0]:
-                    best = (total, banner, roll, currency, value, index + delta, nxt_track)
+                scored.append((gain + DISCOUNT * future, banner, roll, currency,
+                               index + delta, nxt_track))
+            # A switch is made for a new unit, now or further down the route.
+            # Between draws that win none, a filler: one that rerolls no
+            # duplicate Rare, on the banner already up, else the one with the
+            # most Ubers and Legends still to get -- so the duplicates come
+            # from the banners being drawn for anyway.
+            top = max(s[0] for s in scored)
+            unowned = self._unowned_counts()
+            best = max(
+                (s for s in scored if s[0] >= top - TIE),
+                key=lambda s: (not s[2].reroll_steps, s[1].key == on, unowned.get(s[1].key, 0)),
+            )
 
             self._memo.clear()   # the next roll is scored against a changed collection
-            _, banner, roll, currency, value, next_index, next_track = best
+            _, banner, roll, currency, next_index, next_track = best
+            value = self.scorer.value(roll.cat_id, roll.rarity)
             step = PlanStep(
                 index=index, track=track,
                 banner_key=banner.key, banner_name=banner.name,
@@ -255,6 +314,7 @@ class Planner:
             self.scorer.owned.add(roll.cat_id)
             previous_cat = roll.cat_id
             index, track = next_index, next_track
+            on = banner.key
 
         self.scorer.owned = owned_snapshot
         return plan
@@ -381,7 +441,7 @@ class Planner:
         best = 0.0
         for banner in self.banners:
             roll = self._evaluate(self._gacha(seed, banner, cache), index, track, previous_cat)
-            value = self.scorer.value(roll.cat_id, roll.rarity)
+            value = self.scorer.gain(roll.cat_id, roll.rarity)
             delta, nxt = next_position(track, roll.reroll_steps)
             value = max(
                 value,

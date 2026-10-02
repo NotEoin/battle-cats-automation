@@ -392,6 +392,7 @@ def simulate(ctx: Context, account, owned, events, rare: int, platinum: int, pre
             unlocked.append(rolls[-1])
         have.add(step_cat)
         planner.scorer.owned.add(step_cat)
+        planner.on = key
         if currency == PLATINUM_TICKET:
             left_plat -= 1
             planner.platinum_wanted.discard(step_cat)
@@ -751,6 +752,7 @@ class GoalRun:
                     self.account.storage_capacity = getattr(ctx, "storage_capacity", self.account.storage_capacity)
                     self.account.save()
                 reason = self.roll_once(step)
+                self.planner.on = step.banner_key
                 self._publish_state()
                 if reason:
                     s.reason = reason
