@@ -26,11 +26,18 @@ import os
 from collections import Counter
 from itertools import product
 from pathlib import Path
+from typing import Callable
 
 import cv2
 import numpy as np
 
-ATLAS_FILE = Path(__file__).resolve().parent.parent / "state" / "digits.json"
+from .paths import STATE
+
+ATLAS_FILE = STATE / "digits.json"
+# A box on the frame, as fractions: (x0, y0, x1, y1).
+Box = tuple[float, float, float, float]
+# The OCR engine: an image in, (results, timings) out, as RapidOCR returns.
+OCR = Callable[[np.ndarray], tuple]
 # A glyph, resized into a box of this many pixels, wide by high.
 CELL = (20, 28)
 # Remembered pictures of each digit.
@@ -47,9 +54,21 @@ RUNS = ((3, 40, 0.1), (4, 48, 0.1), (3, 48, 0.1), (5, 40, 0.1))
 # In company: at least this many readings, and this share of them agreeing.
 COMPANY_VOTES = 4
 COMPANY_SHARE = 0.8
+# A new picture of a digit is kept only when at least this far from each kept.
+SAME_PICTURE = 0.02
+# The counters' yellow fill and white highlight, in OpenCV HSV.
+YELLOW_INK = ((15, 80, 150), (40, 255, 255))
+WHITE_INK = ((0, 0, 200), (180, 60, 255))
+# A digit blob's height as a share of the counter's, how solid it is, how
+# wide for its height, and how far it may stray from the rightmost digit's
+# height and top, as a share of that height.
+GLYPH_HEIGHT = (0.35, 0.9)
+GLYPH_FILL = 0.45
+GLYPH_WIDTH = 0.85
+GLYPH_ROW = 0.12
 
 
-def ink(frame: np.ndarray, box) -> np.ndarray:
+def ink(frame: np.ndarray, box: Box) -> np.ndarray:
     """The counter's lettering, white on black."""
     h, w = frame.shape[:2]
     x0, y0, x1, y1 = box
@@ -57,7 +76,7 @@ def ink(frame: np.ndarray, box) -> np.ndarray:
     if crop.size == 0:
         return np.zeros((1, 1), np.uint8)
     hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-    return cv2.inRange(hsv, (15, 80, 150), (40, 255, 255)) | cv2.inRange(hsv, (0, 0, 200), (180, 60, 255))
+    return cv2.inRange(hsv, *YELLOW_INK) | cv2.inRange(hsv, *WHITE_INK)
 
 
 def glyphs(mask: np.ndarray) -> list[np.ndarray]:
@@ -69,13 +88,14 @@ def glyphs(mask: np.ndarray) -> list[np.ndarray]:
     blobs = []
     for i in range(1, count):
         x, y, w, h, area = (int(v) for v in stats[i])
-        if 0.35 * tall <= h <= 0.9 * tall and area >= 0.45 * w * h and w <= 0.85 * h:
+        if (GLYPH_HEIGHT[0] * tall <= h <= GLYPH_HEIGHT[1] * tall and area >= GLYPH_FILL * w * h
+                and w <= GLYPH_WIDTH * h):
             blobs.append((x, y, w, h, i))
     if not blobs:
         return []
     right = max(blobs, key=lambda b: b[0])
-    row = [b for b in blobs if abs(b[3] - right[3]) <= 0.12 * right[3]
-           and abs(b[1] - right[1]) <= 0.12 * right[3]]
+    row = [b for b in blobs if abs(b[3] - right[3]) <= GLYPH_ROW * right[3]
+           and abs(b[1] - right[1]) <= GLYPH_ROW * right[3]]
     return [(labels[y:y + h, x:x + w] == i).astype(np.uint8) * 255
             for x, y, w, h, i in sorted(row)]
 
@@ -110,22 +130,24 @@ class Atlas:
         self.samples: dict[str, list[np.ndarray]] = {}
         self.whole: dict[str, np.ndarray] = {}
         if self.path.exists():
-            raw = json.loads(self.path.read_text())
+            raw = json.loads(self.path.read_text(encoding="utf-8"))
             cells = raw.get("cells", raw if "whole" not in raw else {})
             self.samples = {d: [np.array(s, np.float32).reshape(CELL[1], CELL[0]) / 255.0 for s in v]
                             for d, v in cells.items() if isinstance(v, list)}
             self.whole = {d: _unpack(g) for d, g in raw.get("whole", {}).items()}
 
     def known(self) -> str:
+        """The digits with a remembered picture, in order: "0125"."""
         return "".join(sorted(self.samples))
 
     def save(self) -> None:
+        """Write the atlas aside and swap it in, so a crash never leaves half a file."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         raw = dict(cells={d: [np.round(s * 255).astype(int).ravel().tolist() for s in v]
                           for d, v in self.samples.items()},
                    whole={d: _pack(g) for d, g in self.whole.items()})
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(raw))
+        tmp.write_text(json.dumps(raw), encoding="utf-8")
         os.replace(tmp, self.path)
 
     def learn(self, shapes: list[np.ndarray], value: int) -> bool:
@@ -145,7 +167,7 @@ class Atlas:
             c = cell(glyph)
             have = self.samples.setdefault(d, [])
             # A picture much like one kept already adds nothing.
-            if all(float(np.abs(c - s).mean()) > 0.02 for s in have) and len(have) < KEEP:
+            if all(float(np.abs(c - s).mean()) > SAME_PICTURE for s in have) and len(have) < KEEP:
                 have.append(c)
                 grew = True
             if d not in self.whole:
@@ -188,12 +210,12 @@ def _strip(parts: list[np.ndarray], height: int, gap: float) -> np.ndarray:
     return cv2.cvtColor(page, cv2.COLOR_GRAY2BGR)
 
 
-def _text(ocr, page) -> str:
+def _text(ocr: OCR, page: np.ndarray) -> str:
     result, _ = ocr(page)
     return "".join(str(r[1]) for r in result or []).replace(" ", "")
 
 
-def read_runs(glyph: np.ndarray, ocr) -> str | None:
+def read_runs(glyph: np.ndarray, ocr: OCR) -> str | None:
     """A lone glyph read as runs of itself; the digit only if every run that
     reads says the same one, and at least two do."""
     votes = Counter()
@@ -206,7 +228,7 @@ def read_runs(glyph: np.ndarray, ocr) -> str | None:
     return None
 
 
-def read_in_company(glyph: np.ndarray, atlas: Atlas, ocr) -> str | None:
+def read_in_company(glyph: np.ndarray, atlas: Atlas, ocr: OCR) -> str | None:
     """A lone glyph set between remembered digits and read as a number: the
     digit most readings give, if nearly all do. A reading that gets a known
     digit wrong says nothing and is dropped."""
@@ -232,7 +254,7 @@ def read_in_company(glyph: np.ndarray, atlas: Atlas, ocr) -> str | None:
     return digit if n >= COMPANY_VOTES and n >= COMPANY_SHARE * sum(votes.values()) else None
 
 
-def read_lone(glyph: np.ndarray, ocr, atlas: Atlas) -> tuple[str | None, str]:
+def read_lone(glyph: np.ndarray, ocr: OCR, atlas: Atlas) -> tuple[str | None, str]:
     """A lone digit by every way that gives an answer; all must agree."""
     answers = {"remembered": atlas.name(glyph)[0],
                "in company": read_in_company(glyph, atlas, ocr),
@@ -245,7 +267,7 @@ def read_lone(glyph: np.ndarray, ocr, atlas: Atlas) -> tuple[str | None, str]:
     return next(iter(given.values())), "read " + " and ".join(given)
 
 
-def read(frame: np.ndarray, box, ocr, atlas: Atlas | None = None) -> tuple[int | None, str]:
+def read(frame: np.ndarray, box: Box, ocr: OCR, atlas: Atlas | None = None) -> tuple[int | None, str]:
     """(the counter in `box`, or None; how it was read). Reads alone: see
     teach() for remembering what was read."""
     atlas = atlas if atlas is not None else Atlas()
@@ -253,7 +275,9 @@ def read(frame: np.ndarray, box, ocr, atlas: Atlas | None = None) -> tuple[int |
     shapes = glyphs(mask)
     result, _ = ocr(_page(mask))
     found = [str(r[1]).strip() for r in result or [] if str(r[1]).strip().isdigit()]
-    if len(found) == 1:
+    # A number with fewer digits than the glyphs drawn has dropped one: 110
+    # has read as 11. More is fine -- touching digits make one glyph.
+    if len(found) == 1 and len(found[0]) >= len(shapes):
         return int(found[0]), "read"
     if not shapes:
         return None, "no digits"
@@ -266,7 +290,7 @@ def read(frame: np.ndarray, box, ocr, atlas: Atlas | None = None) -> tuple[int |
     return None, f"{len(shapes)} digits, not all known (knows {atlas.known() or 'none'})"
 
 
-def teach(frame: np.ndarray, box, value: int, atlas: Atlas | None = None) -> bool:
+def teach(frame: np.ndarray, box: Box, value: int, atlas: Atlas | None = None) -> bool:
     """Remember the glyphs of a counter known for certain to show `value`:
     read the same on two fresh frames, or the count the run itself kept.
     True if anything new was kept."""

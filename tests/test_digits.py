@@ -142,3 +142,16 @@ def test_the_ways_must_agree(tmp_path, monkeypatch):
     monkeypatch.setattr(digits, "read_runs", lambda g, o: "8")
     value, how = digits.read(counter("9"), BOX, Scripted([]), atlas_in(tmp_path, "9"))
     assert value is None and "disagree" in how
+
+
+def test_a_read_that_drops_a_digit_is_not_trusted(tmp_path):
+    """OCR gave 11 for a counter of 110: fewer digits than glyphs drawn is a
+    dropped digit, and the remembered glyphs read it instead."""
+    def dropping(page):
+        result, _ = FontOCR()(page)
+        return [[None, result[0][1][:-1], 0.9]], None
+
+    assert digits.read(counter("2893"), BOX, dropping, atlas_in(tmp_path, "2893")) == \
+        (2893, "matched remembered digits")
+    value, _ = digits.read(counter("2893"), BOX, dropping, atlas_in(tmp_path / "none"))
+    assert value is None
