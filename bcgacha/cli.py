@@ -82,9 +82,9 @@ def _do_options(p: argparse.ArgumentParser) -> None:
                    help="open a normal machine with its own tickets: cat, lucky or lucky_g; "
                         ":N for N capsules, else until its tickets run out")
     g.add_argument("--exchange", choices=("np", "xp"), default="np",
-                   help="Cat Storage is cleared with Use all; what the game says it cannot use is "
-                        "traded for Rare Tickets, five a ticket, and the rest exchanged for this "
-                        "(default: np)")
+                   help="Cat Storage is cleared with Use all; if the game says some are left over, "
+                        "Trade for Ticket takes the maxed base upgrades, and the rest are exchanged "
+                        "for this (default: np)")
     g.add_argument("--play-legends", action="store_true",
                    help="play the Uncanny Legends with the Cat CPU, stage after stage")
     g.add_argument("--empty-storage", action="store_true", help="press Use all on Cat Storage first")

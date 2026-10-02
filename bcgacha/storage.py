@@ -1,50 +1,45 @@
 """What Use all leaves in Cat Storage: capsules that can no longer be used.
 
 A Cat Capsule item or unit already at its maximum stays in Storage after Use
-all. Each item of those has a Trade-in button: one trade puts one capsule
-toward a Rare Ticket, five make a ticket. What cannot be traded -- the basic
-cats -- goes with "Exchange all for NP/XP", answered NP unless XP is asked.
+all, and the game says so: "There has been some left over." Then, in order:
+Use all again, answered Trade for Ticket -- the maxed base upgrades, traded
+for Rare Tickets in one press; it trades nothing that can be used -- and
+"Exchange all for NP/XP" for the rest, answered NP unless XP is asked.
 
 Every press here is made only once the question it answers has been read
-and says what is expected: the trade question must name trading capsules you
-can no longer use for a Rare Ticket, and Exchange all's must be its own
-"Everything will be exchanged ... NP or XP?". Anything else is closed.
+and says what is expected: Use all's must be its own "will be activated"
+question, a question after Trade for Ticket must be about tickets, and
+Exchange all's must be its own "Everything will be exchanged ... NP or XP?".
+Anything else is answered No, or closed.
+
+Positions are fractions of the landscape frame, measured on a 2532x1170
+iPhone; other screen shapes are untested.
 """
 
 from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass, field
+from typing import Any
 
-# Where the stored capsules float, clear of the filters above and the
-# buttons below.
-FIELD_XS = (0.16, 0.26, 0.36, 0.46, 0.56, 0.66, 0.76, 0.86)
-FIELD_YS = (0.26, 0.38, 0.50, 0.62, 0.72)
 # A notice with no button goes at a tap on it.
 NOTICE_TAP = (0.5, 0.44)
-# Taps in a row that trade nothing before the trading is called done: every
-# point of the field tried twice -- the capsules drift, so a second pass
-# finds what the first missed.
-MISSES = 2 * len(FIELD_XS) * len(FIELD_YS)
+# Words that make a question one about spending: never answered Yes.
+SPENDING = re.compile(r"catfood|purchase|buy")
+# A stored capsule's panel keeps its buttons in this band, top to bottom.
+PANEL_BUTTONS_Y = (0.7, 0.84)
+# A dialog's own words sit inside this box, clear of the bars along the edges.
+DIALOG_X = (0.15, 0.85)
+DIALOG_Y = (0.1, 0.72)
+# Trade for Ticket shares a row with No when its centre is this close in height.
+SAME_ROW = 0.05
 
 
-def is_panel(texts) -> bool:
+def is_panel(texts: list[Any]) -> bool:
     """A stored capsule's panel is up: known by its buttons along the bottom.
     Not every panel says how many of it there are."""
-    return any(0.7 < t.centre[1] < 0.84 and ("exchangefor" in t.text.lower().replace(" ", "")
+    return any(PANEL_BUTTONS_Y[0] < t.centre[1] < PANEL_BUTTONS_Y[1] and ("exchangefor" in t.text.lower().replace(" ", "")
                                               or "trade" in t.text.lower()) for t in texts)
-
-
-@dataclass
-class Traded:
-    traded: int = 0
-    tickets: int = 0
-    skipped: set = field(default_factory=set)       # what a tap found untradeable
-    reason: str = ""
-
-    def to_json(self) -> dict:
-        return dict(traded=self.traded, tickets=self.tickets, skipped=sorted(self.skipped), reason=self.reason)
 
 
 def _flat(texts) -> str:
@@ -54,7 +49,7 @@ def _flat(texts) -> str:
 def _dialog(texts) -> str:
     """Only a dialog's own words: the Cat Food counter along the bottom bar
     must not make every question look like one about spending."""
-    return _flat([t for t in texts if 0.1 < t.centre[1] < 0.72 and 0.15 < t.centre[0] < 0.85])
+    return _flat([t for t in texts if DIALOG_Y[0] < t.centre[1] < DIALOG_Y[1] and DIALOG_X[0] < t.centre[0] < DIALOG_X[1]])
 
 
 def _find(texts, *words):
@@ -62,7 +57,9 @@ def _find(texts, *words):
 
 
 class Storage:
-    def __init__(self, ctx):
+    """Cat Storage's leftovers, traded and exchanged through a run's context."""
+
+    def __init__(self, ctx: Any):
         self.ctx = ctx
         self.nav = ctx.navigator()
 
@@ -98,70 +95,82 @@ class Storage:
             else:
                 return
 
-    def count(self):
+    def count(self) -> tuple[int, int] | None:
+        """Storage's N/M as read off the screen, or None when it does not read."""
         from .pipeline import storage_count
 
         return storage_count(self._look(0.3)[1])
 
     # -- trading -----------------------------------------------------------------
 
-    def trade_in(self, progress=None, limit: int | None = None) -> Traded:
-        """Trade every capsule that has a Trade-in, one press at a time."""
-        ctx, out = self.ctx, Traded()
+    def trade_for_tickets(self) -> str:
+        """Use all, answered Trade for Ticket: the maxed base upgrades traded
+        for Rare Tickets in one press. Only ever after a Use all answered Yes
+        has run, so nothing usable is left to trade. Returns what happened."""
+        from .perception import reward_ok
+
+        ctx = self.ctx
+        self.settle()
         if not self.nav.goto("storage", log=ctx.log):
-            out.reason = "could not reach Cat Storage"
-            return out
-        self.settle()
-        points = [(x, y) for y in FIELD_YS for x in FIELD_XS]
-        misses, n = 0, 0
-        while misses < MISSES and (limit is None or out.traded < limit):
-            ctx.check()
-            point = points[n % len(points)]
-            n += 1
-            self._tap(point)
-            frame, texts = self._look()
-            if not is_panel(texts):
-                misses += 1                     # open water, or a notice to clear
-                if any(w in _flat(texts) for w in ("traded", "ticket!")):
-                    self._tap(NOTICE_TAP)
-                continue
-            name = next((t.text for t in texts if 0.47 < t.centre[1] < 0.56), "?")
-            trade = _find(texts, "trade")
-            if trade is None or trade.centre[1] < 0.7:
-                out.skipped.add(name)
-                misses += 1
-                self._close(frame)
-                continue
-            self._tap(trade.centre)
-            frame, texts = self._look(1.6)
-            said = _flat(texts)
-            if not ("tradingin" in said and "rareticket" in said and "?" in said):
-                ctx.log(f"  a Trade-in question not as expected, closed: {said[:90]!r}")
-                no = _find(texts, "no")
-                self._tap(no.centre) if no is not None and no.text.strip().lower() == "no" else self._close(frame)
-                out.reason = "the Trade-in question did not read as expected"
+            return "could not reach Cat Storage"
+        frame, texts = self._look(0.3)
+        use_all = _find(texts, "useall")
+        if use_all is None:
+            return "no Use all on the Storage screen: nothing to trade"
+        self._tap(use_all.centre)
+        for _ in range(10):                     # the question can take a moment
+            frame, texts = self._look(0.8)
+            if "willbeactivated" in _dialog(texts):
                 break
-            yes = next((t for t in texts if t.text.strip().lower().rstrip("!") == "yes"), None)
-            no = next((t for t in texts if t.text.strip().lower() == "no"), None)
-            point_yes = yes.centre if yes else (1.0 - no.centre[0], no.centre[1]) if no else None
-            if point_yes is None:
-                self._close(frame)
-                out.reason = "no Yes on the Trade-in question"
-                break
-            self._tap(point_yes)
+        else:
+            return "Use all's question did not come up: nothing traded"
+        no = next((t for t in texts if t.text.strip().lower() == "no"), None)
+        trade = _find(texts, "trade", "ticket")
+        if trade is None or no is None or abs(trade.centre[1] - no.centre[1]) > SAME_ROW \
+                or trade.centre[0] <= no.centre[0]:
+            self._tap(no.centre) if no is not None else self._close(frame)
+            return "no Trade for Ticket beside Use all's No: nothing traded"
+        ctx.log("  Use all's question: Trade for Ticket")
+        self._tap(trade.centre)
+        said = []
+        for _ in range(8):
             frame, texts = self._look(1.4)
-            said = _flat(texts)
-            out.traded += 1
-            misses = 0
-            if "traded" in said and "more" not in said or re.search(r"(got|received).*rareticket", said):
-                out.tickets += 1
-            ctx.log(f"  traded 1 {name} toward a Rare Ticket ({out.traded} traded, {out.tickets} tickets)")
-            if progress:
-                progress(out)
-            self._tap(NOTICE_TAP)
+            asked = _dialog(texts)
+            if not asked:
+                break                           # back on Storage
+            no = next((t for t in texts if t.text.strip().lower() == "no"), None)
+            yes = next((t for t in texts if t.text.strip().lower().rstrip("!") == "yes"), None)
+            if "willbeactivated" in asked:
+                self._tap(no.centre) if no is not None else self._close(frame)
+                return "Trade for Ticket did not take: Use all's question still up, answered No"
+            said.append(asked)
+            if "?" in asked:
+                if SPENDING.search(asked) or not re.search(r"ticket|trade", asked):
+                    self._tap(no.centre) if no is not None else self._close(frame)
+                    return f"a question after Trade for Ticket not as expected, answered No: {asked[:90]!r}"
+                ctx.log(f"  confirming: {asked[:90]!r}")
+                if yes is not None:
+                    self._tap(yes.centre)
+                elif no is not None:
+                    from .pipeline import unread_yes
+
+                    point = unread_yes(texts, no)
+                    if point is None:
+                        self._tap(no.centre)
+                        return "no Yes on the question after Trade for Ticket, answered No"
+                    self._tap(point)
+                else:
+                    self._close(frame)
+                    return "no Yes or No on the question after Trade for Ticket"
+                continue
+            ctx.log(f"  the game says: {asked[:90]!r}")
+            ok = reward_ok(frame, ctx.ocr) or next(
+                (t.centre for t in texts if t.text.strip().lower() in ("ok", "0k")), None)
+            if ok is None:
+                break                           # never a blind tap: Storage's cats lie under it
+            self._tap(ok)
         self.settle()
-        out.reason = out.reason or ("as many as asked" if limit and out.traded >= limit else "nothing left with a Trade-in")
-        return out
+        return "traded for Rare Tickets" + (f": {said[-1][:80]!r}" if said else "")
 
     def exchange_rest(self, currency: str = "np") -> str:
         """Exchange all that is left for NP or XP. Returns what happened."""
@@ -189,19 +198,19 @@ class Storage:
         for _ in range(8):
             frame, texts = self._look(1.2)
             said = _flat(texts)
-            # "Are you sure? (3880→3946)": the NP or XP before and after. OCR does
+            # "Are you sure? (3880->3946)": the NP or XP before and after. OCR does
             # not read its Yes; the dialog is centred, so Yes mirrors the No.
             no = next((t for t in texts if t.text.strip().lower() == "no"), None)
             yes = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("yes", "ok")), None)
             asked = _dialog(texts)
             if "areyousure" in said and re.search(r"\d+\D{1,3}\d+", said) and (yes or no):
-                if re.search(r"catfood|purchase|buy", asked):
+                if SPENDING.search(asked):
                     self._tap(no.centre if no else NOTICE_TAP)
                     return f"refused a question that mentions spending: {said[:90]!r}"
                 ctx.log(f"  confirming the exchange: {said[:90]!r}")
                 self._tap(yes.centre if yes else (1.0 - no.centre[0], no.centre[1]))
                 continue
-            if yes is not None and not re.search(r"catfood|purchase|buy", asked):
+            if yes is not None and not SPENDING.search(asked):
                 self._tap(yes.centre)
                 continue
             if is_panel(texts) or any(w in said for w in ("exchanged", "received", "npgot", "got")):
@@ -213,15 +222,14 @@ class Storage:
         return f"exchanged for {name}; Storage now {left[0]}/{left[1]}" if left else f"exchanged for {name}"
 
 
-def clear_unusable(ctx, currency: str = "np") -> dict:
-    """After Use all, and only once the game has said what it left cannot be
-    used: trade what can be traded for Rare Tickets, then the rest for NP or
-    XP."""
+def clear_unusable(ctx: Any, currency: str = "np") -> dict:
+    """After Use all, and only once the game has said some were left over:
+    Trade for Ticket for the maxed base upgrades, then the rest for NP or XP."""
     store = Storage(ctx)
-    traded = store.trade_in(progress=lambda t: ctx.put("trade_in", t.to_json()))
-    ctx.log(f"  trade-in: {traded.traded} traded, {traded.tickets} Rare Ticket(s); {traded.reason}")
+    traded = store.trade_for_tickets()
+    ctx.log(f"  {traded}")
     exchanged = store.exchange_rest(currency)
     ctx.log(f"  {exchanged}")
-    result = dict(traded.to_json(), exchange=exchanged)
+    result = dict(traded=traded, exchange=exchanged)
     ctx.put("trade_in", result)
     return result

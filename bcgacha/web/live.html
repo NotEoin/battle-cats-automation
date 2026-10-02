@@ -270,7 +270,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
           <div class="machine"><label><input type="checkbox" id="m-lucky"> Lucky Capsules</label><input type="number" id="n-lucky" min="0" placeholder="all"></div>
           <div class="machine"><label><input type="checkbox" id="m-lucky_g"> Lucky Capsules G</label><input type="number" id="n-lucky_g" min="0" placeholder="all"></div>
           <div class="checks" style="margin-top: 6px">
-            <label>What Use all can't use, past trade-in: <select id="exchange"><option value="np">NP</option><option value="xp">XP</option></select> <span class="m">traded for Rare Tickets first (5 a ticket)</span></label>
+            <label>What Use all leaves over: <select id="exchange"><option value="np">NP</option><option value="xp">XP</option></select> <span class="m">after Trade for Ticket takes the maxed base upgrades</span></label>
           </div>
         </div>
       </div>
@@ -846,8 +846,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     $('cap-runs').replaceChildren(...(S.capsule_runs || []).map(x => h('li', '', x)), ...(c && c.reason ? [h('li', '', `stopped: ${c.reason}`)] : []));
     table($('cap-table'), [['#', x => x.n], ['machine', x => x.screen], ['read off the name plate', x => x.name]], (pipe.capsules || []).slice().reverse(), null, 'No capsules opened in this run.');
     const ti = S.trade_in;
-    if (ti) $('cap-runs').append(h('li', '', `traded for Rare Tickets: ${ti.traded} capsules, ${ti.tickets} ticket(s)`
-      + (ti.exchange ? `; ${ti.exchange}` : '') + (ti.skipped && ti.skipped.length ? ` · not tradeable: ${ti.skipped.join(', ')}` : '')));
+    if (ti) $('cap-runs').append(h('li', '', `Cat Storage: ${ti.traded}` + (ti.exchange ? `; ${ti.exchange}` : '')));
     if ((pipe.capsules || []).length) badge('capsules', pipe.capsules.length, true);
     // Uncanny Legends
     const L = S.legends;

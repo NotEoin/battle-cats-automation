@@ -75,7 +75,7 @@ class Request:
     rare: int | None = None                             # rare tickets to spend; None: all
     platinum: int | None = None                         # Platinum tickets to spend; None: all
     capsules: dict = field(default_factory=dict)        # machine -> capsules to open, 0: all
-    exchange: str = "np"                                # what Use all leaves, past trade-in: np or xp
+    exchange: str = "np"                                # what Use all leaves, past Trade for Ticket: np or xp
     uncanny: bool = False                               # play the Uncanny Legends
     storage: bool = False                               # empty Cat Storage first
     rescan_owned: bool = False
@@ -178,8 +178,8 @@ class Request:
             lines.append(f"open {MACHINE_NAMES[machine]}: "
                          + (f"{n} capsule{'s' if n != 1 else ''}" if n else "until its tickets run out"))
         if self.roll or self.capsules or self.storage:
-            lines.append("Cat Storage: Use all; what the game says it cannot use is traded for Rare Tickets, "
-                         f"the rest exchanged for {self.exchange.upper()}")
+            lines.append("Cat Storage: Use all; if some are left over, Trade for Ticket (maxed base upgrades), "
+                         f"then the rest exchanged for {self.exchange.upper()}")
         if self.uncanny:
             lines.append("play the Uncanny Legends with the Cat CPU until one stage is lost 3 times")
         return lines

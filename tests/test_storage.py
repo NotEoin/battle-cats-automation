@@ -21,7 +21,7 @@ def test_the_storage_field_is_not_a_panel():
 
 
 def test_the_cat_food_counter_is_not_part_of_a_question():
-    texts = [_t("All units in Storage will be exchanged for NP.", 0.5, 0.45), _t("Are you sure? (3880→3956)", 0.5, 0.52),
+    texts = [_t("All units in Storage will be exchanged for NP.", 0.5, 0.45), _t("Are you sure? (3880\u21923956)", 0.5, 0.52),
              _t("Yes", 0.39, 0.67), _t("No", 0.61, 0.67), _t("Cat Food", 0.78, 0.93)]
     assert "catfood" not in storage._dialog(texts)
     assert "areyousure" in storage._dialog(texts)
@@ -48,8 +48,7 @@ def _clearing(monkeypatch, drained, left, said, after_trade=(0, 128)):
     traded = []
 
     def drain(ctx):
-        ctx.use_all = dict(before=(left, 128), after=(left, 128), said=said,
-                           unusable=any(pipeline.UNUSABLE.search(s) for s in said))
+        ctx.use_all = dict(said=said, unusable=any(pipeline.UNUSABLE.search(s) for s in said))
         ctx.storage_left, ctx.storage_capacity = left, 128
         return drained
 
@@ -123,3 +122,59 @@ def test_an_unread_yes_in_a_two_button_dialog_mirrors_the_no():
 def test_a_centred_no_alone_gives_no_yes():
     no = _t("No", 0.5, 0.58)
     assert pipeline.unread_yes([no], no) is None
+
+
+# -- Use all, answered Trade for Ticket ------------------------------------------
+
+STORAGE = [_t("Storage", 0.1, 0.04), _t("6/128", 0.91, 0.84), _t("Use all", 0.47, 0.91),
+           _t("Exchange all for NP/XP", 0.64, 0.91)]
+QUESTION = STORAGE + [_t("All capsules present in Storage", 0.5, 0.32), _t("will be activated.", 0.5, 0.37),
+                      _t("Do you wish to continue?", 0.5, 0.42), _t("Yes", 0.31, 0.58), _t("No", 0.5, 0.58),
+                      _t("Trade for Ticket", 0.69, 0.58)]
+
+
+def _trading(monkeypatch, screens):
+    """trade_for_tickets over scripted screens; returns what it said and tapped."""
+    store = storage.Storage.__new__(storage.Storage)
+    store.ctx = _Ctx()
+    store.ctx.ocr = None
+    store.nav = type("Nav", (), {"goto": lambda self, screen, log=None: True})()
+    shown, taps = iter(screens), []
+    monkeypatch.setattr(store, "_look", lambda wait=1.4: (None, next(shown, STORAGE)))
+    monkeypatch.setattr(store, "_tap", lambda point, wait=0.0: taps.append(tuple(round(c, 3) for c in point)))
+    monkeypatch.setattr(store, "_close", lambda frame: taps.append("close"))
+    monkeypatch.setattr(store, "settle", lambda: None)
+    monkeypatch.setattr(perception, "reward_ok", lambda frame, ocr: None)
+    return store.trade_for_tickets(), taps
+
+
+def test_trade_for_ticket_is_pressed_on_use_alls_own_question(monkeypatch):
+    said, taps = _trading(monkeypatch, [STORAGE, QUESTION, STORAGE])
+    assert taps == [(0.47, 0.91), (0.69, 0.58)], "Use all, then Trade for Ticket -- no cat tapped"
+    assert said.startswith("traded for Rare Tickets")
+
+
+def test_a_ticket_question_after_trade_for_ticket_is_answered_yes(monkeypatch):
+    confirm = STORAGE + [_t("Trade 3 maxed upgrades for 1 Rare Ticket?", 0.5, 0.4),
+                         _t("Yes", 0.39, 0.58), _t("No", 0.61, 0.58)]
+    _, taps = _trading(monkeypatch, [STORAGE, QUESTION, confirm, STORAGE])
+    assert taps[-1] == (0.39, 0.58)
+
+
+def test_a_question_about_spending_is_answered_no(monkeypatch):
+    spend = STORAGE + [_t("Buy Rare Tickets with Cat Food?", 0.5, 0.4), _t("Yes", 0.39, 0.58), _t("No", 0.61, 0.58)]
+    said, taps = _trading(monkeypatch, [STORAGE, QUESTION, spend])
+    assert taps[-1] == (0.61, 0.58) and "answered No" in said
+
+
+def test_no_trade_for_ticket_means_no_and_nothing_traded(monkeypatch):
+    two = [t for t in QUESTION if "Trade" not in t.text]
+    said, taps = _trading(monkeypatch, [STORAGE, two])
+    assert taps == [(0.47, 0.91), (0.5, 0.58)] and "nothing traded" in said
+
+
+def test_a_notice_without_an_ok_is_never_tapped_blind(monkeypatch):
+    """Under a notice lie Storage's cats: no Ok found, no tap."""
+    notice = STORAGE + [_t("You got 1 Rare Ticket!", 0.5, 0.4)]
+    _, taps = _trading(monkeypatch, [STORAGE, QUESTION, notice])
+    assert taps == [(0.47, 0.91), (0.69, 0.58)]
