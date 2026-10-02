@@ -3,7 +3,7 @@
 A Cat Capsule item or unit already at its maximum stays in Storage after Use
 all. Each item of those has a Trade-in button: one trade puts one capsule
 toward a Rare Ticket, five make a ticket. What cannot be traded -- the basic
-cats -- goes with "Exchange all for NP/XP", answered NP.
+cats -- goes with "Exchange all for NP/XP", answered NP unless XP is asked.
 
 Every press here is made only once the question it answers has been read
 and says what is expected: the trade question must name trading capsules you
@@ -163,9 +163,9 @@ class Storage:
         out.reason = out.reason or ("as many as asked" if limit and out.traded >= limit else "nothing left with a Trade-in")
         return out
 
-    def exchange_rest_for_np(self) -> str:
-        """Exchange all that is left for NP. Returns what happened."""
-        ctx = self.ctx
+    def exchange_rest(self, currency: str = "np") -> str:
+        """Exchange all that is left for NP or XP. Returns what happened."""
+        ctx, name = self.ctx, currency.upper()
         self.settle()
         if not self.nav.goto("storage", log=ctx.log):
             return "could not reach Cat Storage"
@@ -181,15 +181,15 @@ class Storage:
         self._tap(button.centre)
         frame, texts = self._look(1.6)
         said = _flat(texts)
-        np_button = _find(texts, "exchangefornp")
-        if "everythingwillbeexchanged" not in said or np_button is None:
+        button = _find(texts, "exchangefor" + currency)
+        if "everythingwillbeexchanged" not in said or button is None:
             self._close(frame)
             return f"Exchange all's question did not read as expected, closed: {said[:90]!r}"
-        self._tap(np_button.centre)
+        self._tap(button.centre)
         for _ in range(8):
             frame, texts = self._look(1.2)
             said = _flat(texts)
-            # "Are you sure? (3880→3946)": the NP before and after. OCR does
+            # "Are you sure? (3880→3946)": the NP or XP before and after. OCR does
             # not read its Yes; the dialog is centred, so Yes mirrors the No.
             no = next((t for t in texts if t.text.strip().lower() == "no"), None)
             yes = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("yes", "ok")), None)
@@ -210,17 +210,18 @@ class Storage:
             break
         self.settle()
         left = self.count()
-        return f"exchanged for NP; Storage now {left[0]}/{left[1]}" if left else "exchanged for NP"
+        return f"exchanged for {name}; Storage now {left[0]}/{left[1]}" if left else f"exchanged for {name}"
 
 
-def clear_unusable(ctx) -> dict:
-    """After Use all: trade what can be traded for Rare Tickets, then the rest
-    for NP."""
+def clear_unusable(ctx, currency: str = "np") -> dict:
+    """After Use all, and only once the game has said what it left cannot be
+    used: trade what can be traded for Rare Tickets, then the rest for NP or
+    XP."""
     store = Storage(ctx)
     traded = store.trade_in(progress=lambda t: ctx.put("trade_in", t.to_json()))
     ctx.log(f"  trade-in: {traded.traded} traded, {traded.tickets} Rare Ticket(s); {traded.reason}")
-    np = store.exchange_rest_for_np()
-    ctx.log(f"  {np}")
-    result = dict(traded.to_json(), exchange=np)
+    exchanged = store.exchange_rest(currency)
+    ctx.log(f"  {exchanged}")
+    result = dict(traded.to_json(), exchange=exchanged)
     ctx.put("trade_in", result)
     return result

@@ -18,17 +18,25 @@ import datetime as dt
 import re
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
 
-from .data import UBER
+from . import paths
+from .data import LEGEND, RARE, UBER
 from .gacha import next_position
 
-ROOT = Path(__file__).resolve().parent.parent
-CAPTURES = ROOT / "captures"
+if TYPE_CHECKING:
+    from .data import Dataset
+    from .liveview import SharedSession
+    from .timing import Humaniser
+    from .uigraph import Navigator, UIGraph
+
+CAPTURES = paths.CAPTURES
 # Counters on the capsule screen's bottom bar, read only to watch them: the
 # draw button's own face is what guards a draw (see draw.py).
 TICKETS_BOX = (0.635, 0.865, 0.745, 0.950)
@@ -49,35 +57,45 @@ FRESH_SAVE = 600
 RECOVER_AHEAD = 40
 # How long Use all's question may take to come up, in seconds.
 ASK_WAIT = 8.0
+# Looks at Use all's questions before giving up; still looks, once one was
+# answered, that mean it is over; and answers past which it is going round.
+ASK_LOOKS = 24
+ASK_QUIET = 3
+ASK_MAX_CONFIRMS = 6
 # Empty storage this many draws before it would fill.
 STORAGE_MARGIN = 3
 
 
 class Stopped(RuntimeError):
-    pass
+    """A person asked the run to stop; raised between steps, never mid-tap."""
 
 
 @dataclass
 class Context:
-    session: object
-    graph: object
-    ocr: object
-    dataset: object
-    log: object = print
-    publish: object = None                 # publish(section, payload)
-    should_stop: object = None             # () -> bool, checked between steps
-    human: object = None
+    """What every piece of a run works with: the phone, the map, and where to report."""
+
+    session: SharedSession | None           # None: no phone, plans only
+    graph: UIGraph
+    ocr: Callable
+    dataset: Dataset | None
+    log: Callable[[str], None] = print
+    publish: Callable[[str, object], None] | None = None
+    should_stop: Callable[[], bool] | None = None   # checked between steps
+    human: Humaniser | None = None
     captures: Path = CAPTURES
 
-    def put(self, section: str, payload) -> None:
+    def put(self, section: str, payload: object) -> None:
+        """Publish one section of the run, if anyone is listening."""
         if self.publish:
             self.publish(section, payload)
 
     def check(self) -> None:
+        """Raise `Stopped` if a stop was asked for."""
         if self.should_stop and self.should_stop():
             raise Stopped("stopped")
 
-    def navigator(self):
+    def navigator(self) -> Navigator:
+        """A navigator on this run's phone and map."""
         from .uigraph import Navigator
 
         return Navigator(self.session, self.graph, humaniser=self.human)
@@ -106,20 +124,49 @@ def storage_count(texts) -> tuple[int, int] | None:
     return None
 
 
+# The game's word, after Use all, that some capsules stayed behind because
+# they cannot be used -- "All of the possible Cat Capsules have been used.
+# There has been some left over." Only on its say-so is anything traded in.
+UNUSABLE = re.compile(r"left\s*over")
+
+
+def unread_yes(texts, no) -> tuple[float, float] | None:
+    """Where the Yes is when OCR reads the No beside it but not the Yes.
+
+    The buttons sit evenly spaced: with two, the dialog is centred and Yes is
+    the No's mirror image; Use all's has a third, Trade for Ticket, to the
+    No's right -- No then sits in the middle, and Yes is Trade for Ticket's
+    mirror image across it. A point that comes out on the No is no answer."""
+    trade = next((t for t in texts if "trade" in t.text.lower().replace(" ", "")
+                  and abs(t.centre[1] - no.centre[1]) < 0.05 and t.centre[0] > no.centre[0]), None)
+    x = 2 * no.centre[0] - trade.centre[0] if trade else 1.0 - no.centre[0]
+    if abs(x - no.centre[0]) < 0.08:
+        return None
+    return x, no.centre[1]
+
+
 def drain_storage(ctx: Context) -> bool:
-    """Press Use all on Cat Storage -- the only control ever pressed there --
-    and confirm its question only once it reads as that question. True only
-    once Storage is seen emptied; ctx.storage_left is then what it holds."""
-    from .perception import perceive, read_texts
+    """Press Use all on Cat Storage and confirm its question only once it
+    reads as that question. True once Use all is seen through and the count
+    read after it: ctx.storage_left is then what it left, and ctx.use_all
+    says whether the game called what it left unusable."""
+    from .perception import perceive, read_texts, reward_ok
 
     nav = ctx.navigator()
     if not nav.goto("storage", log=ctx.log):
         ctx.log("  could not reach Cat Storage")
         return False
     frame = ctx.session.screenshot()
+    # A notice left up -- the last Use all's "some left over" -- reads as the
+    # Storage screen behind it, and takes the tap meant for Use all.
+    ok = reward_ok(frame, ctx.ocr)
+    if ok is not None:
+        nav._tap(*ok, 1.2)
+        frame = ctx.session.screenshot()
     percept = perceive(frame, ctx.ocr)
     before = storage_count(percept.texts)
     use_all = percept.find("Use all")
+    ctx.use_all = dict(said=[], unusable=False)
     if use_all is None:
         ctx.log("  no Use all on the Storage screen: nothing to redeem")
         ctx.storage_left = before[0] if before else 0
@@ -137,15 +184,13 @@ def drain_storage(ctx: Context) -> bool:
 
     quiet, answered, confirms = 0, False, 0
     asked_by = time.time() + ASK_WAIT
-    for _ in range(24):
+    for _ in range(ASK_LOOKS):
         texts = read_texts(ctx.session.screenshot(), ctx.ocr)
         answer = next((t for t in texts if t.text.strip().lower().rstrip("!") in ("yes", "ok")), None)
         no = next((t for t in texts if t.text.strip().lower() in ("no", "cancel")), None)
         point = answer.centre if answer else None
         if answer is None and no is not None and "?" in said_above(texts, no.centre[1]):
-            # OCR reads the No beside it but not the Yes: the dialog is
-            # centred, so its Yes is the No's mirror image.
-            point = (1.0 - no.centre[0], no.centre[1])
+            point = unread_yes(texts, no)
         if point is None:
             # The question can take seconds to come up; once answered,
             # activating takes a moment before its closing notice appears.
@@ -155,7 +200,7 @@ def drain_storage(ctx: Context) -> bool:
                 time.sleep(0.5)
                 continue
             quiet += 1
-            if quiet >= 3:
+            if quiet >= ASK_QUIET:
                 break
             time.sleep(1.0)
             continue
@@ -168,15 +213,31 @@ def drain_storage(ctx: Context) -> bool:
                 nav._tap(*no.centre, 1.2)
             return False
         confirms += 1
-        if confirms > 6:
+        if confirms > ASK_MAX_CONFIRMS:
             ctx.log("  Storage keeps asking: stopping")
             return False
         ctx.log(f"  confirming: {said[:100]!r}")
+        ctx.use_all["said"].append(said)
+        if UNUSABLE.search(said):
+            ctx.use_all["unusable"] = True
         nav._tap(*point, 2.0)
+    # Its closing notice: OCR rarely reads the Ok, so the loop above passes
+    # it by. Its words are what say anything was left over; then its Ok.
+    frame = ctx.session.screenshot()
+    notice = " ".join(t.text for t in read_texts(frame, ctx.ocr)).lower()
+    if ctx.use_all["said"] and "havebeenused" in notice.replace(" ", ""):
+        ctx.log(f"  the game says: {notice[:100]!r}")
+        ctx.use_all["said"].append(notice)
+        ctx.use_all["unusable"] = ctx.use_all["unusable"] or bool(UNUSABLE.search(notice))
+        ok = reward_ok(frame, ctx.ocr)
+        if ok is not None:
+            nav._tap(*ok, 1.2)
     after = storage_count(read_texts(ctx.session.screenshot(), ctx.ocr))
-    if after is None or after[0] > after[1] - 2 * STORAGE_MARGIN or \
-            (before and after[0] >= before[0] and before[0] > 0):
-        ctx.log(f"  Use all did not empty Storage (read {after}): stopping rather than overfill it")
+    if not ctx.use_all["said"]:
+        ctx.log("  Use all asked nothing: it was not seen through")
+        return False
+    if after is None:
+        ctx.log("  Cat Storage's count did not read after Use all")
         return False
     ctx.storage_left = after[0]
     ctx.storage_capacity = after[1]             # 64, or 128 after Cats of the Cosmos Ch.3
@@ -185,7 +246,34 @@ def drain_storage(ctx: Context) -> bool:
     return True
 
 
+def clear_storage(ctx: Context, room: int = 2 * STORAGE_MARGIN) -> bool:
+    """Make room in Cat Storage: Use all, and then -- only when the game says
+    some of what it left could not be used -- trade those in for Rare Tickets
+    and exchange the rest for NP, or XP as ctx.exchange says. A capsule traded
+    that could have been used is a cat marked owned that is not, so nothing is
+    traded on a Use all not seen through, nor on one the game said nothing
+    against. True once `room` places are free."""
+    if not drain_storage(ctx):
+        return False
+    if ctx.storage_left and ctx.use_all["unusable"]:
+        from .storage import Storage, clear_unusable
+
+        clear_unusable(ctx, getattr(ctx, "exchange", "np"))
+        left = Storage(ctx).count()
+        if left is None:
+            ctx.log("  Cat Storage's count did not read after trading")
+            return False
+        ctx.storage_left, ctx.storage_capacity = left
+    elif ctx.storage_left:
+        ctx.log(f"  Use all left {ctx.storage_left} without saying they cannot be used: none traded")
+    if ctx.storage_left > ctx.storage_capacity - room:
+        ctx.log(f"  Cat Storage still {ctx.storage_left}/{ctx.storage_capacity}: stopping rather than overfill it")
+        return False
+    return True
+
+
 def stage_owned(ctx: Context, force: bool = False, limit: int | None = None):
+    """The owned list: the one saved, or the Cat Guide read again when forced or incomplete."""
     from .catindex import OwnedIndex, scan
 
     index = OwnedIndex.load()
@@ -224,7 +312,9 @@ def stage_seed(ctx: Context):
                                  ctx.ocr, log=ctx.log, progress=progress, should_stop=ctx.should_stop)
         ctx.put("seed_found", found.to_json(ctx.dataset))
         if not found.found:
-            raise RuntimeError("seed not identified: " + "; ".join(found.detail))
+            raise RuntimeError("seed not identified: " + "; ".join(found.detail)
+                               + ". Find it once by hand: bcgacha tools find-seed, then set-seed"
+                               + " (docs/howto/find-your-seed.md)")
         account = Account(seed=found.seed, index=found.index, track=found.track,
                           last_cat_id=found.last_cat_id, source="captures", confirmed=False)
         account.save()
@@ -310,13 +400,14 @@ def schedule_platinum(planner, goal, tiers, account, rare, tickets, tier_picks=T
                          else f"Platinum pick, tier {tier}, at {pos}")
         goal.priority.setdefault(cat, UBER_BONUS)
     for cat in goal.targets:
-        if cat not in where and cat in (planner.platinum_banner.slots.get(4) or [] if planner.platinum_banner else []) \
+        if cat not in where and cat in (planner.platinum_banner.slots.get(UBER) or [] if planner.platinum_banner else []) \
                 and cat not in planner.scorer.owned and tickets:
             goal.why[cat] = f"{goal.why.get(cat, 'target')}; the Platinum machine does not give it on this route"
     return at
 
 
 def goal_json(goal, dataset, tiers, owned, events) -> dict:
+    """The goal as the page and terminal show it: each wanted unit, where and why."""
     where = {}
     for e in events:
         for c in e.legends + e.ubers:
@@ -327,7 +418,9 @@ def goal_json(goal, dataset, tiers, owned, events) -> dict:
                     event=where.get(c, "Platinum"), owned=c in owned, why=goal.reason(c),
                     priority=round(goal.priority.get(c, 0)), platinum=c in goal.platinum)
 
-    order = lambda s: sorted(s, key=lambda c: -goal.priority.get(c, 0))
+    def order(cats):
+        return sorted(cats, key=lambda c: -goal.priority.get(c, 0))
+
     return dict(targets=[row(c) for c in goal.targets],
                 legendaries=[row(c) for c in order(goal.legendaries)],
                 ubers=[row(c) for c in order(goal.ubers)],
@@ -341,6 +434,7 @@ def goal_json(goal, dataset, tiers, owned, events) -> dict:
 
 
 def plan_json(plan, dataset, events, goal=None, tiers=None) -> list[dict]:
+    """The planned draws as the page and terminal show them."""
     from . import events as live
     from .planner import PLATINUM_TICKET
 
@@ -412,6 +506,8 @@ def simulate(ctx: Context, account, owned, events, rare: int, platinum: int, pre
 
 @dataclass
 class RunState:
+    """What a draw run has done so far, and why it stopped."""
+
     rolled: int = 0
     rare_left: int | None = None
     platinum_left: int = 0
@@ -467,7 +563,7 @@ class GoalRun:
         left = self.goal.remaining(self.owned_index.owned)
         if self.state.platinum_left > 0:
             return left
-        normal = {c for e in self.events if not e.platinum for r in (2, 3, 4, 5) for c in e.banner.slots.get(r) or []}
+        normal = {c for e in self.events if not e.platinum for r in range(RARE, LEGEND + 1) for c in e.banner.slots.get(r) or []}
         return {c for c in left if c in normal}
 
     def _publish_state(self) -> None:
@@ -508,16 +604,15 @@ class GoalRun:
     def _await_result(self, before):
         """(frame, read, moved): the result screen once its name plate reads --
         or the last frame seen -- and whether the screen ever left `before`."""
-        from .results import read_result
-        from .uigraph import RESULT_SCREENS, frame_changed, result_ok
-
         import random
 
         from .capsules import SKIP_AFTER, SKIP_EVERY, SKIP_POINT
         from .layout import landscape_to_hid
+        from .results import read_result
+        from .uigraph import RESULT_SCREENS, frame_changed, result_ok
 
         deadline = time.time() + REVEAL_TIMEOUT
-        pool = {c for e in self.events for r in (2, 3, 4, 5) for c in e.banner.slots.get(r) or []}
+        pool = {c for e in self.events for r in range(RARE, LEGEND + 1) for c in e.banner.slots.get(r) or []}
         moved, last, started = False, None, time.time()
         next_skip = started + SKIP_AFTER
         while time.time() < deadline:
@@ -708,6 +803,7 @@ class GoalRun:
     # -- the loop --
 
     def run(self) -> str:
+        """Draw until the goal is met, the tickets run out or a check fails; says why it stopped."""
         from .planner import PLATINUM_TICKET
 
         ctx, s = self.ctx, self.state
@@ -745,8 +841,8 @@ class GoalRun:
                     break
                 if self.account.storage_used >= self.account.storage_capacity - STORAGE_MARGIN:
                     ctx.log("  Cat Storage nearly full: Use all")
-                    if not drain_storage(ctx):
-                        s.reason = "could not empty Cat Storage"
+                    if not clear_storage(ctx):
+                        s.reason = "could not make room in Cat Storage"
                         break
                     self.account.storage_used = getattr(ctx, "storage_left", 0)
                     self.account.storage_capacity = getattr(ctx, "storage_capacity", self.account.storage_capacity)

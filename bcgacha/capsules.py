@@ -13,6 +13,9 @@ the 10; otherwise, "Try once!".
 Reveals are skipped: once a capsule has opened, a tap anywhere jumps to the
 result, as a player mashing through would. The tap goes on the top bar, which
 does nothing on any screen, so a tap landing late presses nothing.
+
+Positions and sizes are fractions of the landscape frame, measured on a
+2532x1170 iPhone; other screen shapes are untested.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from __future__ import annotations
 import random
 import time
 from dataclasses import dataclass, field
+from typing import Any
 
 MACHINES = {"cat": "cat_capsules", "lucky": "lucky_capsules", "lucky_g": "lucky_capsules_g"}
 SINGLE, MULTI = "Try once!", "Try 10 times!"
@@ -45,16 +49,34 @@ FACE_SHIFT = 0.008
 # The Cat Food can sits in the lower part of the face, with the cost; the
 # label above it prints the 10 of "Try 10 times!" in red.
 FACE_LOWER = 0.45
+# A learned box this many times FACE_HEIGHT is the whole button; taller, it
+# took in the bar below.
+FACE_FIT = (0.8, 1.4)
+# A face never reaches below the bottom bar, nor a label sit this far above
+# the button taken from another tab.
+FACE_BOTTOM = 0.87
+LABEL_SLACK = 0.03
+# A draw button read where it is sits in the lower part of the frame; text
+# above this is not one.
+BUTTON_TOP = 0.6
+# A press is watched for this long, and this much more per capsule it opens.
+COLLECT_BASE, COLLECT_PER = 25, 8
+# Skip taps are spaced this much either side of SKIP_EVERY, like a thumb.
+SKIP_JITTER = (0.7, 1.3)
 # An Ok the screen has not answered in this long is pressed again.
 OK_AGAIN = 2.5
 # A press that has not changed the screen in this long did not draw.
 NO_DRAW = 4.0
 # Empty Storage when a press would leave fewer free slots than this.
 STORAGE_MARGIN = 3
+# Cat Storage's size until one has been read: 128 after Cats of the Cosmos Ch.3.
+DEFAULT_CAPACITY = 128
 
 
 @dataclass
 class CapsuleState:
+    """What a capsule run has done so far, for the log and the live page."""
+
     presses: int = 0
     capsules: int = 0
     names: list = field(default_factory=list)
@@ -63,6 +85,7 @@ class CapsuleState:
     reason: str = ""
 
     def to_json(self) -> dict:
+        """The run so far as plain JSON, with the time per capsule."""
         spent = time.time() - self.started
         return dict(presses=self.presses, capsules=self.capsules, cat_food=self.cat_food,
                     seconds=round(spent, 1), reason=self.reason,
@@ -74,20 +97,17 @@ class CapsuleRun:
     """Press one machine's draw button until told to stop, `limit` capsules
     are open, or a check refuses."""
 
-    def __init__(self, ctx, machine: str, limit: int | None = None, multi: bool = True,
-                 trade_in: bool = False):
+    def __init__(self, ctx: Any, machine: str, limit: int | None = None, multi: bool = True):
         from .state import STATE_PATH, Account
 
         if machine not in MACHINES:
             raise ValueError(f"unknown machine {machine!r}: one of {', '.join(MACHINES)}")
         self.ctx, self.screen, self.limit, self.multi = ctx, MACHINES[machine], limit, multi
-        # What Use all cannot use: traded for Rare Tickets, the rest for NP.
-        self.trade_in = trade_in
         self.nav = ctx.navigator()
         self.state = CapsuleState()
         self.account = Account.load() if STATE_PATH.exists() else None
         self.stored: int | None = self.account.storage_used if self.account else None
-        self.capacity = self.account.storage_capacity if self.account else 128
+        self.capacity = self.account.storage_capacity if self.account else DEFAULT_CAPACITY
 
     # -- reading ---------------------------------------------------------------
 
@@ -128,7 +148,7 @@ class CapsuleRun:
             from .perception import perceive
 
             control = perceive(frame, self.ctx.ocr).find(name)
-            if control is None or control.box[1] < 0.6:
+            if control is None or control.box[1] < BUTTON_TOP:
                 return None, f"no {name!r} on screen"
             found = dict(key=name, label=control.label, kind=control.kind, score=1.0,
                          tap=control.tap, box=tuple(control.box))
@@ -163,25 +183,25 @@ class CapsuleRun:
         and only its label is learned; the three machines are tabs of one
         screen with their buttons in one place, so take it from a tab where the
         whole button was found."""
-        if 0.8 * FACE_HEIGHT <= box[3] - box[1] <= 1.4 * FACE_HEIGHT:
+        if FACE_FIT[0] * FACE_HEIGHT <= box[3] - box[1] <= FACE_FIT[1] * FACE_HEIGHT:
             return tuple(box)
-        if box[3] - box[1] > 1.4 * FACE_HEIGHT:
+        if box[3] - box[1] > FACE_FIT[1] * FACE_HEIGHT:
             # Learned with the bar below it: the face is the button's own.
             cx = (box[0] + box[2]) / 2
-            return (cx - FACE_WIDTH / 2, box[1], cx + FACE_WIDTH / 2, min(box[1] + FACE_DEPTH, 0.87))
+            return (cx - FACE_WIDTH / 2, box[1], cx + FACE_WIDTH / 2, min(box[1] + FACE_DEPTH, FACE_BOTTOM))
         for screen in MACHINES.values():
             entry = profile.controls(screen).get(name)
-            if entry and entry["box"][3] - entry["box"][1] >= 0.8 * FACE_HEIGHT:
+            if entry and entry["box"][3] - entry["box"][1] >= FACE_FIT[0] * FACE_HEIGHT:
                 x0, y0, x1, y1 = entry["box"]
                 # Only if the label sits inside that button.
-                if x0 <= (box[0] + box[2]) / 2 <= x1 and y0 - 0.03 <= box[1] <= y1:
+                if x0 <= (box[0] + box[2]) / 2 <= x1 and y0 - LABEL_SLACK <= box[1] <= y1:
                     return tuple(entry["box"])
         # No tab has the whole button where this label is -- the Cat Capsules
         # button moves over when its tickets run out -- so it is drawn from
         # the label: the face hangs below it, as wide as a draw button is.
         # The face is still checked, digits and all, before any press.
         cx = (box[0] + box[2]) / 2 + FACE_SHIFT
-        return (cx - FACE_WIDTH / 2, box[1], cx + FACE_WIDTH / 2, min(box[1] + FACE_DEPTH, 0.87))
+        return (cx - FACE_WIDTH / 2, box[1], cx + FACE_WIDTH / 2, min(box[1] + FACE_DEPTH, FACE_BOTTOM))
 
     # -- one press ---------------------------------------------------------------
 
@@ -194,7 +214,7 @@ class CapsuleRun:
 
         ctx, graph, human = self.ctx, self.ctx.graph, self.nav.human
         started = time.monotonic()
-        deadline = started + 25 + 8 * cost
+        deadline = started + COLLECT_BASE + COLLECT_PER * cost
         next_skip = started + SKIP_AFTER
         seen, moved, last = 0, False, None
         # After an Ok, the next result counts only once the screen has left
@@ -239,24 +259,15 @@ class CapsuleRun:
                 from .layout import landscape_to_hid
 
                 ctx.session.tap(*human.jitter_point(*landscape_to_hid(*SKIP_POINT)))
-                next_skip = now + SKIP_EVERY * random.uniform(0.7, 1.3)
+                next_skip = now + SKIP_EVERY * random.uniform(*SKIP_JITTER)
         ctx.log("  a press did not come back to the machine in time")
         return seen or None
 
     def _drain(self) -> bool:
-        from .pipeline import drain_storage
+        from .pipeline import clear_storage
 
         self.ctx.log("  Cat Storage nearly full: Use all")
-        drained = drain_storage(self.ctx)
-        if self.trade_in:
-            from .storage import Storage, clear_unusable
-
-            clear_unusable(self.ctx)
-            left = Storage(self.ctx).count()
-            if left is None or left[0] > left[1] - 2 * STORAGE_MARGIN - COST[MULTI]:
-                return False
-            self.ctx.storage_left, self.ctx.storage_capacity = left
-        elif not drained:
+        if not clear_storage(self.ctx, room=2 * STORAGE_MARGIN + COST[MULTI]):
             return False
         self.stored = getattr(self.ctx, "storage_left", 0)
         self.capacity = getattr(self.ctx, "storage_capacity", self.capacity)
@@ -312,6 +323,7 @@ class CapsuleRun:
         return None
 
     def run(self) -> str:
+        """Press until done, stopped or refused; returns why it ended."""
         from .pipeline import Stopped
 
         s = self.state

@@ -81,9 +81,10 @@ def _do_options(p: argparse.ArgumentParser) -> None:
     g.add_argument("--capsules", action="append", type=_capsules, default=[], metavar="MACHINE[:N]",
                    help="open a normal machine with its own tickets: cat, lucky or lucky_g; "
                         ":N for N capsules, else until its tickets run out")
-    g.add_argument("--trade-in", action="store_true",
-                   help="with --capsules: what Use all cannot use (maxed) is traded for Rare "
-                        "Tickets, five a ticket, and the rest exchanged for NP")
+    g.add_argument("--exchange", choices=("np", "xp"), default="np",
+                   help="Cat Storage is cleared with Use all; what the game says it cannot use is "
+                        "traded for Rare Tickets, five a ticket, and the rest exchanged for this "
+                        "(default: np)")
     g.add_argument("--play-legends", action="store_true",
                    help="play the Uncanny Legends with the Cat CPU, stage after stage")
     g.add_argument("--empty-storage", action="store_true", help="press Use all on Cat Storage first")
@@ -107,7 +108,7 @@ def request_from_args(args) -> jobs.Request:
         platinum=args.platinum, capsules=dict(getattr(args, "capsules", []) or []),
         uncanny=getattr(args, "play_legends", False), storage=getattr(args, "empty_storage", False),
         rescan_owned=getattr(args, "rescan_owned", False), rescan_map=getattr(args, "rescan_map", False),
-        update=getattr(args, "update", False), trade_in=getattr(args, "trade_in", False),
+        update=getattr(args, "update", False), exchange=getattr(args, "exchange", "np"),
     )
 
 

@@ -270,7 +270,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
           <div class="machine"><label><input type="checkbox" id="m-lucky"> Lucky Capsules</label><input type="number" id="n-lucky" min="0" placeholder="all"></div>
           <div class="machine"><label><input type="checkbox" id="m-lucky_g"> Lucky Capsules G</label><input type="number" id="n-lucky_g" min="0" placeholder="all"></div>
           <div class="checks" style="margin-top: 6px">
-            <label><input type="checkbox" id="trade-in"> Trade what Use all can't use <span class="m">maxed capsules: Rare Tickets (5 a ticket), the rest NP</span></label>
+            <label>What Use all can't use, past trade-in: <select id="exchange"><option value="np">NP</option><option value="xp">XP</option></select> <span class="m">traded for Rare Tickets first (5 a ticket)</span></label>
           </div>
         </div>
       </div>
@@ -965,7 +965,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       events: [...$('events').querySelectorAll('input:checked')].map(i => i.value),
       legend_rares: $('legend-rares').checked, prefer: $('prefer').value || null,
       roll: $('roll').checked, rare: num('rare'), platinum: num('platinum'),
-      capsules, trade_in: $('trade-in').checked, uncanny: $('uncanny').checked, storage: $('storage').checked, update: $('update').checked,
+      capsules, exchange: $('exchange').value, uncanny: $('uncanny').checked, storage: $('storage').checked, update: $('update').checked,
       rescan_owned: $('rescan-owned').checked, rescan_map: $('rescan-map').checked,
     };
   }

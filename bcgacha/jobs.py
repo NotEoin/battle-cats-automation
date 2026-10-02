@@ -75,7 +75,7 @@ class Request:
     rare: int | None = None                             # rare tickets to spend; None: all
     platinum: int | None = None                         # Platinum tickets to spend; None: all
     capsules: dict = field(default_factory=dict)        # machine -> capsules to open, 0: all
-    trade_in: bool = False                              # what Use all leaves: Rare Tickets, then NP
+    exchange: str = "np"                                # what Use all leaves, past trade-in: np or xp
     uncanny: bool = False                               # play the Uncanny Legends
     storage: bool = False                               # empty Cat Storage first
     rescan_owned: bool = False
@@ -92,6 +92,7 @@ class Request:
         req.rare = None if req.rare in (None, "", "all") else max(0, int(req.rare))
         req.platinum = None if req.platinum in (None, "", "all") else max(0, int(req.platinum))
         req.capsules = {m: max(0, int(n or 0)) for m, n in (req.capsules or {}).items() if m in MACHINE_NAMES}
+        req.exchange = "xp" if str(req.exchange).lower() == "xp" else "np"
         return req
 
     def to_json(self) -> dict:
@@ -134,8 +135,8 @@ class Request:
             words += ["--platinum", str(self.platinum)]
         for machine, n in self.capsules.items():
             words += ["--capsules", f"{machine}:{n}" if n else machine]
-        if self.trade_in and self.capsules:
-            words.append("--trade-in")
+        if self.exchange == "xp":
+            words += ["--exchange", "xp"]
         if self.uncanny:
             words.append("--play-legends")
         if self.storage:
@@ -176,8 +177,9 @@ class Request:
         for machine, n in self.capsules.items():
             lines.append(f"open {MACHINE_NAMES[machine]}: "
                          + (f"{n} capsule{'s' if n != 1 else ''}" if n else "until its tickets run out"))
-        if self.capsules and self.trade_in:
-            lines.append("whatever Use all cannot use: traded for Rare Tickets, the rest exchanged for NP")
+        if self.roll or self.capsules or self.storage:
+            lines.append("Cat Storage: Use all; what the game says it cannot use is traded for Rare Tickets, "
+                         f"the rest exchanged for {self.exchange.upper()}")
         if self.uncanny:
             lines.append("play the Uncanny Legends with the Cat CPU until one stage is lost 3 times")
         return lines
@@ -190,6 +192,7 @@ class Job:
 
     def __init__(self, ctx: P.Context, request: Request, reload=None):
         self.ctx, self.req, self.reload = ctx, request, reload
+        self.ctx.exchange = request.exchange
         self.tasks = [dict(name=n, title=TITLES[n], does=DOES[n], state="waiting", detail="",
                            started=None, seconds=None) for n in request.tasks()]
         self.owned = self.account = self.events = None
@@ -342,18 +345,7 @@ class Job:
         from .state import STATE_PATH, Account
 
         self._needs_device("Emptying Cat Storage")
-        drained = P.drain_storage(self.ctx)
-        if self.req.trade_in and self.req.capsules:
-            # What Use all leaves is maxed: traded, then exchanged for NP.
-            from .storage import Storage, clear_unusable
-
-            clear_unusable(self.ctx)
-            left = Storage(self.ctx).count()
-            if left is None:
-                raise Refused("Cat Storage's count did not read after trading",
-                              "look at the phone: a panel may be open")
-            self.ctx.storage_left, self.ctx.storage_capacity = left
-        elif not drained:
+        if not P.clear_storage(self.ctx, room=0):
             raise Refused("Cat Storage was not emptied", "look at the phone: a question may be waiting")
         if STATE_PATH.exists():
             account = Account.load()
@@ -633,7 +625,7 @@ class Job:
         for machine, n in self.req.capsules.items():
             self.ctx.check()
             self.ctx.log(f"-- {MACHINE_NAMES[machine]}: {n or 'until out of tickets'}")
-            run = CapsuleRun(self.ctx, machine, limit=n or None, trade_in=self.req.trade_in)
+            run = CapsuleRun(self.ctx, machine, limit=n or None)
             reason = run.run()
             done.append(f"{MACHINE_NAMES[machine]} {run.state.capsules} ({reason})")
             self.ctx.put("capsule_runs", done)

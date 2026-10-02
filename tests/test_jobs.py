@@ -37,7 +37,8 @@ def test_a_request_from_the_page_is_cleaned():
 
 def test_the_command_line_asks_for_the_same_run():
     req = jobs.Request(targets=["Dark Kasli", "Shirou Emiya"], events=["Iron Legion"], roll=True,
-                       rare=20, platinum=1, capsules={"cat": 0, "lucky": 10}, uncanny=True)
+                       rare=20, platinum=1, capsules={"cat": 0, "lucky": 10}, uncanny=True,
+                       exchange="xp")
     from bcgacha import cli
 
     again = cli.request_from_args(cli.parser().parse_args(shlex.split(req.command())[1:]))
