@@ -28,6 +28,7 @@ can stop it. Either one can do anything the other can:
 | want every Uber of an event | `-e "Iron Legion"` (`--legend-rares` for its Legend Rares) | tick the event |
 | open Cat or Lucky Capsules | `--capsules cat:30` (`lucky`, `lucky_g`; no count: until out) | Normal capsules |
 | play the Uncanny Legends | `--play-legends` | Battles |
+| beat the Zombie Outbreaks | `--play-outbreaks` | Battles |
 | all of it in one go | `bcgacha run -t Gunduros --roll --capsules cat --play-legends` | tick them all |
 | stop | Ctrl+C (between taps) | Stop |
 
@@ -129,6 +130,7 @@ terminal and the page as it starts and ends (`jobs.py`):
 | roll | draws along the route, every result read and checked against the plan |
 | capsules | the normal machines, with their own tickets |
 | legends | the Uncanny Legends, stage after stage, with the Cat CPU |
+| outbreaks | each saga chapter's Zombie Outbreak, with the zombie deck and the Cat CPU |
 
 - What is wanted: the units named with `-t`, in that order, outrank everything;
   then each event named with `-e`. With neither, every unowned Uber of every
@@ -163,6 +165,15 @@ cleared) and presses Attack!. Energy is refilled with Leadership; the offer to
 continue a lost battle for Cat Food is always refused. It stops when that
 topmost chapter is CLEAR, or when one stage is lost three times running, which
 needs a person. Each battle's end is kept under `logs/legends`.
+
+The Zombie Outbreak player goes through every saga chapter in turn. On each
+chapter's Stage Select, a purple OUTBREAK button on the left means an outbreak
+is up: pressing it selects the stage. If the Equip button beside Attack! does
+not name the zombie deck, Equip opens Organize Cats, whose arrows step through
+the decks until one named zombie comes up, and Back returns to the stage. Then
+the Cat CPU, Attack!, and the same battle handling as the Legends. A stage is
+fought until it is cleared or lost three times running; then on to the next
+chapter.
 
 Only one thing may drive the phone. A second `bcgacha run` while the page is up
 refuses, and says to start the run from the page.
