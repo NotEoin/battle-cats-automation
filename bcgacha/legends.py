@@ -19,20 +19,25 @@ person is needed. Nothing is ever confirmed that spends Cat Food: a question
 naming it, or one this module does not know, is answered No or stops the run.
 Energy is refilled only with Leadership.
 
-Every frame of a battle's end is kept under logs/legends, to learn from.
+Every frame of a battle's end is kept under logs/legends in the bcgacha
+folder, to learn from.
+
+Positions and colours were measured on a 2532x1170 iPhone, as fractions of
+the landscape frame and OpenCV HSV; other screen shapes are untested.
 """
 
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
+from typing import Any
 
 import cv2
 import numpy as np
 
-ROOT = Path(__file__).resolve().parent.parent
-SHOTS = ROOT / "logs" / "legends"
+from .paths import LOGS
+
+SHOTS = LOGS / "legends"
 
 # -- the Legend Stages list ----------------------------------------------------
 # The list's pills are sampled down a thin column clear of their text and of
@@ -45,13 +50,25 @@ GREEN_HUE = (37, 47)            # Uncanny Legends; yellow is Stories of Legend
 YELLOW_HUE = (19, 30)
 PILL_SATURATION = 120
 BRIGHT = 150                    # a greyed-out (locked) pill is half as bright
-# The CLEAR badge covers the left end of a cleared pill's lower half.
+# The CLEAR badge covers the left end of a cleared pill's lower half: less
+# than this share of it still green means the badge is there.
 BADGE_X = (0.078, 0.108)
+BADGE_GREEN = 0.5
+# The section header sits in this column, up to this far above its first pill;
+# a pill's name in this column, this tall from its top.
+HEADER_X = (0.07, 0.30)
+HEADER_ABOVE = 0.085
+NAME_X = (0.07, 0.36)
+NAME_HEIGHT = 0.07
+# The first pill is nudged down when its top is above this, to show the header.
+HEADER_ROOM = 0.2
 HEADER = "uncanny"
 # Pages of drag from the top before giving up on finding the section.
 MAX_PAGES = 30
-# Drags, as (from y, to y) at x = 0.2. None starts near the top edge: that
+# Drags, as (from y, to y) at x = DRAG_X. None starts near the top edge: that
 # pulls down the Notification Centre.
+DRAG_X = 0.2
+FLICKS_TO_TOP = 10
 PAGE_DOWN = (0.85, 0.2)
 NUDGE_DOWN = (0.7, 0.35)
 NUDGE_UP = (0.4, 0.65)
@@ -63,6 +80,18 @@ TAB_ROW = 0.125
 TAB_MIN = 0.06
 CPU_ICON = (0.695, 0.735, 0.745, 0.815)
 CPU_TAP = (0.721, 0.785)
+# The Cat CPU icon's colours: vivid is the rainbow screen and the gold of
+# skip-battle, gold a hue band of it, white the CPU state's casing. A share
+# of the icon over these means that colour is there.
+VIVID = (110, 150)                  # saturation above, value above
+GOLD_HUE = (12, 32)
+WHITE = (40, 200)                   # saturation below, value above
+GOLD_SHARE, CPU_SHARE = 0.1, 0.04
+# Attack! is lit when its median value and saturation are over these.
+ATTACK_LIT = (190, 120)
+# The selected tab is solid white; the others pale. (saturation below, value above)
+TAB_WHITE = (30, 235)
+TAB_PALE = (45, 140)
 ATTACK = (0.83, 0.662)
 ATTACK_BOX = (0.74, 0.625, 0.92, 0.70)
 
@@ -70,6 +99,8 @@ ATTACK_BOX = (0.74, 0.625, 0.92, 0.70)
 END_OK = (0.498, 0.88)                      # Victory's Ok, and Defeat's
 DEFEAT_WORDS = ("defeat", "youlose", "youlost", "gameover")
 NOTICE_TAP = (0.5, 0.72)                    # blank ground under a victory notice
+# The end Ok is the gold pill within this of where it was measured.
+END_OK_REACH = (0.08, 0.05)
 POLL = 1.5
 LOOK_EVERY = 6.0                            # a full look for questions, this often
 BATTLE_LIMIT = 15 * 60
@@ -80,6 +111,14 @@ DIALOG_Y = (0.2, 0.78)
 # again if nothing is asked and the map has not moved in this long.
 QUESTION_EVERY = 2.5
 ATTACK_AGAIN = 5.0
+ATTACK_PRESSES = 3
+# A screen not learned yet gets a full look this often while it is awaited.
+LOOK_AGAIN = 2.5
+# A frame differing by less than this share from the last is a still screen.
+STILL_SHARE = 0.01
+STILL_TRIES = 12
+# Attack! pressed with the map moved by less than this share did not take.
+MAP_MOVED = 0.02
 
 
 def _hsv(frame: np.ndarray, box) -> np.ndarray:
@@ -91,6 +130,8 @@ def _hsv(frame: np.ndarray, box) -> np.ndarray:
 
 @dataclass
 class Pill:
+    """One chapter's pill in the Legend Stages list, as a span down the frame."""
+
     kind: str           # "green", "yellow" or "other"
     y0: float
     y1: float
@@ -98,6 +139,7 @@ class Pill:
 
     @property
     def y(self) -> float:
+        """The pill's middle, down the frame."""
         return (self.y0 + self.y1) / 2
 
 
@@ -128,18 +170,18 @@ def cleared(frame: np.ndarray, pill: Pill) -> bool:
     region = _hsv(frame, (BADGE_X[0], pill.y, BADGE_X[1], pill.y1 - 0.005))
     green = ((region[:, :, 0] >= GREEN_HUE[0]) & (region[:, :, 0] <= GREEN_HUE[1])
              & (region[:, :, 1] > PILL_SATURATION))
-    return green.size > 0 and green.mean() < 0.5
+    return green.size > 0 and green.mean() < BADGE_GREEN
 
 
 def cpu_state(frame: np.ndarray) -> str:
     """The Cat CPU item: "cpu" (white, a rainbow screen), "skip" (gold) or "off"."""
     r = _hsv(frame, CPU_ICON)
-    vivid = (r[:, :, 1] > 110) & (r[:, :, 2] > 150)
-    gold = vivid & (r[:, :, 0] >= 12) & (r[:, :, 0] <= 32)
-    white = (r[:, :, 1] < 40) & (r[:, :, 2] > 200)
-    if gold.mean() > 0.1:
+    vivid = (r[:, :, 1] > VIVID[0]) & (r[:, :, 2] > VIVID[1])
+    gold = vivid & (r[:, :, 0] >= GOLD_HUE[0]) & (r[:, :, 0] <= GOLD_HUE[1])
+    white = (r[:, :, 1] < WHITE[0]) & (r[:, :, 2] > WHITE[1])
+    if gold.mean() > GOLD_SHARE:
         return "skip"
-    if white.mean() > 0.04 and (vivid & ~gold).mean() > 0.04:
+    if white.mean() > CPU_SHARE and (vivid & ~gold).mean() > CPU_SHARE:
         return "cpu"
     return "off"
 
@@ -147,7 +189,7 @@ def cpu_state(frame: np.ndarray) -> str:
 def attack_ready(frame: np.ndarray) -> bool:
     """Attack! lit: bright gold, not the dimmed skip-battle face."""
     r = _hsv(frame, ATTACK_BOX)
-    return float(np.median(r[:, :, 2])) > 190 and float(np.median(r[:, :, 1])) > 120
+    return float(np.median(r[:, :, 2])) > ATTACK_LIT[0] and float(np.median(r[:, :, 1])) > ATTACK_LIT[1]
 
 
 def tabs(frame: np.ndarray) -> tuple[tuple[float, float] | None, list[tuple[float, float]]]:
@@ -155,8 +197,8 @@ def tabs(frame: np.ndarray) -> tuple[tuple[float, float] | None, list[tuple[floa
     h, w = frame.shape[:2]
     row = cv2.cvtColor(frame[int(TAB_ROW * h): int(TAB_ROW * h) + 1], cv2.COLOR_BGR2HSV)[0].astype(int)
     x0, x1 = int(TAB_STRIP[0] * w), int(TAB_STRIP[2] * w)
-    white = (row[:, 1] < 30) & (row[:, 2] > 235)
-    pale = (row[:, 1] < 45) & (row[:, 2] > 140)
+    white = (row[:, 1] < TAB_WHITE[0]) & (row[:, 2] > TAB_WHITE[1])
+    pale = (row[:, 1] < TAB_PALE[0]) & (row[:, 2] > TAB_PALE[1])
 
     def runs(mask):
         out, start = [], None
@@ -177,6 +219,8 @@ def tabs(frame: np.ndarray) -> tuple[tuple[float, float] | None, list[tuple[floa
 
 @dataclass
 class LegendState:
+    """What a Legends run has done so far, for the log and the live page."""
+
     battles: int = 0
     wins: int = 0
     losses: int = 0
@@ -187,15 +231,18 @@ class LegendState:
     reason: str = ""
 
     def to_json(self) -> dict:
+        """The run so far as plain JSON."""
         return dict(battles=self.battles, wins=self.wins, losses=self.losses, stage=self.stage,
                     streak=self.streak, cleared=self.cleared[-12:], reason=self.reason,
                     minutes=round((time.time() - self.started) / 60, 1))
 
 
 class LegendRun:
+    """Play the Uncanny Legends through, stage after stage, until one needs a person."""
+
     who = "legends"             # how its lines start in the log
 
-    def __init__(self, ctx, attempts: int = ATTEMPTS):
+    def __init__(self, ctx: Any, attempts: int = ATTEMPTS):
         self.ctx, self.attempts = ctx, attempts
         self.nav = ctx.navigator()
         self.state = LegendState()
@@ -211,7 +258,7 @@ class LegendRun:
     def _move(self, y0: float, y1: float, flick: bool = False) -> None:
         from .layout import landscape_to_hid
 
-        a, b = landscape_to_hid(0.2, y0), landscape_to_hid(0.2, y1)
+        a, b = landscape_to_hid(DRAG_X, y0), landscape_to_hid(DRAG_X, y1)
         if flick:
             self.ctx.session.swipe(*a, *b, duration=0.12)
         else:
@@ -227,14 +274,14 @@ class LegendRun:
     def _arrive(self, expected: str, timeout: float = 8.0) -> bool:
         """Wait for `expected` on two frames running; a screen not learned
         yet gets a full look now and then, which learns it."""
-        graph, seen, look = self.ctx.graph, None, time.monotonic() + 2.5
+        graph, seen, look = self.ctx.graph, None, time.monotonic() + LOOK_AGAIN
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             frame = self._shot()
             slow = time.monotonic() > look
             here = graph.recognise(frame, slow=slow, ocr=slow).here
             if slow:
-                look = time.monotonic() + 2.5
+                look = time.monotonic() + LOOK_AGAIN
             if here == expected and seen == expected:
                 return True
             seen = here
@@ -245,10 +292,10 @@ class LegendRun:
         from .uigraph import frame_changed
 
         last = self._shot()
-        for _ in range(12):
+        for _ in range(STILL_TRIES):
             time.sleep(wait)
             frame = self._shot()
-            if not frame_changed(last, frame, fraction=0.01):
+            if not frame_changed(last, frame, fraction=STILL_SHARE):
                 return frame
             last = frame
         return last
@@ -262,7 +309,7 @@ class LegendRun:
         if not self.nav.goto("legend_stage_select", log=ctx.log):
             self.state.reason = "could not reach the Legend Stages list"
             return None
-        for _ in range(10):
+        for _ in range(FLICKS_TO_TOP):
             self._move(*FLICK_UP, flick=True)
         time.sleep(0.8)
         frame = self._still()
@@ -277,19 +324,20 @@ class LegendRun:
             self.state.reason = "no green Uncanny Legends pills in the list"
             return None
         # The section's first pill, with room above it for the header.
-        if greens[0].y0 < 0.2:
+        if greens[0].y0 < HEADER_ROOM:
             self._move(*NUDGE_UP)
             frame = self._still()
             greens = [p for p in pills(frame) if p.kind == "green"]
         top = greens[0]
-        header = self._read(frame, (0.07, max(top.y0 - 0.085, 0.07), 0.30, top.y0 - 0.005))
+        header = self._read(frame, (HEADER_X[0], max(top.y0 - HEADER_ABOVE, HEADER_X[0]), HEADER_X[1],
+                                    top.y0 - 0.005))
         if HEADER not in header.lower().replace(" ", ""):
             self.state.reason = f"the first green pills are not the Uncanny Legends ({header!r})"
             return None
         for _ in range(8):
             for p in greens:
                 if p.bright and p.y1 < LIST_Y[1] - 0.01:
-                    name = self._read(frame, (0.07, p.y0, 0.36, p.y0 + 0.07)) or "?"
+                    name = self._read(frame, (NAME_X[0], p.y0, NAME_X[1], p.y0 + NAME_HEIGHT)) or "?"
                     if cleared(frame, p):
                         self.state.reason = f"every Uncanny Legends chapter is clear (top: {name})"
                         return None
@@ -327,7 +375,7 @@ class LegendRun:
         stage = self._read(frame, (selected[0], TAB_STRIP[1], selected[1], TAB_STRIP[3])) or "?"
         return stage if self.arm(frame) else None
 
-    def arm(self, frame) -> bool:
+    def arm(self, frame: np.ndarray) -> bool:
         """The Cat CPU item in its CPU state and Attack! lit, or state.reason says why not."""
         for _ in range(3):
             state = cpu_state(frame)
@@ -382,7 +430,7 @@ class LegendRun:
         from .uigraph import find_buttons
 
         pills_ = [bt for bt in find_buttons(frame)
-                  if abs(bt.x - END_OK[0]) < 0.08 and abs(bt.y - END_OK[1]) < 0.05]
+                  if abs(bt.x - END_OK[0]) < END_OK_REACH[0] and abs(bt.y - END_OK[1]) < END_OK_REACH[1]]
         best = min(pills_, key=lambda bt: abs(bt.x - END_OK[0]), default=None)
         return (best.x, best.y) if best else None
 
@@ -412,7 +460,9 @@ class LegendRun:
             here = ctx.graph.recognise(frame, slow=False, ocr=False).here
             still = last is not None and not frame_changed(last, frame)
             last = frame
-            if here in ("cat_base", "legend_stage_select") and still:
+            # Once the end was seen, the Cat Base is enough: its cat moves, and
+            # a tip it says ("Feeling strapped for cash?") is no question.
+            if here in ("cat_base", "legend_stage_select") and (still or outcome):
                 return outcome or f"back on {here} without seeing the battle end"
             if here == "stage_select" and still and outcome:
                 return outcome
@@ -424,9 +474,9 @@ class LegendRun:
                     why = self._question(frame)
                     if why:
                         return why
-                    if attack_ready(frame) and not frame_changed(before, frame, fraction=0.02) \
+                    if attack_ready(frame) and not frame_changed(before, frame, fraction=MAP_MOVED) \
                             and now - pressed_at > ATTACK_AGAIN:
-                        if presses >= 3:
+                        if presses >= ATTACK_PRESSES:
                             return "Attack! did not start a battle"
                         ctx.log(f"{self.who}: Attack! again")
                         self._press(*ATTACK)
@@ -466,6 +516,7 @@ class LegendRun:
     # -- the loop -------------------------------------------------------------------------
 
     def run(self) -> str:
+        """Battle until every chapter is clear, a stage needs a person, or stopped; returns why."""
         from .pipeline import Stopped
 
         ctx, s = self.ctx, self.state
