@@ -18,11 +18,15 @@ Each chapter is visited in turn, from anywhere in the game:
 A stage is attacked until it is cleared or lost three times running; then the
 next chapter. Once a won stage no longer shows, the chapter is done; one that
 is won and still shown is left, so a run cannot loop on it.
+
+Positions and colours were measured on a 2532x1170 iPhone, as fractions of
+the landscape frame and OpenCV HSV; other screen shapes are untested.
 """
 
 from __future__ import annotations
 
 import time
+from typing import Any
 
 import numpy as np
 
@@ -30,11 +34,11 @@ from .legends import ATTEMPTS, LegendRun, _hsv
 
 # -- Stage Select -----------------------------------------------------------------
 OUTBREAK_BOX = (0.095, 0.42, 0.20, 0.56)        # the purple button, skull and all
-OUTBREAK_TEXT = (0.095, 0.47, 0.205, 0.525)
 OUTBREAK_TAP = (0.146, 0.50)
 OUTBREAK_STAGE = (0.09, 0.575, 0.205, 0.625)    # the stage's name under it
 SELECTED_TAB = (0.43, 0.11, 0.56, 0.20)         # the selected tab sits mid-strip
 PURPLE_HUE = (125, 155)
+PURPLE_MIN = (80, 80)                           # saturation and value above
 PURPLE_BUTTON = 0.2                             # the button measures 0.38 purple
 PURPLE_TAB = 0.4                                # an outbreak's tab, 0.75
 # -- the deck -----------------------------------------------------------------------
@@ -44,6 +48,7 @@ EQUIP_TAP = (0.690, 0.667)
 DECK_NAME = (0.18, 0.145, 0.29, 0.192)          # on Organize Cats, under "Slot n"
 DECK_NEXT = (0.792, 0.274)
 MAX_DECKS = 25                                  # the game has 20 slots; they wrap
+DECK_SETTLE = 0.6                               # seconds for the next deck to slide in
 BACK = (0.091, 0.872)
 # Stages won in one chapter before it is left, should outbreaks keep coming.
 MAX_STAGES = 6
@@ -52,7 +57,7 @@ MAX_STAGES = 6
 def _purple(frame: np.ndarray, box) -> float:
     r = _hsv(frame, box)
     hit = ((r[:, :, 0] >= PURPLE_HUE[0]) & (r[:, :, 0] <= PURPLE_HUE[1])
-           & (r[:, :, 1] > 80) & (r[:, :, 2] > 80))
+           & (r[:, :, 1] > PURPLE_MIN[0]) & (r[:, :, 2] > PURPLE_MIN[1]))
     return float(hit.mean()) if hit.size else 0.0
 
 
@@ -67,17 +72,21 @@ def outbreak_selected(frame: np.ndarray) -> bool:
 
 
 def is_deck(name: str) -> bool:
+    """True when a deck's name, as read, is the zombie deck's."""
     return DECK in name.lower().replace(" ", "")
 
 
 class OutbreakRun(LegendRun):
+    """Beat each saga chapter's Zombie Outbreak in turn, with the zombie deck."""
+
     who = "outbreaks"
 
-    def __init__(self, ctx, attempts: int = ATTEMPTS):
+    def __init__(self, ctx: Any, attempts: int = ATTEMPTS):
         super().__init__(ctx, attempts)
         self.chapters: dict[str, str] = {}      # chapter -> how it ended
 
     def publish(self) -> None:
+        """Show the run so far, chapter by chapter, on the live page."""
         self.ctx.put("outbreaks", dict(self.state.to_json(), chapters=dict(self.chapters)))
 
     # -- where -------------------------------------------------------------------------
@@ -118,7 +127,7 @@ class OutbreakRun(LegendRun):
             if is_deck(name):
                 break
             self._press(*DECK_NEXT)
-            time.sleep(0.6)
+            time.sleep(DECK_SETTLE)
         else:
             self.state.reason = f"no deck named {DECK!r} among {sorted(set(n for n in seen if n))}"
             return None
@@ -150,7 +159,7 @@ class OutbreakRun(LegendRun):
             ctx.check()
             if not outbreak_shown(frame):
                 return (f"cleared {', '.join(won)}" if won else "no outbreak"), True
-            stage = self._read(frame, OUTBREAK_STAGE) or "?"
+            stage = " ".join(self._read(frame, OUTBREAK_STAGE).split()) or "?"
             if stage in won:
                 return f"cleared {', '.join(won)}; {stage} still shows", True
             if len(won) >= MAX_STAGES:
@@ -194,6 +203,7 @@ class OutbreakRun(LegendRun):
     # -- the loop -------------------------------------------------------------------------
 
     def run(self) -> str:
+        """Visit every chapter, stopping early only when one needs a person; returns why it ended."""
         from .pipeline import Stopped
 
         ctx, s = self.ctx, self.state
