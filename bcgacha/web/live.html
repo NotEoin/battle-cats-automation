@@ -279,6 +279,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
           <span class="label">Battles</span>
           <div class="checks">
             <label><input type="checkbox" id="uncanny"> Play the Uncanny Legends <span class="m">Cat CPU, until a stage is lost 3 times</span></label>
+            <label><input type="checkbox" id="outbreaks"> Beat the Zombie Outbreaks <span class="m">zombie deck, Cat CPU, 3 tries a stage</span></label>
           </div>
         </div>
         <div class="field">
@@ -372,6 +373,10 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     <div class="panel" id="tab-legends" role="tabpanel" hidden>
       <div class="bigstats" id="leg-stats"></div>
       <h3>Stages cleared</h3><ul class="next" id="leg-cleared"></ul>
+    </div>
+    <div class="panel" id="tab-outbreaks" role="tabpanel" hidden>
+      <div class="bigstats" id="ob-stats"></div>
+      <h3>Chapters</h3><ul class="next" id="ob-chapters"></ul>
     </div>
     <div class="panel" id="tab-vision" role="tabpanel" hidden>
       <p class="hint">How the bot reads the screen above: the screen it settled on and the evidence, the taps that leave it, and what it has learned about this phone.</p>
@@ -485,7 +490,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
 
   // -- tabs ----------------------------------------------------------------------
   const TABS = [['overview', 'Overview'], ['goal', 'Goal'], ['plan', 'Plan'], ['sim', 'Paper run'], ['draws', 'Draws'],
-    ['events', 'Events'], ['collection', 'Collection & seed'], ['capsules', 'Capsules'], ['legends', 'Uncanny Legends'],
+    ['events', 'Events'], ['collection', 'Collection & seed'], ['capsules', 'Capsules'], ['legends', 'Uncanny Legends'], ['outbreaks', 'Zombie Outbreaks'],
     ['vision', 'Vision'], ['log', 'Log'], ['history', 'History'], ['map', 'Map']];
   let tab = 'overview';
   try { tab = localStorage.getItem('bc-tab') || tab; } catch (e) { /* no storage: the default */ }
@@ -855,6 +860,14 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       $('leg-cleared').replaceChildren(...(L.cleared || []).map(x => h('li', '', x)), h('li', 'dim', `now: ${L.stage || '–'}${L.reason ? ` · stopped: ${L.reason}` : ''}`));
       badge('legends', L.wins, true);
     }
+    // Zombie Outbreaks
+    const O = S.outbreaks;
+    if (O) {
+      stats($('ob-stats'), [['battles', O.battles], ['won', O.wins], ['lost', O.losses], ['losses running', O.streak], ['minutes', O.minutes]]);
+      $('ob-chapters').replaceChildren(...Object.entries(O.chapters || {}).map(([c, w]) => h('li', '', `${c}: ${w}`)),
+        h('li', 'dim', `now: ${O.stage || '–'}${O.reason ? ` · stopped: ${O.reason}` : ''}`));
+      badge('outbreaks', O.wins, true);
+    }
     // History
     table($('history-table'), [['ended', x => new Date(x.ended * 1000).toLocaleTimeString()], ['took', x => `${Math.round(x.ended - x.started)}s`],
       ['result', x => x.result, x => x.ok ? 'ok' : 'bad'], ['what', x => x.request ? x.request.summary.join('; ') : x.title, () => 'wrap'],
@@ -964,7 +977,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       events: [...$('events').querySelectorAll('input:checked')].map(i => i.value),
       legend_rares: $('legend-rares').checked, prefer: $('prefer').value || null,
       roll: $('roll').checked, rare: num('rare'), platinum: num('platinum'),
-      capsules, exchange: $('exchange').value, uncanny: $('uncanny').checked, storage: $('storage').checked, update: $('update').checked,
+      capsules, exchange: $('exchange').value, uncanny: $('uncanny').checked, outbreaks: $('outbreaks').checked, storage: $('storage').checked, update: $('update').checked,
       rescan_owned: $('rescan-owned').checked, rescan_map: $('rescan-map').checked,
     };
   }
@@ -977,7 +990,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       const out = await (await fetch('/api/command?request=' + encodeURIComponent(JSON.stringify(r)))).json();
       $('command').textContent = out.command;
       $('summary').replaceChildren(...out.summary.map(x => h('li', '', x)));
-      const spends = r.roll || Object.keys(r.capsules).length || r.uncanny;
+      const spends = r.roll || Object.keys(r.capsules).length || r.uncanny || r.outbreaks;
       $('start-btn').textContent = spends ? 'Start' : 'Start (plan only)';
     }, 120);
   }
@@ -990,18 +1003,18 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
   async function start(r) {
     const out = await post('/api/run', r);
     if (out.ok) {
-      showTab(r.roll ? 'draws' : Object.keys(r.capsules || {}).length ? 'capsules' : r.uncanny ? 'legends'
+      showTab(r.roll ? 'draws' : Object.keys(r.capsules || {}).length ? 'capsules' : r.uncanny ? 'legends' : r.outbreaks ? 'outbreaks'
         : r.only ? (r.only[0] === 'update' ? 'events' : 'log') : 'goal');
       pipeVersion = -1;
     }
   }
   $('plan-btn').addEventListener('click', () => {
     const r = request();
-    start({ ...r, roll: false, capsules: {}, uncanny: false, storage: false });
+    start({ ...r, roll: false, capsules: {}, uncanny: false, outbreaks: false, storage: false });
   });
   $('start-btn').addEventListener('click', () => {
     const r = request();
-    const spends = r.roll || Object.keys(r.capsules).length || r.uncanny;
+    const spends = r.roll || Object.keys(r.capsules).length || r.uncanny || r.outbreaks;
     if (!spends) { start(r); return; }
     $('confirm-list').replaceChildren(...[...$('summary').children].map(li => h('li', '', li.textContent)));
     $('confirm-note').textContent = r.roll

@@ -17,6 +17,7 @@ The tasks, in the order they run, each only when needed:
   roll      draw rare (and Platinum) tickets towards the goal   (if asked)
   capsules  open Cat or Lucky Capsules                          (if asked)
   legends   play the Uncanny Legends with the Cat CPU           (if asked)
+  outbreaks beat each chapter's Zombie Outbreak, the zombie deck (if asked)
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ TITLES = {
     "roll": "Rare draws",
     "capsules": "Normal capsules",
     "legends": "Uncanny Legends",
+    "outbreaks": "Zombie Outbreaks",
 }
 DOES = {
     "update": "downloading the newest event schedule and the community tier list",
@@ -54,6 +56,7 @@ DOES = {
     "roll": "drawing tickets along the planned route, each result checked",
     "capsules": "opening the normal machines with their own tickets",
     "legends": "beating Uncanny Legends stages with the Cat CPU",
+    "outbreaks": "beating each chapter's Zombie Outbreak with the zombie deck and the Cat CPU",
 }
 
 
@@ -77,6 +80,7 @@ class Request:
     capsules: dict = field(default_factory=dict)        # machine -> capsules to open, 0: all
     exchange: str = "np"                                # what Use all leaves, past Trade for Ticket: np or xp
     uncanny: bool = False                               # play the Uncanny Legends
+    outbreaks: bool = False                             # beat the Zombie Outbreaks
     storage: bool = False                               # empty Cat Storage first
     rescan_owned: bool = False
     rescan_map: bool = False
@@ -100,7 +104,7 @@ class Request:
 
     @property
     def spends(self) -> bool:
-        return self.roll or bool(self.capsules) or self.uncanny
+        return self.roll or bool(self.capsules) or self.uncanny or self.outbreaks
 
     def tasks(self) -> list[str]:
         if self.only:
@@ -116,6 +120,8 @@ class Request:
             out.append("capsules")
         if self.uncanny:
             out.append("legends")
+        if self.outbreaks:
+            out.append("outbreaks")
         return out
 
     def command(self) -> str:
@@ -139,6 +145,8 @@ class Request:
             words += ["--exchange", "xp"]
         if self.uncanny:
             words.append("--play-legends")
+        if self.outbreaks:
+            words.append("--play-outbreaks")
         if self.storage:
             words.append("--empty-storage")
         if self.rescan_owned:
@@ -182,6 +190,9 @@ class Request:
                          f"then the rest exchanged for {self.exchange.upper()}")
         if self.uncanny:
             lines.append("play the Uncanny Legends with the Cat CPU until one stage is lost 3 times")
+        if self.outbreaks:
+            lines.append("beat each chapter's Zombie Outbreak with the zombie deck and the Cat CPU; "
+                         "a stage lost 3 times is left for the next chapter")
         return lines
 
 
@@ -638,6 +649,15 @@ class Job:
 
         self._needs_device("Playing the Uncanny Legends")
         run = LegendRun(self.ctx)
+        reason = run.run()
+        s = run.state
+        return f"{s.wins} won, {s.losses} lost: {reason}"
+
+    def _do_outbreaks(self):
+        from .outbreaks import OutbreakRun
+
+        self._needs_device("Beating the Zombie Outbreaks")
+        run = OutbreakRun(self.ctx)
         reason = run.run()
         s = run.state
         return f"{s.wins} won, {s.losses} lost: {reason}"

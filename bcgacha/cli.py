@@ -87,6 +87,8 @@ def _do_options(p: argparse.ArgumentParser) -> None:
                         "for this (default: np)")
     g.add_argument("--play-legends", action="store_true",
                    help="play the Uncanny Legends with the Cat CPU, stage after stage")
+    g.add_argument("--play-outbreaks", action="store_true",
+                   help="beat each saga chapter's Zombie Outbreak with the zombie deck and the Cat CPU")
     g.add_argument("--empty-storage", action="store_true", help="press Use all on Cat Storage first")
     g.add_argument("--rescan-owned", action="store_true", help="read the Cat Guide again")
     g.add_argument("--rescan-map", action="store_true", help="read the save's sagas and chapters again")
@@ -106,7 +108,8 @@ def request_from_args(args) -> jobs.Request:
         targets=list(args.target), events=list(args.event), legend_rares=args.legend_rares,
         prefer=args.prefer, roll=getattr(args, "roll", False), rare=getattr(args, "rare", None),
         platinum=args.platinum, capsules=dict(getattr(args, "capsules", []) or []),
-        uncanny=getattr(args, "play_legends", False), storage=getattr(args, "empty_storage", False),
+        uncanny=getattr(args, "play_legends", False),
+        outbreaks=getattr(args, "play_outbreaks", False), storage=getattr(args, "empty_storage", False),
         rescan_owned=getattr(args, "rescan_owned", False), rescan_map=getattr(args, "rescan_map", False),
         update=getattr(args, "update", False), exchange=getattr(args, "exchange", "np"),
     )
@@ -421,6 +424,7 @@ def _guided(con: Console, units, args) -> int:
         ("plan", "Just show me the plan -- spend nothing"),
         ("capsules", "Open Cat Capsules or Lucky Capsules"),
         ("legends", "Play the Uncanny Legends with the Cat CPU"),
+        ("outbreaks", "Beat the Zombie Outbreaks with the zombie deck"),
         ("page", "Open the live page and decide there"),
     ]
     for n, (_, text) in enumerate(choices, 1):
@@ -486,6 +490,8 @@ def _guided(con: Console, units, args) -> int:
                     con.say(f"    skipped: {exc}")
     if "legends" in picked:
         req.uncanny = True
+    if "outbreaks" in picked:
+        req.outbreaks = True
     con.say()
     con.say(con.bold("This run will:"))
     for line in req.summary():

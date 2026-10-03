@@ -193,6 +193,8 @@ class LegendState:
 
 
 class LegendRun:
+    who = "legends"             # how its lines start in the log
+
     def __init__(self, ctx, attempts: int = ATTEMPTS):
         self.ctx, self.attempts = ctx, attempts
         self.nav = ctx.navigator()
@@ -291,7 +293,7 @@ class LegendRun:
                     if cleared(frame, p):
                         self.state.reason = f"every Uncanny Legends chapter is clear (top: {name})"
                         return None
-                    ctx.log(f"legends: opening {name}")
+                    ctx.log(f"{self.who}: opening {name}")
                     self._press(PILL_TAP_X, p.y)
                     if not self._arrive("stage_select"):
                         self.state.reason = f"{name} did not open its Stage Select"
@@ -316,27 +318,31 @@ class LegendRun:
             if selected is None or not later:
                 break
             x0, x1 = max(later)
-            self.ctx.log("legends: selecting the rightmost stage")
+            self.ctx.log(f"{self.who}: selecting the rightmost stage")
             self._press((x0 + x1) / 2, (TAB_STRIP[1] + TAB_STRIP[3]) / 2)
             frame = self._still()
         if selected is None:
             self.state.reason = "no stage tab selected on Stage Select"
             return None
         stage = self._read(frame, (selected[0], TAB_STRIP[1], selected[1], TAB_STRIP[3])) or "?"
+        return stage if self.arm(frame) else None
+
+    def arm(self, frame) -> bool:
+        """The Cat CPU item in its CPU state and Attack! lit, or state.reason says why not."""
         for _ in range(3):
             state = cpu_state(frame)
             if state == "cpu":
                 break
-            self.ctx.log(f"legends: Cat CPU item is {state}: tapping it")
+            self.ctx.log(f"{self.who}: Cat CPU item is {state}: tapping it")
             self._press(*CPU_TAP)
             frame = self._still()
         else:
             self.state.reason = "the Cat CPU item would not turn to CPU (none left?)"
-            return None
+            return False
         if not attack_ready(frame):
             self.state.reason = "Attack! is not lit"
-            return None
-        return stage
+            return False
+        return True
 
     # -- the battle -----------------------------------------------------------------------
 
@@ -359,13 +365,13 @@ class LegendRun:
             yes = percept.find("Yes") or percept.find("OK") or percept.find("Use")
             if yes is None:
                 return f"a Leadership question with no Yes: {asked}"
-            self.ctx.log(f"legends: refilling energy with Leadership ({asked[0]!r})")
+            self.ctx.log(f"{self.who}: refilling energy with Leadership ({asked[0]!r})")
             self._press(*yes.tap)
             return None
         for label in ANSWER_NO:
             control = percept.find(label)
             if control is not None:
-                self.ctx.log(f"legends: answering {label!r} to {asked[0]!r}")
+                self.ctx.log(f"{self.who}: answering {label!r} to {asked[0]!r}")
                 self._press(*control.tap)
                 return None
         return f"a question with no way to say No: {asked}"
@@ -422,7 +428,7 @@ class LegendRun:
                             and now - pressed_at > ATTACK_AGAIN:
                         if presses >= 3:
                             return "Attack! did not start a battle"
-                        ctx.log("legends: Attack! again")
+                        ctx.log(f"{self.who}: Attack! again")
                         self._press(*ATTACK)
                         presses, pressed_at = presses + 1, time.monotonic()
                 continue
@@ -431,17 +437,17 @@ class LegendRun:
             if "victory" in words:
                 if outcome is None:
                     self._keep(frame, "victory")
-                    ctx.log(f"legends: victory ({round(now - started)}s)")
+                    ctx.log(f"{self.who}: victory ({round(now - started)}s)")
                 outcome = "won"
                 self._press(*((self._end_ok(frame) or END_OK) if "posttosns" in words else NOTICE_TAP))
                 continue
             if outcome is None and any(w in words for w in DEFEAT_WORDS):
                 self._keep(frame, "defeat")
-                ctx.log(f"legends: defeat ({round(now - started)}s)")
+                ctx.log(f"{self.who}: defeat ({round(now - started)}s)")
                 outcome = "lost"
             if any(re.fullmatch(r"\d+/\d+\D?", t.text.strip()) for t in texts) and outcome is None:
                 if not fighting:
-                    ctx.log("legends: battle on, the CPU at the helm")
+                    ctx.log(f"{self.who}: battle on, the CPU at the helm")
                 fighting = True
                 continue
             asks = any("?" in t.text and DIALOG_Y[0] <= t.centre[1] <= DIALOG_Y[1] for t in texts)
@@ -475,18 +481,18 @@ class LegendRun:
                 key = f"{chapter}: {stage}"
                 if key != s.stage:
                     s.stage, s.streak = key, 0
-                ctx.log(f"legends: attacking {key} (try {s.streak + 1} of {self.attempts})")
+                ctx.log(f"{self.who}: attacking {key} (try {s.streak + 1} of {self.attempts})")
                 outcome = self.fight()
                 s.battles += 1
                 if outcome == "won":
                     s.wins += 1
                     s.streak = 0
                     s.cleared.append(key)
-                    ctx.log(f"legends: won {key} ({s.wins} won, {s.losses} lost)")
+                    ctx.log(f"{self.who}: won {key} ({s.wins} won, {s.losses} lost)")
                 elif outcome == "lost":
                     s.losses += 1
                     s.streak += 1
-                    ctx.log(f"legends: lost {key}, {s.streak} time{'s' if s.streak > 1 else ''} running")
+                    ctx.log(f"{self.who}: lost {key}, {s.streak} time{'s' if s.streak > 1 else ''} running")
                     if s.streak >= self.attempts:
                         s.reason = f"{key} lost {s.streak} times running: over to a person"
                         break
@@ -497,5 +503,5 @@ class LegendRun:
         except Stopped:
             s.reason = "stopped by request"
         ctx.put("legends", s.to_json())
-        ctx.log(f"legends: {s.reason}")
+        ctx.log(f"{self.who}: {s.reason}")
         return s.reason
