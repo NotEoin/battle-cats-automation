@@ -127,6 +127,15 @@ def _open_session(con: Console, serial=None):
         con.say("  Plug it in by USB, unlock it, and tap Trust if it asks. Then run this again.")
         con.say("  (bcgacha tools probe says what the phone supports once it is attached)")
         return None
+    # The disk image comes off whenever the phone restarts; put it back first.
+    try:
+        if not device.ddi_mounted():
+            con.say(con.dim("mounting the developer disk image (the phone restarted since last time)..."))
+            device.mount_ddi()
+    except Exception as exc:
+        con.say(con.bad(f"The developer disk image would not mount: {exc}"))
+        con.say("  Unlock the phone, check Developer Mode is on, and run this again.")
+        return None
     con.say(con.dim("connecting to the iPhone..."))
     try:
         session = DeviceSession(serial)
@@ -134,8 +143,7 @@ def _open_session(con: Console, serial=None):
         return session
     except Exception as exc:
         con.say(con.bad(f"The iPhone is attached but would not connect: {exc}"))
-        con.say("  Developer Mode must be on, and the developer disk image mounted:")
-        con.say("    .venv/bin/pymobiledevice3 mounter auto-mount")
+        con.say("  Unlock the phone, check Developer Mode is on, and run this again.")
         return None
 
 

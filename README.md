@@ -205,11 +205,14 @@ to them and the right banner selected when they arrive.
     python3 -m venv .venv && .venv/bin/pip install -e .
     .venv/bin/bcgacha tools update      # the event schedule and the tier list
 
-`bcgacha` is then `.venv/bin/bcgacha` (or `python -m bcgacha`); activate the
-venv to call it by name.
+`bcgacha` is then `.venv/bin/bcgacha` (or `python -m bcgacha`). To call it by
+name from anywhere without activating the venv, link it onto your PATH:
+
+    ln -s "$PWD/.venv/bin/bcgacha" ~/.local/bin/bcgacha
 
 On the phone, once: Settings > Privacy & Security > Developer Mode, on, and
-restart. Then mount the developer disk image:
+restart. The developer disk image comes off whenever the phone restarts;
+`bcgacha run` and `bcgacha ui` mount it again before connecting. By hand:
 
     .venv/bin/pymobiledevice3 mounter auto-mount
 
