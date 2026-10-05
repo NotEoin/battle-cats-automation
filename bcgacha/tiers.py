@@ -27,10 +27,13 @@ from pathlib import Path
 from rapidfuzz import fuzz, process
 
 from .data import LEGEND, UBER, Dataset
+from .paths import DATA, RESOURCES
 
 TIER_URL = "https://www.battlecatstierlist.com/current-tier-list"
-TIER_FILE = Path(__file__).resolve().parent.parent / "data" / "tiers.json"
-OVERRIDE_FILE = Path(__file__).resolve().parent.parent / "data" / "tier_aliases.json"
+# Seconds to wait for the page.
+FETCH_TIMEOUT = 60
+TIER_FILE = DATA / "tiers.json"
+OVERRIDE_FILE = RESOURCES / "tier_aliases.json"
 
 # Best to worst. Index doubles as the score, so lower is better.
 TIER_ORDER = [
@@ -50,6 +53,8 @@ LINE_RE = re.compile(r"^(SSS|SS|[SA-F][+-]?)\s*:\s*(.+)$")
 
 @dataclass
 class TierEntry:
+    """One placement on the list, under the community's nickname for the cat."""
+
     nickname: str
     tier: str
     ultra_form: bool = False
@@ -57,11 +62,14 @@ class TierEntry:
 
     @property
     def rank(self) -> int:
+        """The tier's index in `TIER_ORDER`; `UNRANKED` for one not in it."""
         return TIER_RANK.get(self.tier, UNRANKED)
 
 
 @dataclass
 class TierList:
+    """The parsed list, and each matched cat's tier by id."""
+
     entries: list[TierEntry] = field(default_factory=list)
     # cat id -> best (lowest) rank at base investment
     by_cat: dict[int, str] = field(default_factory=dict)
@@ -70,28 +78,34 @@ class TierList:
     unmatched: list[str] = field(default_factory=list)
 
     def rank_of(self, cat_id: int, use_potential: bool = False) -> int:
+        """The cat's rank, lower is better; `UNRANKED` for one not listed."""
         table = self.potential if use_potential else self.by_cat
         return TIER_RANK.get(table.get(cat_id, ""), UNRANKED)
 
     def tier_of(self, cat_id: int, use_potential: bool = False) -> str:
+        """The cat's tier name, or "?" for one not listed."""
         table = self.potential if use_potential else self.by_cat
         return table.get(cat_id, "?")
 
     def save(self, path: Path | None = None) -> Path:
+        """Write the list to `path` (default `TIER_FILE`) and return where it went."""
         path = Path(path or TIER_FILE)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({
+        text = json.dumps({
             "entries": [vars(e) for e in self.entries],
             "by_cat": {str(k): v for k, v in self.by_cat.items()},
             "potential": {str(k): v for k, v in self.potential.items()},
             "unmatched": self.unmatched,
-        }, indent=1))
+        }, indent=1)
+        if not path.exists() or path.read_text(encoding="utf-8") != text:   # unchanged keeps its date
+            path.write_text(text, encoding="utf-8")
         return path
 
     @classmethod
     def load(cls, path: Path | None = None) -> "TierList":
+        """Read a list `save` wrote; raises FileNotFoundError before any update."""
         path = Path(path or TIER_FILE)
-        raw = json.loads(path.read_text())
+        raw = json.loads(path.read_text(encoding="utf-8"))
         return cls(
             entries=[TierEntry(**e) for e in raw["entries"]],
             by_cat={int(k): v for k, v in raw["by_cat"].items()},
@@ -140,7 +154,7 @@ def _candidate_names(dataset: Dataset) -> dict[str, int]:
 
 def _load_overrides() -> dict[str, str]:
     if OVERRIDE_FILE.exists():
-        return json.loads(OVERRIDE_FILE.read_text())
+        return json.loads(OVERRIDE_FILE.read_text(encoding="utf-8"))
     return {}
 
 
@@ -182,10 +196,11 @@ def match(entries: list[TierEntry], dataset: Dataset, cutoff: int = 82) -> TierL
 
 
 def fetch_text(url: str = TIER_URL) -> str:
+    """The tier list page as plain text, for `parse`."""
     import httpx
     from bs4 import BeautifulSoup
 
-    r = httpx.get(url, timeout=60, follow_redirects=True, headers={
+    r = httpx.get(url, timeout=FETCH_TIMEOUT, follow_redirects=True, headers={
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
     })
     r.raise_for_status()

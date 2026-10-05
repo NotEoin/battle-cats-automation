@@ -20,7 +20,7 @@ can stop it. Either one can do anything the other can:
 | You want to | Command line | Live page (`bcgacha ui`) |
 |---|---|---|
 | see what is known | `bcgacha status` | Overview tab |
-| get new events | `bcgacha tools update` (or `--update` on any run) | Update events & tiers |
+| get new events | automatic: every command downloads them first (or `bcgacha tools update`) | automatic before every run (or Update events & tiers) |
 | find a unit | `bcgacha search dark kasli` | search box under Start a run |
 | see the plan, spending nothing | `bcgacha plan -t "Dark Kasli"` | Plan |
 | draw for units, most wanted first | `bcgacha run -t "Dark Kasli" -t Gunduros --roll` | tick Draw, Start |
@@ -203,7 +203,7 @@ to them and the right banner selected when they arrive.
 
     sudo apt install -y python3-dev usbmuxd
     python3 -m venv .venv && .venv/bin/pip install -e .
-    .venv/bin/bcgacha tools update      # the event schedule and the tier list
+    .venv/bin/bcgacha tools update      # the event schedule and the tier list (any command does this first)
 
 `bcgacha` is then `.venv/bin/bcgacha` (or `python -m bcgacha`). To call it by
 name from anywhere without activating the venv, link it onto your PATH:
@@ -223,7 +223,7 @@ Single steps, for a closer look (`bcgacha tools --help`):
     bcgacha tools probe                 # what the attached iPhone supports
     bcgacha tools upkeep owned          # read the Cat Guide again (also: map, storage)
     bcgacha tools resync --cat NAME     # fix the position after draws made by hand
-    bcgacha tools update                # the newest events and tier list (no phone)
+    bcgacha tools update                # the newest events and tier list, said in full (every command does it quietly)
     bcgacha tools tiers                 # the tier list alone
     bcgacha tools predict --seed S --event KEY
     bcgacha tools ubers --seed S --event KEY
@@ -270,7 +270,9 @@ as BOT and/or cheat tools". This project is one. Running it risks the account.
 ## Data
 
 Cat pools and rarity weights come from godfat's `battle-cats-rolls` dataset,
-refreshed by `bcgacha tools update`. The tests diff this engine against live
+downloaded before every command and every run from the live page (offline, the
+copy saved is used). Only the current copy matters, so `data/bc-en.yaml` and
+`data/tiers.json` are not kept in git. The tests diff this engine against live
 bc.godfat.org output saved under `tests/fixtures`.
 
 

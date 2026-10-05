@@ -25,6 +25,7 @@ from __future__ import annotations
 import shlex
 import time
 import traceback
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 
 from . import pipeline as P
@@ -70,6 +71,8 @@ class Refused(RuntimeError):
 
 @dataclass
 class Request:
+    """What a person asked a run to do; the command line and the page both make one."""
+
     targets: list[str] = field(default_factory=list)    # units wanted, most wanted first
     events: list[str] = field(default_factory=list)     # events whose Ubers are wanted
     legend_rares: bool = False                          # those events' Legend Rares too
@@ -89,6 +92,7 @@ class Request:
 
     @classmethod
     def from_json(cls, raw: dict) -> "Request":
+        """The request the live page sent, with unknown keys dropped and counts checked."""
         known = {k: v for k, v in (raw or {}).items() if k in cls.__dataclass_fields__}
         req = cls(**known)
         req.targets = [str(t).strip() for t in req.targets if str(t).strip()]
@@ -97,16 +101,20 @@ class Request:
         req.platinum = None if req.platinum in (None, "", "all") else max(0, int(req.platinum))
         req.capsules = {m: max(0, int(n or 0)) for m, n in (req.capsules or {}).items() if m in MACHINE_NAMES}
         req.exchange = "xp" if str(req.exchange).lower() == "xp" else "np"
+        req.update = True            # the page stays open for days: every run from it updates first
         return req
 
     def to_json(self) -> dict:
+        """The request as plain data, for the page."""
         return asdict(self)
 
     @property
     def spends(self) -> bool:
+        """True when the run spends tickets or energy on the phone."""
         return self.roll or bool(self.capsules) or self.uncanny or self.outbreaks
 
     def tasks(self) -> list[str]:
+        """The tasks this run needs, in the order they run."""
         if self.only:
             return [t for t in TITLES if t in self.only]
         out = (["update"] if self.update else []) + ["map"]
@@ -153,8 +161,6 @@ class Request:
             words.append("--rescan-owned")
         if self.rescan_map:
             words.append("--rescan-map")
-        if self.update:
-            words.append("--update")
         if self.only == ["update"]:
             words = ["bcgacha", "tools", "update"]
         elif self.only:
@@ -201,7 +207,7 @@ class Request:
 class Job:
     """One Request carried out on a Context, published task by task."""
 
-    def __init__(self, ctx: P.Context, request: Request, reload=None):
+    def __init__(self, ctx: P.Context, request: Request, reload: Callable | None = None):
         self.ctx, self.req, self.reload = ctx, request, reload
         self.ctx.exchange = request.exchange
         self.tasks = [dict(name=n, title=TITLES[n], does=DOES[n], state="waiting", detail="",
@@ -236,11 +242,12 @@ class Job:
 
     def _needs_device(self, what: str) -> None:
         if self.ctx.session is None:
-            raise Refused(f"{what} needs the phone", "attach the iPhone and run again")
+            raise Refused(f"{what} needs the phone", "attach the iPhone or iPad and run again")
 
     # -- the whole of it --
 
     def run(self) -> tuple[bool, str]:
+        """Every task in turn; whether the run finished, and how it ended."""
         ctx = self.ctx
         ctx.put("request", dict(self.req.to_json(), command=self.req.command(), summary=self.req.summary()))
         ctx.put("error", None)
@@ -260,7 +267,7 @@ class Job:
         except P.Stopped:
             self._fail(current, "stopped", "stopped by request")
             return False, "stopped"
-        except Exception as exc:
+        except Exception as exc:  # any failure ends the run as a failed task, said on both views
             hint = getattr(exc, "hint", "")
             self._fail(current, "failed", str(exc), hint)
             if not isinstance(exc, Refused):
@@ -282,46 +289,23 @@ class Job:
 
     def _do_update(self):
         """The newest schedule and tier list. Needs no phone; the map is built
-        again after, so a new event is a screen at once."""
+        again after, so a new event is a screen at once. Offline, a run goes on
+        with the schedule kept; only tools update itself stops."""
         from . import data
-        from . import events as live
-        from . import tiers as T
         from .uigraph import UIGraph
 
         ctx = self.ctx
-
-        def live_now():
-            try:
-                return {e.key: e for e in live.live_events(data.load())}
-            except FileNotFoundError:
-                return {}
-
-        before = live_now()
-        ctx.log("  downloading the event schedule (godfat's dataset)")
         try:
-            path = data.fetch()
-        except Exception as exc:
-            raise Refused(f"the event schedule did not download: {exc}",
-                          "check the internet connection; the schedule kept is unchanged") from None
+            after, new, ended, tiers = refresh(ctx.log)
+        except RuntimeError as exc:
+            if self.req.only == ["update"]:
+                raise Refused(str(exc), "check the internet connection; the schedule kept is unchanged") from None
+            ctx.log(f"  {exc}; going on with the schedule kept")
+            return "schedule kept (offline)"
         ctx.dataset = data.load()
-        after = live_now()
-        new = [e for k, e in after.items() if k not in before]
-        ended = [e for k, e in before.items() if k not in after]
-        ctx.log(f"  {path.name}: {path.stat().st_size:,} bytes, {len(after)} events live today")
-        for e in new:
-            ctx.log(f"  new: {e.label} ({e.start} to {e.end})")
-        for e in ended:
-            ctx.log(f"  gone: {e.label}")
-        ctx.log("  downloading the tier list")
-        try:
-            tier_list = T.match(T.parse(T.fetch_text()), ctx.dataset)
-            tier_list.save()
-            tiers = f"{len(tier_list.by_cat)} cats ranked"
-        except Exception as exc:
-            tiers = f"tier list kept as it was ({type(exc).__name__}: {exc})"
-            ctx.log(f"  {tiers}")
         ctx.graph = self.reload() if self.reload else UIGraph.load()
         self.events = None
+        from . import events as live
         from .catindex import OwnedIndex
 
         index = OwnedIndex.load()
@@ -663,7 +647,48 @@ class Job:
         return f"{s.wins} won, {s.losses} lost: {reason}"
 
 
-def run(ctx: P.Context, request: Request, reload=None) -> tuple[bool, str]:
+def refresh(log: Callable[[str], None]):
+    """Download the newest event schedule and tier list, each swapped in only
+    when it changed. Returns the events live today, the new and the ended
+    ones, and what became of the tier list; RuntimeError when the schedule
+    would not download."""
+    from . import data
+    from . import events as live
+    from . import tiers as T
+
+    def live_now():
+        try:
+            return {e.key: e for e in live.live_events(data.load())}
+        except FileNotFoundError:
+            return {}
+
+    before = live_now()
+    log("  downloading the event schedule (godfat's dataset)")
+    try:
+        path = data.fetch()
+    except Exception as exc:  # a download fails in many ways, and each means the same: keep the old
+        raise RuntimeError(f"the event schedule did not download: {type(exc).__name__}: {exc}") from None
+    after = live_now()
+    new = [e for k, e in after.items() if k not in before]
+    ended = [e for k, e in before.items() if k not in after]
+    log(f"  {path.name}: {path.stat().st_size:,} bytes, {len(after)} events live today")
+    for e in new:
+        log(f"  new: {e.label} ({e.start} to {e.end})")
+    for e in ended:
+        log(f"  gone: {e.label}")
+    log("  downloading the tier list")
+    try:
+        tier_list = T.match(T.parse(T.fetch_text()), data.load())
+        tier_list.save()
+        tiers = f"{len(tier_list.by_cat)} cats ranked"
+    except Exception as exc:  # a site outage or redesign keeps the old list rather than stop the run
+        tiers = f"tier list kept as it was ({type(exc).__name__}: {exc})"
+        log(f"  {tiers}")
+    return after, new, ended, tiers
+
+
+def run(ctx: P.Context, request: Request, reload: Callable | None = None) -> tuple[bool, str]:
+    """Carry out one request; whether it finished, and how it ended."""
     return Job(ctx, request, reload).run()
 
 
@@ -687,7 +712,7 @@ def status(dataset=None) -> dict:
         out["data"] = dict(ok=True, updated=dt.date.fromtimestamp(source.stat().st_mtime).isoformat())
     except FileNotFoundError:
         out["data"] = dict(ok=False)
-        out["next"].append("fetch the cat data: .venv/bin/python scripts/fetch_data.py --lang en")
+        out["next"].append("download the cat data: bcgacha tools update")
         return out
     try:
         tiers = TierList.load()
@@ -709,11 +734,15 @@ def status(dataset=None) -> dict:
                               confirmed=a.confirmed, rare=a.tickets, platinum=a.platinum_tickets,
                               storage=f"{a.storage_used}/{a.storage_capacity}",
                               saved=dt.datetime.fromtimestamp(STATE_PATH.stat().st_mtime).isoformat(timespec="minutes"))
-    else:
-        out["account"] = dict(ok=False)
-        out["next"].append("find the seed: any run finds it from captures/, spending nothing")
     captures = list(P.CAPTURES.glob("roll_*.png")) if P.CAPTURES.exists() else []
     out["captures"] = len(captures)
+    if not STATE_PATH.exists():
+        out["account"] = dict(ok=False)
+        if captures:
+            out["next"].append("find the seed: any run finds it from the result screens saved, spending nothing")
+        else:
+            out["next"].append("find the seed once by hand: bcgacha tools find-seed, then tools set-seed "
+                               "(docs/howto/find-your-seed.md)")
     events = live.current(dataset)
     owned = index.owned if index.complete else set()
     seen, out["screen_checked"] = live.last_screen()

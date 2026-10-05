@@ -15,8 +15,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .data import LEGEND, UBER, Banner, Dataset
-from .tiers import TierList, UNRANKED
+from .data import CAPSULE_RARITIES, LEGEND, UBER, Banner, Dataset
+from .tiers import UNRANKED, TierList
 
 # A unit a person named outranks everything else, the first named most.
 TARGET_BONUS = 100_000.0
@@ -34,6 +34,8 @@ UBER_TIER_SPREAD = 6_000.0
 
 @dataclass
 class Goal:
+    """What a run wants, how much each unit is worth to it, and why."""
+
     legendaries: set[int] = field(default_factory=set)
     ubers: set[int] = field(default_factory=set)
     platinum: set[int] = field(default_factory=set)
@@ -47,15 +49,19 @@ class Goal:
 
     @property
     def wanted(self) -> set[int]:
+        """Every unit the goal wants that some live banner can roll."""
         return (self.legendaries | self.ubers | self.platinum | set(self.targets)) - set(self.unreachable)
 
     def reason(self, cat: int) -> str:
+        """Why `cat` is wanted, or "" when it is not."""
         return self.why.get(cat, "")
 
     def remaining(self, owned: set[int]) -> set[int]:
+        """The wanted units not yet owned."""
         return {c for c in self.wanted if c not in owned}
 
     def complete(self, owned: set[int]) -> bool:
+        """True when every wanted unit is owned."""
         return not self.remaining(owned)
 
 
@@ -97,7 +103,7 @@ def build(
             return 0.5                     # unranked: treat as middling
         return 1.0 - rank / max(UNRANKED - 1, 1)
 
-    pool = {c for b in banners for r in (2, 3, 4, 5) for c in b.slots.get(r) or []}
+    pool = {c for b in banners for r in CAPSULE_RARITIES for c in b.slots.get(r) or []}
     platinum_pool = set(platinum_banner.slots.get(UBER) or []) if platinum_banner else set()
     for n, cat in enumerate(dict.fromkeys(targets)):
         goal.targets.append(cat)

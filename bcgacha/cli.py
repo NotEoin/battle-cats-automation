@@ -1,4 +1,4 @@
-"""bcgacha: draw Battle Cats capsules for the units you want, on a USB iPhone.
+"""bcgacha: draw Battle Cats capsules for the units you want, on a USB iPhone or iPad.
 
 Run it with nothing after it and it asks what you want, step by step. Or say
 it all at once:
@@ -25,8 +25,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import jobs
-from .console import Console, table
+from . import __version__, jobs, paths
+from .console import BULLET, MARKS, Console, table
 
 HOST, PORT = "127.0.0.1", 8765
 MACHINES = ("cat", "lucky", "lucky_g")
@@ -65,8 +65,6 @@ def _want_options(p: argparse.ArgumentParser) -> None:
     g.add_argument("--legend-rares", action="store_true",
                    help="want those events' Legend Rares too")
     g.add_argument("--prefer", metavar="EVENT", help="the event whose Legend Rare comes first")
-    g.add_argument("--update", action="store_true",
-                   help="download the newest events and tier list first (bcgacha tools update)")
     g.add_argument("--platinum", type=_count_or_all, default=None, metavar="N|all",
                    help="Platinum tickets it may spend (default: all it holds, as read off "
                         "the screen), on targets first, then the best unowned Ubers by tier")
@@ -100,10 +98,11 @@ def _do_options(p: argparse.ArgumentParser) -> None:
     h.add_argument("--stay", action="store_true", help="keep the live page up after the run")
     h.add_argument("-q", "--quiet", action="store_true", help="hide the step-by-step navigation")
     h.add_argument("--port", type=int, default=PORT)
-    h.add_argument("--serial", help="the iPhone to use, if more than one is attached")
+    h.add_argument("--serial", help="the iPhone or iPad to use, if more than one is attached")
 
 
-def request_from_args(args) -> jobs.Request:
+def request_from_args(args: argparse.Namespace) -> jobs.Request:
+    """The run the command line asked for."""
     return jobs.Request(
         targets=list(args.target), events=list(args.event), legend_rares=args.legend_rares,
         prefer=args.prefer, roll=getattr(args, "roll", False), rare=getattr(args, "rare", None),
@@ -111,7 +110,7 @@ def request_from_args(args) -> jobs.Request:
         uncanny=getattr(args, "play_legends", False),
         outbreaks=getattr(args, "play_outbreaks", False), storage=getattr(args, "empty_storage", False),
         rescan_owned=getattr(args, "rescan_owned", False), rescan_map=getattr(args, "rescan_map", False),
-        update=getattr(args, "update", False), exchange=getattr(args, "exchange", "np"),
+        exchange=getattr(args, "exchange", "np"),
     )
 
 
@@ -123,28 +122,34 @@ def _open_session(con: Console, serial=None):
     from .session import DeviceSession
 
     if not device.attached():
-        con.say(con.bad("No iPhone is plugged in."))
+        con.say(con.bad("No iPhone or iPad is plugged in."))
         con.say("  Plug it in by USB, unlock it, and tap Trust if it asks. Then run this again.")
-        con.say("  (bcgacha tools probe says what the phone supports once it is attached)")
+        con.say("  (bcgacha check goes through everything a run needs, and how to fix it)")
         return None
     # The disk image comes off whenever the phone restarts; put it back first.
     try:
         if not device.ddi_mounted():
             con.say(con.dim("mounting the developer disk image (the phone restarted since last time)..."))
             device.mount_ddi()
-    except Exception as exc:
+    except Exception as exc:  # whatever stops it, the person is told and can act on it
         con.say(con.bad(f"The developer disk image would not mount: {exc}"))
         con.say("  Unlock the phone, check Developer Mode is on, and run this again.")
         return None
-    con.say(con.dim("connecting to the iPhone..."))
+    con.say(con.dim("connecting to the device..."))
     try:
         session = DeviceSession(serial)
         session.__enter__()
-        return session
-    except Exception as exc:
-        con.say(con.bad(f"The iPhone is attached but would not connect: {exc}"))
+    except Exception as exc:  # as above: said, not raised
+        con.say(con.bad(f"The device is attached but would not connect: {exc}"))
         con.say("  Unlock the phone, check Developer Mode is on, and run this again.")
         return None
+    height, width = session.screenshot().shape[:2]
+    if not device.tested_shape(width, height):
+        con.say(con.note(f"This {width}x{height} screen has a shape nobody has tested bcgacha on yet."))
+        con.say("  Most buttons are learned as it goes, but a few positions were measured on one")
+        con.say("  iPhone and may be off. Watch the first run, and stop it with Ctrl+C if a tap")
+        con.say("  lands somewhere wrong. A report helps: docs/howto/report-a-new-device.md")
+    return session
 
 
 def _page_taken(port: int) -> bool:
@@ -217,9 +222,9 @@ def _finish(con: Console, view, job) -> None:
     took = round((job["ended"] or time.time()) - (job["started"] or time.time()))
     con.say()
     if job["ok"]:
-        con.say(con.good(f"✓ Finished in {took // 60}m {took % 60}s."))
+        con.say(con.good(f"{MARKS['done']} Finished in {took // 60}m {took % 60}s."))
     else:
-        con.say(con.bad(f"✗ Ended after {took // 60}m {took % 60}s: {job['result']}"))
+        con.say(con.bad(f"{MARKS['failed']} Ended after {took // 60}m {took % 60}s: {job['result']}"))
     state = view.pipeline_state()
     rolls = state["rolls"]
     if rolls:
@@ -233,15 +238,16 @@ def _finish(con: Console, view, job) -> None:
 
 # -- commands --------------------------------------------------------------------------------
 
-def cmd_status(args) -> int:
+def cmd_status(args: argparse.Namespace) -> int:
+    """What is saved: phone, data, seed, owned cats, tickets, live events."""
     con = Console()
     from . import device
 
     s = jobs.status()
     phone = device.attached()
-    ok, no = con.good("✓"), con.bad("✗")
-    con.say(con.bold("What the bot knows"))
-    con.say(f"  {ok if phone else no} iPhone      {'plugged in' if phone else 'not plugged in'}")
+    ok, no = con.good(MARKS["done"]), con.bad(MARKS["failed"])
+    con.say(con.bold("What the bot knows") + con.dim(f"  (kept in {paths.HOME})"))
+    con.say(f"  {ok if phone else no} device      {'plugged in' if phone else 'not plugged in'}")
     if not s["data"]["ok"]:
         con.say(f"  {no} cat data    missing")
     else:
@@ -276,11 +282,12 @@ def cmd_status(args) -> int:
         con.say()
         con.say(con.bold("Next"))
         for line in s["next"]:
-            con.say(f"  • {line}")
+            con.say(f"  {BULLET} {line}")
     return 0
 
 
-def cmd_search(args) -> int:
+def cmd_search(args: argparse.Namespace) -> int:
+    """Units whose names are like the query, with tier, ownership and events."""
     from . import units
 
     con = Console()
@@ -322,32 +329,33 @@ def _run_offline(con: Console, request: jobs.Request) -> bool:
     return jobs.run(ctx, request)[0]
 
 
-def cmd_update(args) -> int:
+def cmd_update(args: argparse.Namespace) -> int:
     """The newest events and tier list, downloaded; no phone needed."""
     con = Console()
     ok = _run_offline(con, jobs.Request(only=["update"]))
     if ok:
         con.say()
-        con.say(con.good("✓ Up to date.") + " See what is live: " + con.note("bcgacha status"))
+        con.say(con.good(f"{MARKS['done']} Up to date.") + " See what is live: " + con.note("bcgacha status"))
         con.say(con.dim("  (a draw run checks which of the events the phone shows; "
                         "bcgacha tools upkeep tickets does it on its own)"))
     return 0 if ok else 1
 
 
-def cmd_plan(args) -> int:
+def cmd_plan(args: argparse.Namespace) -> int:
     """A run with nothing spent: from what is saved, no phone needed."""
     con = Console(quiet=args.quiet)
     request = request_from_args(args)
     ok = _run_offline(con, request)
     con.say()
     if ok:
-        con.say(con.good("✓ Planned; nothing was spent.") + " To draw it: "
-                + con.note(request.command().replace(" --update", "").replace("bcgacha run", "bcgacha run --roll", 1)))
+        con.say(con.good(f"{MARKS['done']} Planned; nothing was spent.") + " To draw it: "
+                + con.note(request.command().replace("bcgacha run", "bcgacha run --roll", 1)))
         con.say(con.dim("  (the plan is from the schedule: a run checks which events the phone shows first)"))
     return 0 if ok else 1
 
 
-def cmd_run(args) -> int:
+def cmd_run(args: argparse.Namespace) -> int:
+    """A run on the phone, asked about first when it spends."""
     con = Console(quiet=args.quiet)
     request = request_from_args(args)
     if not request.spends and not (request.rescan_map or request.rescan_owned or request.storage):
@@ -356,7 +364,7 @@ def cmd_run(args) -> int:
         return cmd_plan(args)
     con.say(con.bold("This run will:"))
     for line in request.summary():
-        con.say(f"  • {line}")
+        con.say(f"  {BULLET} {line}")
     con.announced = True
     if request.spends and not args.yes:
         if not sys.stdin.isatty():
@@ -368,7 +376,7 @@ def cmd_run(args) -> int:
     return _run_on_phone(con, request, args)
 
 
-def cmd_ui(args) -> int:
+def cmd_ui(args: argparse.Namespace) -> int:
     """The live page on its own: every run started from the browser."""
     from . import liveview
 
@@ -382,7 +390,7 @@ def cmd_ui(args) -> int:
     else:
         session = _open_session(con, args.serial)
         if session is None:
-            con.say(con.dim("  (bcgacha ui --replay captures/ shows the page on saved frames instead)"))
+            con.say(con.dim(f"  (bcgacha ui --replay {paths.CAPTURES} shows the page on saved frames instead)"))
             return 1
         view = liveview.LiveView(session, False, args.interval, args.profiles, speed=args.speed)
     try:
@@ -403,7 +411,7 @@ def cmd_ui(args) -> int:
     return 0
 
 
-def cmd_guided(args) -> int:
+def cmd_guided(args: argparse.Namespace) -> int:
     """Ask what the person wants, show the plan, then do it."""
     from . import units
 
@@ -503,7 +511,7 @@ def _guided(con: Console, units, args) -> int:
     con.say()
     con.say(con.bold("This run will:"))
     for line in req.summary():
-        con.say(f"  • {line}")
+        con.say(f"  {BULLET} {line}")
     con.say(con.dim(f"  next time, straight from the command line: {req.command()}"))
     con.announced = True
     run_args = argparse.Namespace(port=PORT, serial=None, speed=1.0, no_page=False, open=False,
@@ -520,7 +528,72 @@ def _guided(con: Console, units, args) -> int:
 
 # -- tools: single steps, for looking closer ---------------------------------------------------
 
-def cmd_probe(args) -> int:
+def cmd_check(args: argparse.Namespace) -> int:
+    """Each thing a run needs, in order, with how to fix the first one missing."""
+    from . import device
+
+    con = Console()
+
+    def ok(what: str) -> None:
+        con.say(f"  {con.good(MARKS['done'])} {what}")
+
+    def fix(what: str, *how: str) -> int:
+        con.say(f"  {con.bad(MARKS['failed'])} {what}")
+        for line in how:
+            con.say(f"      {line}")
+        return 1
+
+    if not device.attached():
+        return fix("no iPhone or iPad is plugged in",
+                   "Plug it in with a cable that carries data, and unlock it.",
+                   "Windows: install Apple Devices from the Microsoft Store first.",
+                   "Linux: install usbmuxd first.")
+    try:
+        info = device.lockdown_info()
+    except device.DeviceError:
+        return fix("the device is plugged in but does not trust this computer",
+                   "Unlock it, unplug and replug it, and tap Trust.")
+    model, version = info.get("ProductType", "?"), info.get("ProductVersion", "?")
+    ok(f"device: {model}, iOS {version}")
+    if not device.developer_mode_enabled():
+        try:
+            device.reveal_developer_mode()
+        except device.DeviceError as exc:
+            con.say(con.dim(f"      ({exc})"))
+        return fix("Developer Mode is off",
+                   "On the device: Settings > Privacy & Security > Developer Mode, on, then Restart.",
+                   "After the restart, tap Turn On, then run bcgacha check again.")
+    ok("Developer Mode is on")
+    if not device.ddi_mounted():
+        con.say(con.dim("      mounting the developer disk image (the first time downloads it)..."))
+        try:
+            device.mount_ddi()
+        except device.DeviceError as exc:
+            return fix(f"the developer disk image would not mount: {exc}",
+                       "Unlock the device, check this computer is online, and try again.")
+    ok("developer disk image mounted")
+    if device.version_tuple(version) < (27,):
+        return fix(f"taps need iOS 27 or later; this device has {version}",
+                   "Update it in Settings > General > Software Update.")
+    ok("taps allowed (iOS 27 or later)")
+    try:
+        size = device.native_size()
+    except device.DeviceError:
+        size = None
+    if size is None:
+        con.say(con.dim("      screen size unknown: it is read again when a run starts"))
+    elif device.tested_shape(*size):
+        ok(f"screen {max(size)}x{min(size)}: a tested shape")
+    else:
+        con.say(f"  {con.note('!')} screen {max(size)}x{min(size)}: nobody has tested this shape yet")
+        con.say("      Most buttons are learned, but some positions may be off; watch the first run.")
+        con.say("      Please tell us how it goes: docs/howto/report-a-new-device.md")
+    con.say(con.good("Ready. Open The Battle Cats and run: bcgacha"))
+    return 0
+
+
+def cmd_probe(args: argparse.Namespace) -> int:
+    """What the attached phone supports."""
     from . import device
 
     caps = device.capabilities()
@@ -535,7 +608,8 @@ def cmd_probe(args) -> int:
     return 0 if caps.can_screenshot else 1
 
 
-def cmd_screenshot(args) -> int:
+def cmd_screenshot(args: argparse.Namespace) -> int:
+    """Save the screen as a PNG."""
     from . import device
 
     dest = Path(args.output)
@@ -545,7 +619,8 @@ def cmd_screenshot(args) -> int:
     return 0
 
 
-def cmd_banners(args) -> int:
+def cmd_banners(args: argparse.Namespace) -> int:
+    """Every banner the schedule lists on a date."""
     from .data import load
 
     ds = load(args.lang)
@@ -561,7 +636,8 @@ def cmd_banners(args) -> int:
     return 0
 
 
-def cmd_predict(args) -> int:
+def cmd_predict(args: argparse.Namespace) -> int:
+    """The cats a seed gives on one banner."""
     from .data import RARITY_NAMES, load
     from .gacha import TRACK_A, TRACK_B, Gacha
 
@@ -579,7 +655,8 @@ def cmd_predict(args) -> int:
     return 0
 
 
-def cmd_ubers(args) -> int:
+def cmd_ubers(args: argparse.Namespace) -> int:
+    """The positions that give an Uber or Legend on one banner."""
     from .data import load
     from .planner import uber_positions
 
@@ -593,7 +670,8 @@ def cmd_ubers(args) -> int:
     return 0
 
 
-def cmd_find_seed(args) -> int:
+def cmd_find_seed(args: argparse.Namespace) -> int:
+    """The seed that fits draws written down by hand."""
     from .data import load
     from .seedfind import resolve_names, search
 
@@ -618,10 +696,13 @@ def cmd_find_seed(args) -> int:
         print(f"  replay: {' -> '.join(cand.rolls)}")
     if len(results) > 1:
         print(f"\n{len(results)} seeds fit; roll once more and re-run", file=sys.stderr)
+    else:
+        print(f'\nto save it: bcgacha tools set-seed {results[0].seed} --event {banner.key} '
+              f'--cat "{names[-1]}"', file=sys.stderr)
     return 0
 
 
-def cmd_resync(args) -> int:
+def cmd_resync(args: argparse.Namespace) -> int:
     """Recover the saved position after draws made outside the bot."""
     from . import events as live
     from . import units
@@ -629,7 +710,11 @@ def cmd_resync(args) -> int:
     from .state import Account, resync
 
     ds = load(args.lang)
-    account = Account.load()
+    try:
+        account = Account.load()
+    except FileNotFoundError:
+        print("no seed is saved yet: find it first (docs/howto/find-your-seed.md)", file=sys.stderr)
+        return 1
     unit, hits = units.load(ds).resolve(args.cat)
     if unit is None:
         print(f"{args.cat!r} could be: {', '.join(h.name for h in hits[:5]) or 'nothing'}", file=sys.stderr)
@@ -645,7 +730,38 @@ def cmd_resync(args) -> int:
     return 0
 
 
-def cmd_tiers(args) -> int:
+def cmd_set_seed(args: argparse.Namespace) -> int:
+    """Save a seed found elsewhere, at the position after the last cat drawn."""
+    from . import events as live
+    from . import units
+    from .data import load
+    from .state import STATE_PATH, Account, resync
+
+    if STATE_PATH.exists() and not args.force:
+        print(f"a position is already saved in {STATE_PATH}; add --force to replace it",
+              file=sys.stderr)
+        return 1
+    ds = load(args.lang)
+    unit, hits = units.load(ds).resolve(args.cat)
+    if unit is None:
+        print(f"{args.cat!r} could be: {', '.join(h.name for h in hits[:5]) or 'nothing'}", file=sys.stderr)
+        return 1
+    if args.event:
+        banners = [ds.find_banner(args.event)]
+    else:
+        banners = [e.banner for e in live.live_events(ds) if not e.platinum]
+    account = Account(seed=args.seed, source="set-seed")
+    if resync(account, unit.id, banners, ds, window=args.window) is None:
+        print(f"{unit.name!r} does not come out at exactly one position in the first {args.window} "
+              f"draws of seed {args.seed} -- draw once more by hand and name that cat", file=sys.stderr)
+        return 1
+    account.save()
+    print(f"seed {args.seed} saved; the next draw is at {account.position}")
+    return 0
+
+
+def cmd_tiers(args: argparse.Namespace) -> int:
+    """Fetch and match the community tier list again."""
     from . import tiers as T
     from .data import load
 
@@ -658,14 +774,15 @@ def cmd_tiers(args) -> int:
     return 0
 
 
-def cmd_map(args) -> int:
+def cmd_map(args: argparse.Namespace) -> int:
+    """Draw the screen map to an HTML page."""
     from . import mapdraw
 
     sys.argv = ["mapdraw"] + (["--out", args.out] if args.out else [])
     return mapdraw.main()
 
 
-def cmd_upkeep(args) -> int:
+def cmd_upkeep(args: argparse.Namespace) -> int:
     """One task alone, read afresh: the map, the owned list, or Use all."""
     con = Console(quiet=args.quiet)
     tasks = ["capsule" if t == "tickets" else t for t in args.tasks]
@@ -677,11 +794,15 @@ def cmd_upkeep(args) -> int:
 # -- the parser -------------------------------------------------------------------------------
 
 def parser() -> argparse.ArgumentParser:
+    """The `bcgacha` command line."""
     ap = argparse.ArgumentParser(prog="bcgacha", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--lang", default="en", choices=["en", "jp", "kr", "tw"], help=argparse.SUPPRESS)
     sub = ap.add_subparsers(dest="command", metavar="COMMAND")
 
+    ap.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    sub.add_parser("check", help="check the cable, the device and its settings, and say how to fix each") \
+        .set_defaults(func=cmd_check)
     sub.add_parser("status", help="what is saved: phone, seed, owned cats, tickets, live events") \
         .set_defaults(func=cmd_status)
 
@@ -690,7 +811,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--limit", type=int, default=10)
     p.set_defaults(func=cmd_search)
 
-    p = sub.add_parser("plan", help="the route and the run on paper; spends nothing, needs no phone",
+    p = sub.add_parser("plan", help="the route and the run on paper; spends nothing, needs no phone after the first run",
                        description="Plan a run from what is saved: nothing is spent and no phone is needed.")
     _want_options(p)
     p.add_argument("-q", "--quiet", action="store_true")
@@ -706,19 +827,19 @@ def parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("ui", help="the live page alone: start and watch runs from a browser")
     p.add_argument("--port", type=int, default=PORT)
-    p.add_argument("--serial", help="the iPhone to use, if more than one is attached")
+    p.add_argument("--serial", help="the iPhone or iPad to use, if more than one is attached")
     p.add_argument("--no-browser", action="store_true", help="do not open a browser")
     p.add_argument("--speed", type=float, default=1.0, help="delay multiplier for runs")
     p.add_argument("--interval", type=float, default=0.3, help="seconds between frames while idle")
     p.add_argument("--replay", nargs="+", type=Path, metavar="PATH",
                    help="saved frames, or folders of them, in place of the phone (plans only)")
     p.add_argument("--profiles", type=Path, metavar="DIR",
-                   help="learn device profiles here instead of state/devices")
+                   help="learn device profiles here instead of state/devices in the bcgacha folder")
     p.set_defaults(func=cmd_ui)
 
     tools = sub.add_parser("tools", help="single steps for a closer look: probe, predict, resync, ...")
     ts = tools.add_subparsers(dest="tool", metavar="TOOL", required=True)
-    ts.add_parser("probe", help="what the attached iPhone supports").set_defaults(func=cmd_probe)
+    ts.add_parser("probe", help="what the attached iPhone or iPad supports").set_defaults(func=cmd_probe)
     p = ts.add_parser("screenshot", help="save the phone's screen as a PNG")
     p.add_argument("output")
     p.set_defaults(func=cmd_screenshot)
@@ -758,6 +879,13 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--event", required=True)
     p.add_argument("--cats", required=True, help="comma separated, in draw order")
     p.set_defaults(func=cmd_find_seed)
+    p = ts.add_parser("set-seed", help="save a seed found elsewhere, after the last cat drawn")
+    p.add_argument("seed", type=int)
+    p.add_argument("--cat", required=True, help="the last cat drawn, by any name")
+    p.add_argument("--event", help="the event it was drawn on (default: any live one)")
+    p.add_argument("--window", type=int, default=40, help="draws to search along the seed (default 40)")
+    p.add_argument("--force", action="store_true", help="replace a position already saved")
+    p.set_defaults(func=cmd_set_seed)
     p = ts.add_parser("map", help="draw the screen map to an HTML page")
     p.add_argument("--out")
     p.set_defaults(func=cmd_map)
@@ -768,8 +896,15 @@ def _interrupt(*_args) -> None:
     raise KeyboardInterrupt
 
 
-def main(argv=None) -> int:
+def main(argv: list[str] | None = None) -> int:
+    """Run the `bcgacha` command; returns its exit status."""
     import signal
+
+    # A Windows console on a legacy code page cannot show every mark printed;
+    # a missing glyph should come out as "?", not stop the run.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
 
     # A kill stops a run as Ctrl+C does: between taps, the device let go.
     signal.signal(signal.SIGTERM, _interrupt)
@@ -780,8 +915,25 @@ def main(argv=None) -> int:
         if not sys.stdin.isatty():
             parser().print_help()
             return 0
+        _refresh(Console())
         return cmd_guided(args)
+    if args.func is not cmd_update:
+        _refresh(Console())
     return args.func(args)
+
+
+def _refresh(con: Console) -> None:
+    """The newest events and tier list before anything else, said only when
+    something changed. Offline, the ones saved are used."""
+    try:
+        _, new, ended, _ = jobs.refresh(log=lambda line: None)
+    except RuntimeError as exc:
+        con.say(con.dim(f"({exc}; using the schedule saved)"))
+        return
+    for e in new:
+        con.say(con.dim(f"new event: {e.label} ({e.start} to {e.end})"))
+    for e in ended:
+        con.say(con.dim(f"ended: {e.label}"))
 
 
 if __name__ == "__main__":

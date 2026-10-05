@@ -22,12 +22,17 @@ from dataclasses import dataclass, field
 
 import yaml
 
-DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
+from .paths import DATA as DATA_DIR
+
 # godfat's dataset, one YAML per game language, rebuilt as events are announced.
 SOURCE = "https://gitlab.com/godfat/battle-cats-rolls/-/raw/master/build/bc-{lang}.yaml"
+# Seconds to wait for it: the file is several megabytes.
+FETCH_TIMEOUT = 120
 
 # Rarity codes as the dataset stores them.
 BASIC, EX, RARE, SUPER_RARE, UBER, LEGEND = range(6)
+# The rarities a rare capsule draws.
+CAPSULE_RARITIES = (RARE, SUPER_RARE, UBER, LEGEND)
 
 RARITY_NAMES = {
     BASIC: "Basic",
@@ -40,6 +45,15 @@ RARITY_NAMES = {
 
 # Rarity weights are out of this.
 BASE = 10000
+
+# Seed positions a guaranteed banner consumes before its Uber lands: an
+# 11-draw, and a step-up's run of draws.
+GUARANTEED_DRAW = 11
+STEP_UP_DRAWS = 15
+
+# The YAML is downloaded, so it is only ever read with a safe loader; the C one
+# when PyYAML was built with it, as it is several times quicker.
+SAFE_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
 @dataclass(frozen=True)
@@ -64,27 +78,32 @@ class Banner:
 
     @property
     def legend(self) -> int:
+        """The Legend Rare weight: whatever the other rarities leave of `BASE`."""
         return BASE - self.rare - self.supa - self.uber
 
     @property
     def guaranteed_rolls(self) -> int:
         """Seed positions consumed before the guaranteed uber lands, or 0."""
         if self.guaranteed:
-            return 11
+            return GUARANTEED_DRAW
         if self.step_up:
-            return 15
+            return STEP_UP_DRAWS
         return 0
 
     def is_live(self, when: dt.date) -> bool:
+        """True when the banner runs on `when`, both end days included."""
         return self.start_on <= when <= self.end_on
 
 
 @dataclass
 class Dataset:
+    """Every cat and every scheduled banner, as the roll engine reads them."""
+
     cats: dict[int, dict]
     banners: dict[str, Banner]
 
     def cat_name(self, cat_id: int) -> str:
+        """The cat's first-form name; "N/A" for no cat, "#id" for one unknown."""
         if cat_id < 0:
             return "N/A"
         entry = self.cats.get(cat_id)
@@ -94,9 +113,11 @@ class Dataset:
         return names[0] if names else f"#{cat_id}"
 
     def rarity_of(self, cat_id: int) -> int:
+        """The cat's rarity code; `BASIC` for a cat the dataset does not know."""
         return self.cats.get(cat_id, {}).get("rarity", BASIC)
 
     def live_banners(self, when: dt.date | None = None) -> list[Banner]:
+        """Banners running on `when` (default today), in key order."""
         when = when or dt.date.today()
         return sorted(
             (b for b in self.banners.values() if b.is_live(when)),
@@ -104,6 +125,10 @@ class Dataset:
         )
 
     def find_banner(self, key: str) -> Banner:
+        """The banner with this key, or the one key suffix or name part it fits.
+
+        Raises KeyError when nothing fits or more than one does.
+        """
         if key in self.banners:
             return self.banners[key]
         matches = [b for b in self.banners.values() if b.key.endswith(key) or key in b.name]
@@ -149,6 +174,7 @@ def _as_date(value) -> dt.date:
     return dt.date.fromisoformat(str(value))
 
 
+# Versioned: a pickle of an older Banner would silently lack new fields.
 CACHE_VERSION = "v2"
 
 
@@ -158,16 +184,18 @@ def load(lang: str = "en") -> Dataset:
     source = DATA_DIR / f"bc-{lang}.yaml"
     if not source.exists():
         raise FileNotFoundError(
-            f"{source} missing -- run scripts/fetch_data.py --lang {lang}"
+            f"{source} missing -- run: bcgacha tools update"
+            if lang == "en" else f"{source} missing -- run: python scripts/fetch_data.py --lang {lang}"
         )
-    # Versioned: a pickle of an older Banner would silently lack new fields.
+    # The pickle is one bcgacha wrote itself, into its own folder, from the
+    # YAML beside it: never one downloaded.
     cache = DATA_DIR / f"bc-{lang}.{CACHE_VERSION}.pickle"
     if cache.exists() and cache.stat().st_mtime >= source.stat().st_mtime:
         with open(cache, "rb") as fh:
             return pickle.load(fh)
 
-    with open(source) as fh:
-        raw = yaml.load(fh, Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader))
+    with open(source, encoding="utf-8") as fh:
+        raw = yaml.load(fh, Loader=SAFE_LOADER)
     ds = _build(raw)
     with open(cache, "wb") as fh:
         pickle.dump(ds, fh, protocol=pickle.HIGHEST_PROTOCOL)
@@ -177,20 +205,21 @@ def load(lang: str = "en") -> Dataset:
 def fetch(lang: str = "en") -> pathlib.Path:
     """Download the newest dataset -- the event schedule with it -- in place of
     the one kept. Written aside and swapped in, so a dropped connection leaves
-    the old file whole; load() rebuilds its cache from the new one."""
+    the old file whole; load() rebuilds its cache from the new one. An
+    unchanged download leaves the file and its cache alone."""
     import os
 
     import httpx
 
-    DATA_DIR.mkdir(exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     out = DATA_DIR / f"bc-{lang}.yaml"
+    r = httpx.get(SOURCE.format(lang=lang), follow_redirects=True, timeout=FETCH_TIMEOUT)
+    r.raise_for_status()
+    if out.exists() and out.read_bytes() == r.content:
+        return out
+    yaml.load(r.text, Loader=SAFE_LOADER)["events"]   # whole, or raises
     tmp = out.with_suffix(".yaml.part")
-    with httpx.stream("GET", SOURCE.format(lang=lang), follow_redirects=True, timeout=120) as r:
-        r.raise_for_status()
-        with open(tmp, "wb") as fh:
-            for chunk in r.iter_bytes():
-                fh.write(chunk)
-    yaml.load(tmp.read_text(), Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader))["events"]   # whole, or raises
+    tmp.write_bytes(r.content)
     os.replace(tmp, out)
     load.cache_clear()
     return out

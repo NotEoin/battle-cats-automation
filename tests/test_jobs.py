@@ -77,5 +77,31 @@ def test_an_update_comes_before_everything_else():
 
 def test_an_update_has_its_own_command():
     assert jobs.Request(only=["update"]).command() == "bcgacha tools update"
-    assert "--update" in jobs.Request(update=True, roll=True).command()
+    assert "--update" not in jobs.Request(update=True, roll=True).command()
     assert jobs.Request(update=True).summary()[0].startswith("first download")
+
+
+def test_a_run_from_the_page_updates_first():
+    assert jobs.Request.from_json(dict(roll=True)).tasks()[:2] == ["update", "map"]
+    assert jobs.Request.from_json(dict(only=["owned"])).tasks() == ["owned"]
+
+
+def test_missing_cat_data_names_a_command_that_exists(monkeypatch):
+    """Regression: the hint named .venv/bin/python scripts/fetch_data.py, absent from an install."""
+    from bcgacha import data
+
+    def missing(*_args, **_kw):
+        raise FileNotFoundError("no dataset")
+
+    monkeypatch.setattr(data, "load", missing)
+    assert jobs.status()["next"] == ["download the cat data: bcgacha tools update"]
+
+
+
+def test_a_new_install_is_told_to_find_its_seed_by_hand(tmp_path, monkeypatch):
+    """With no seed and no saved result screens, no run can find the seed alone."""
+    from bcgacha import state
+
+    monkeypatch.setattr(state, "STATE_PATH", tmp_path / "account.json")
+    monkeypatch.setattr(jobs.P, "CAPTURES", tmp_path / "captures")
+    assert any("tools find-seed" in step for step in jobs.status()["next"])

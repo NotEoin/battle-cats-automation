@@ -16,10 +16,9 @@ from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz, process
 
-from .data import LEGEND, RARE, RARITY_NAMES, SUPER_RARE, UBER, Dataset
+from .data import CAPSULE_RARITIES, RARITY_NAMES, UBER, Dataset
+from .tiers import OVERRIDE_FILE, TierList
 
-# Only the rarities a capsule can give are worth searching.
-GACHA_RARITIES = (RARE, SUPER_RARE, UBER, LEGEND)
 # How well a name fits the query: the whole name, its start, the start of
 # one of its words, anywhere in it. A fuzzy hit scores below all of them.
 EXACT, STARTS, WORD, INSIDE = 100.0, 97.0, 94.0, 88.0
@@ -32,6 +31,8 @@ CLEAR_MARGIN = 5
 
 @dataclass
 class Unit:
+    """A unit as a search shows it: names, tier, owned, and where it rolls."""
+
     id: int
     name: str
     rarity: int
@@ -45,13 +46,16 @@ class Unit:
 
     @property
     def rarity_name(self) -> str:
+        """The rarity as the game names it."""
         return RARITY_NAMES.get(self.rarity, str(self.rarity))
 
     @property
     def obtainable(self) -> bool:
+        """True when a live event or the Platinum Capsule rolls it."""
         return bool(self.events) or self.platinum
 
     def where(self, most: int | None = None) -> str:
+        """Where it rolls, for a person; past `most` events, the rest are counted."""
         found = list(self.events) + (["Platinum"] if self.platinum else [])
         if not found:
             return "not in any live event"
@@ -60,12 +64,14 @@ class Unit:
         return ", ".join(found)
 
     def to_json(self) -> dict:
+        """The unit for the live page."""
         return dict(id=self.id, name=self.name, rarity=self.rarity, rarity_name=self.rarity_name,
                     forms=self.forms, matched=self.matched, score=round(self.score),
                     tier=self.tier, owned=self.owned, events=self.events, platinum=self.platinum,
                     obtainable=self.obtainable, where=self.where())
 
     def line(self) -> str:
+        """The unit as one line of `bcgacha search`."""
         owned = {True: "owned", False: "not owned", None: "owned ?"}[self.owned]
         also = f"  (as {self.matched!r})" if self.matched and self.matched != self.name else ""
         return (f"{self.name:<30} {self.rarity_name:<11} tier {self.tier:<4} {owned:<10} "
@@ -75,24 +81,23 @@ class Unit:
 class Catalogue:
     """Every capsule unit's names, and what the account and today know of it."""
 
-    def __init__(self, dataset: Dataset, tiers=None, owned: set[int] | None = None, events=None):
-        from .tiers import OVERRIDE_FILE
-
+    def __init__(self, dataset: Dataset, tiers: TierList | None = None, owned: set[int] | None = None,
+                 events: list | None = None):
         self.dataset, self.tiers, self.owned, self.events = dataset, tiers, owned, events or []
         self.names: dict[str, int] = {}             # lower-cased name -> cat id
         self.shown: dict[str, str] = {}             # lower-cased name -> as written
         for cat_id, entry in dataset.cats.items():
-            if entry.get("rarity") not in GACHA_RARITIES:
+            if entry.get("rarity") not in CAPSULE_RARITIES:
                 continue
             for form in entry.get("name") or []:
                 if form and form.strip():
                     self._add(form.strip(), cat_id)
         # Community nicknames name a form; they find its cat.
-        aliases = json.loads(OVERRIDE_FILE.read_text()) if OVERRIDE_FILE.exists() else {}
+        aliases = json.loads(OVERRIDE_FILE.read_text(encoding="utf-8")) if OVERRIDE_FILE.exists() else {}
         for nickname, form in aliases.items():
             cat_id = self.names.get(form.strip().lower())
             if cat_id is not None:
-                self._add(nickname.replace("’", "'"), cat_id)
+                self._add(nickname.replace("\u2019", "'"), cat_id)
         self._choices = list(self.shown.values())
 
     def _add(self, name: str, cat_id: int) -> None:
@@ -100,10 +105,11 @@ class Catalogue:
         self.shown.setdefault(name.lower(), name)
 
     def unit(self, cat_id: int, matched: str = "", score: float = 100.0) -> Unit:
+        """The unit with this id, filled in with what the catalogue knows."""
         entry = self.dataset.cats.get(cat_id, {})
         forms = [n for n in entry.get("name") or [] if n]
         events = [e.label for e in self.events if not e.platinum
-                  and any(cat_id in (e.banner.slots.get(r) or []) for r in GACHA_RARITIES)]
+                  and any(cat_id in (e.banner.slots.get(r) or []) for r in CAPSULE_RARITIES)]
         platinum = any(e.platinum and cat_id in (e.banner.slots.get(UBER) or []) for e in self.events)
         return Unit(id=cat_id, name=self.dataset.cat_name(cat_id), rarity=self.dataset.rarity_of(cat_id),
                     forms=forms, matched=matched, score=score,
@@ -120,7 +126,7 @@ class Catalogue:
         m = re.fullmatch(r"#?(\d{1,4})", q)
         if m and int(m.group(1)) in self.dataset.cats:
             cat_id = int(m.group(1))
-            if self.dataset.rarity_of(cat_id) in GACHA_RARITIES:
+            if self.dataset.rarity_of(cat_id) in CAPSULE_RARITIES:
                 return [self.unit(cat_id, f"#{cat_id}")]
         low = q.lower()
         scored: dict[int, tuple[float, str]] = {}
@@ -167,12 +173,11 @@ class Catalogue:
         return None, hits
 
 
-def load(dataset: Dataset | None = None, owned: set[int] | None = None, events=None) -> Catalogue:
+def load(dataset: Dataset | None = None, owned: set[int] | None = None, events: list | None = None) -> Catalogue:
     """A catalogue with whatever is saved: tier list, owned list, live events."""
     from . import data
     from . import events as live
     from .catindex import OwnedIndex
-    from .tiers import TierList
 
     dataset = dataset or data.load()
     try:

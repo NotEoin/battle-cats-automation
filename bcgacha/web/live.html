@@ -189,15 +189,15 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
   <div class="top">
     <div class="card screen">
       <div class="stage" id="stage">
-        <img id="frame" alt="Latest frame from the iPhone">
+        <img id="frame" alt="Latest frame from the phone">
         <svg id="overlay" viewBox="0 0 1000 462" preserveAspectRatio="none" aria-hidden="true"></svg>
-        <div class="empty" id="empty">Waiting for the first frame from the phone…</div>
+        <div class="empty" id="empty">Waiting for the first frame from the phone&#x2026;</div>
       </div>
       <div class="caption">
-        <span>Screen: <span class="where" id="here">–</span></span>
+        <span>Screen: <span class="where" id="here">&#x2013;</span></span>
         <span id="how" class="dim"></span>
-        <span>frame <b id="frame-age" class="num">–</b></span>
-        <span>analysis <b id="analysis-ms" class="num">–</b></span>
+        <span>frame <b id="frame-age" class="num">&#x2013;</b></span>
+        <span>analysis <b id="analysis-ms" class="num">&#x2013;</b></span>
         <a href="/frame.png" target="_blank" rel="noopener" class="dim">full-size frame</a>
       </div>
       <div class="layers" role="group" aria-label="What to draw over the screen">
@@ -233,9 +233,9 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     <div class="runner-grid" style="margin-top: 12px">
       <div>
         <div class="field">
-          <span class="label">Units you want <span class="dim">— most wanted first</span></span>
+          <span class="label">Units you want <span class="dim">&#x2014; most wanted first</span></span>
           <div class="searchbox">
-            <input type="search" id="q" placeholder="Search any name or nickname: Kasli, Dark Phono, #800…" autocomplete="off" aria-label="Search for a unit">
+            <input type="search" id="q" placeholder="Search any name or nickname: Kasli, Dark Phono, #800&#x2026;" autocomplete="off" aria-label="Search for a unit">
             <div class="results" id="results" hidden></div>
           </div>
           <ol class="targets" id="targets"></ol>
@@ -265,7 +265,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
           </div>
         </div>
         <div class="field">
-          <span class="label">Normal capsules <span class="dim">— their own tickets; blank count: until out</span></span>
+          <span class="label">Normal capsules <span class="dim">&#x2014; their own tickets; blank count: until out</span></span>
           <div class="machine"><label><input type="checkbox" id="m-cat"> Cat Capsules</label><input type="number" id="n-cat" min="0" placeholder="all"></div>
           <div class="machine"><label><input type="checkbox" id="m-lucky"> Lucky Capsules</label><input type="number" id="n-lucky" min="0" placeholder="all"></div>
           <div class="machine"><label><input type="checkbox" id="m-lucky_g"> Lucky Capsules G</label><input type="number" id="n-lucky_g" min="0" placeholder="all"></div>
@@ -285,7 +285,6 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
         <div class="field">
           <span class="label">Before starting</span>
           <div class="checks">
-            <label><input type="checkbox" id="update"> Update events and tier list <span class="m">download the newest schedule</span></label>
             <label><input type="checkbox" id="storage"> Empty Cat Storage (Use all)</label>
             <label><input type="checkbox" id="rescan-owned"> Read the Cat Guide again <span class="m">after drawing by hand</span></label>
             <label><input type="checkbox" id="rescan-map"> Read the sagas and chapters again</label>
@@ -325,7 +324,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
         <div><h3>Saved data</h3><dl class="facts" id="ov-data"></dl></div>
         <div><h3>What to do next</h3><ul class="next" id="ov-next"></ul></div>
       </div>
-      <h3 style="margin-top: 16px">Live events <span class="dim" style="text-transform: none; letter-spacing: 0" id="ov-checked">— as scheduled; a draw run checks which the phone shows</span></h3>
+      <h3 style="margin-top: 16px">Live events <span class="dim" style="text-transform: none; letter-spacing: 0" id="ov-checked">&#x2014; as scheduled; a draw run checks which the phone shows</span></h3>
       <div class="ptable" id="ov-events"></div>
     </div>
     <div class="panel" id="tab-goal" role="tabpanel" hidden>
@@ -428,7 +427,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
   const $ = id => document.getElementById(id);
   const overlay = $('overlay'), img = $('frame');
   const RARITY = { 0: 'Normal', 1: 'Special', 2: 'Rare', 3: 'Super Rare', 4: 'Uber Rare', 5: 'Legend Rare' };
-  const MARK = { waiting: '○', running: '▶', done: '✓', skipped: '–', failed: '✗', stopped: '■', 'not run': '·' };
+  const MARK = { waiting: '\u25cb', running: '\u25b6', done: '\u2713', skipped: '\u2013', failed: '\u2717', stopped: '\u25a0', 'not run': '\u00b7' };
   let D = JSON.parse($('map-data').textContent);
   let map, nodes, edges;
   const LAG_LIMIT = 1.0;
@@ -450,7 +449,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     return e;
   }
   const upper = t => t ? t[0].toUpperCase() + t.slice(1) : t;
-  const tick = b => b === true ? '✓' : b === false ? '·' : '?';
+  const tick = b => b === true ? '\u2713' : b === false ? '\u00b7' : '?';
   const ago = t => { if (!t) return ''; const d = Math.max(0, Date.now() / 1000 - t); return d < 90 ? `${Math.round(d)}s` : `${Math.round(d / 60)}m`; };
   function facts(el, pairs) {
     el.replaceChildren(...pairs.filter(p => p[1] !== undefined && p[1] !== null && p[1] !== '')
@@ -465,7 +464,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       const tr = h('tr', rowClass ? rowClass(r) : '');
       for (const c of cols) {
         const v = c[1](r);
-        tr.append(h('td', c[2] ? c[2](r) : '', v === null || v === undefined || v === '' ? '–' : v instanceof Node ? v : String(v)));
+        tr.append(h('td', c[2] ? c[2](r) : '', v === null || v === undefined || v === '' ? '\u2013' : v instanceof Node ? v : String(v)));
       }
       body.append(tr);
     }
@@ -473,7 +472,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     el.replaceChildren(t);
   }
   function stats(el, items) {
-    el.replaceChildren(...items.filter(Boolean).map(([k, v, meter]) => h('div', 'stat', h('div', 'v', String(v ?? '–')), h('div', 'k', k),
+    el.replaceChildren(...items.filter(Boolean).map(([k, v, meter]) => h('div', 'stat', h('div', 'v', String(v ?? '\u2013')), h('div', 'k', k),
       meter !== undefined ? h('div', 'bar-meter', Object.assign(h('i'), { style: `width:${Math.round(100 * Math.min(1, meter))}%` })) : null)));
   }
   let toastTimer;
@@ -564,7 +563,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       let size = parseFloat(getComputedStyle(t).fontSize);
       if (!t.getComputedTextLength()) return;        // hidden: fitted when shown
       while (t.getComputedTextLength() > max && size > 8.5) { size -= 0.25; t.style.fontSize = `${size}px`; }
-      while (t.getComputedTextLength() > max && t.textContent.length > 4) t.textContent = t.textContent.slice(0, -2).trimEnd() + '…';
+      while (t.getComputedTextLength() > max && t.textContent.length > 4) t.textContent = t.textContent.slice(0, -2).trimEnd() + '\u2026';
     });
     map.querySelectorAll('.chip').forEach(c => {
       const t = c.querySelector('text'), r = c.querySelector('rect');
@@ -599,7 +598,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       if (v.title_box) {
         rect(v.title_box, '#ffffff', '6 4');
         const read = v.title_from === 'full look' ? 'title (full look)' : 'title';
-        label(v.title_box[0] + 0.004, v.title_box[3] + 0.045, v.title ? `${read}: “${v.title}”` : `${read}: nothing read`);
+        label(v.title_box[0] + 0.004, v.title_box[3] + 0.045, v.title ? `${read}: \u201c${v.title}\u201d` : `${read}: nothing read`);
       }
       if (v.door) {
         rect(v.door, '#ffffff', '');
@@ -609,7 +608,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     if (on('perceived')) for (const c of v.perceived) {
       if (c.kind === 'tag' && !v.exits.some(e => e.target && c.label.toLowerCase().includes(e.target.toLowerCase()))) continue;
       rect(c.box, 'var(--ov-button)', c.kind === 'tag' ? '5 3' : '');
-      label(c.box[0] + 0.003, c.box[1] - 0.008, `${c.label} · ${c.kind}`);
+      label(c.box[0] + 0.003, c.box[1] - 0.008, `${c.label} \u00b7 ${c.kind}`);
     }
     if (on('learned')) for (const c of v.learned) {
       rect(c.box, c.found ? 'var(--ov-anchor)' : '#c3c2b7', c.found ? '' : '4 4');
@@ -628,7 +627,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       overlay.append(s('circle', { cx, cy, r: 11, style: 'stroke: var(--ov-exit); fill: var(--ov-exit)', 'fill-opacity': 0.35, 'stroke-width': 3 }));
       const right = e.x > 0.7;
       overlay.append(s('text', { x: cx + (right ? -16 : 16), y: cy + 5, class: 'ov-label', 'text-anchor': right ? 'end' : 'start' },
-        `${e.label} → ${e.dst}${e.forbidden ? ' (off limits)' : ''}`));
+        `${e.label} \u2192 ${e.dst}${e.forbidden ? ' (off limits)' : ''}`));
     }
   }
   function drawVision(v) {
@@ -639,10 +638,10 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     const sc = v.here ? D.screens[v.here] : null;
     const rows = [['Screen', v.here || 'not on the map: the navigator backs out and looks again'],
       ['How', `${v.how}, ${v.analysis_ms} ms`],
-      ['Title read', v.title_from === null ? 'no title box placed yet' : `${v.title ? `“${v.title}”` : 'nothing'} (${v.title_from})`]];
+      ['Title read', v.title_from === null ? 'no title box placed yet' : `${v.title ? `\u201c${v.title}\u201d` : 'nothing'} (${v.title_from})`]];
     if (v.base) rows.push(['Chapter', chapterText(v)]);
     if (sc) {
-      if (sc.title) rows.push(['Expects title', `“${sc.title}”`]);
+      if (sc.title) rows.push(['Expects title', `\u201c${sc.title}\u201d`]);
       if (sc.marks && sc.marks.length) rows.push(['Needs text', sc.marks.join(', ')]);
       if (sc.absent_marks && sc.absent_marks.length) rows.push(['Must lack', sc.absent_marks.join(', ')]);
       if (sc.shapes && sc.shapes.length) rows.push(['Needs shape', sc.shapes.join(', ')]);
@@ -651,13 +650,13 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     }
     facts($('v-here'), rows);
     $('v-cands').replaceChildren(...(v.candidates.length ? v.candidates.map(c => h('li', null,
-      h('span', 'mono', `${c.verified ? '✓' : '?'} ${c.name}`, c.read ? null : h('span', 'dim', c.score > 0 ? ' · shape only' : ' · nothing read')),
+      h('span', 'mono', `${c.verified ? '\u2713' : '?'} ${c.name}`, c.read ? null : h('span', 'dim', c.score > 0 ? ' \u00b7 shape only' : ' \u00b7 nothing read')),
       h('span', 'num', c.score.toFixed(1)))) : [h('li', null, 'No screen fits this frame')]));
     $('v-exits').replaceChildren(...(v.exits.length ? v.exits.map(e => {
       const sw = h('span', 'sw' + (e.action ? ' routine' : e.how === 'learned template' ? '' : ' off'));
       const where = e.action ? `routine ${e.action}` : e.x === null ? `${e.target}: not found on screen`
-        : `${e.target || 'tap'} · ${e.how} at (${e.x.toFixed(3)}, ${e.y.toFixed(3)})`;
-      return h('li', null, sw, h('div', null, h('b', null, e.label), ' → ', h('span', 'mono', e.dst), e.forbidden ? ' (off limits)' : '', h('div', 'meta', where)));
+        : `${e.target || 'tap'} \u00b7 ${e.how} at (${e.x.toFixed(3)}, ${e.y.toFixed(3)})`;
+      return h('li', null, sw, h('div', null, h('b', null, e.label), ' \u2192 ', h('span', 'mono', e.dst), e.forbidden ? ' (off limits)' : '', h('div', 'meta', where)));
     }) : [h('li', null, v.here ? 'No way out recorded from this screen.' : 'Unknown screen: no recorded exits.')]));
     const p = v.profile;
     facts($('v-device'), [['Profile', p.key],
@@ -716,13 +715,13 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     $('doing').replaceChildren(running ? h('span', '', cur ? `${cur.title}: ` : '', h('span', 'dim', last)) : '');
     if (running) {
       $('job-title').textContent = j.kind === 'goto' ? `Going to ${j.target}` : upper(j.title || 'Running');
-      $('job-sub').textContent = `started ${ago(j.started)} ago` + (cur ? ` · now: ${cur.does}` : '');
+      $('job-sub').textContent = `started ${ago(j.started)} ago` + (cur ? ` \u00b7 now: ${cur.does}` : '');
     } else if (j.result) {
       $('job-title').textContent = j.kind === 'goto' ? `Walk to ${j.target}: ${j.result}` : (j.ok ? 'Finished: ' : 'Ended: ') + j.result;
       $('job-sub').textContent = j.ended ? `${ago(j.ended)} ago, after ${Math.round(j.ended - j.started)}s` : '';
     } else {
       $('job-title').textContent = 'Nothing is running.';
-      $('job-sub').textContent = 'Choose what to do under “Start a run”, or click a screen on the Map tab to go there.';
+      $('job-sub').textContent = 'Choose what to do under \u201cStart a run\u201d, or click a screen on the Map tab to go there.';
     }
     const idle = !running && j.kind !== 'run';
     $('tasks').hidden = !tasks.length || (idle && !j.result);
@@ -737,8 +736,8 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     const S = (pipe && pipe.sections) || {};
     const tasks = S.tasks || [];
     $('tasks').replaceChildren(...tasks.map(t => h('li', t.state,
-      h('span', 'mark ' + (t.state === 'done' ? 'ok' : t.state === 'failed' ? 'bad' : ''), MARK[t.state] || '·'),
-      h('div', '', h('div', 't', t.title), h('div', 'd', t.detail || (t.state === 'waiting' ? t.does : t.state === 'running' ? t.does + '…' : ''))),
+      h('span', 'mark ' + (t.state === 'done' ? 'ok' : t.state === 'failed' ? 'bad' : ''), MARK[t.state] || '\u00b7'),
+      h('div', '', h('div', 't', t.title), h('div', 'd', t.detail || (t.state === 'waiting' ? t.does : t.state === 'running' ? t.does + '\u2026' : ''))),
       h('span', 's', t.seconds ? `${t.seconds}s` : t.state === 'running' && t.started ? ago(t.started) : ''))));
   }
   function drawTail() {
@@ -778,7 +777,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
         ['rolls on', x => x.event], ['Platinum may go on it', x => x.platinum ? 'yes' : ''], ['owned', x => x.owned ? 'yes' : 'no'], ['priority', x => x.priority]],
         rows.map((r, i) => ({ ...r, i })), r => r.kind === 'unreachable' ? 'bad-row' : r.owned ? '' : r.kind === 'target' ? 'hl' : '');
       [...$('goal-table').querySelectorAll('tbody tr')].forEach((tr, i) => { tr.firstChild.textContent = i + 1; });
-      if (g.empty_why) $('goal-table').prepend(h('p', 'error-box', h('b', '', 'Nothing to go for'), `${upper(g.empty_why)}. Search for a unit under “Start a run”, or give Platinum tickets.`));
+      if (g.empty_why) $('goal-table').prepend(h('p', 'error-box', h('b', '', 'Nothing to go for'), `${upper(g.empty_why)}. Search for a unit under \u201cStart a run\u201d, or give Platinum tickets.`));
       badge('goal', g.remaining, true);
     }
     // Plan
@@ -795,7 +794,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
         [`Platinum used, of ${sim.platinum_given ?? '?'}` + (sim.platinum_source ? ` (${sim.platinum_source})` : ''), sim.platinum_used],
         ['new Ubers / Legends', sim.unlocked.length], ['still wanted after', sim.left.length]]);
       table($('sim-table'), [['draw', x => x.n], ['position', x => x.position], ['event', x => x.event], ['ticket', x => x.platinum ? 'Platinum' : 'rare'],
-        ['rarity', x => RARITY[x.rarity]], ['cat', x => x.cat], ['new', x => x.new ? 'NEW' : ''], ['unlocks', x => unlocked.has(x.n) ? '★ unlocks' : '']],
+        ['rarity', x => RARITY[x.rarity]], ['cat', x => x.cat], ['new', x => x.new ? 'NEW' : ''], ['unlocks', x => unlocked.has(x.n) ? '\u2605 unlocks' : '']],
         sim.rolls, x => unlocked.has(x.n) ? 'hl' : '');
       badge('sim', sim.unlocked.length, true);
     }
@@ -807,7 +806,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       ['matched the plan', rolls.filter(x => x.verdict === 'match').length + ' / ' + rolls.length]]);
     table($('rolls-table'), [['#', x => x.n], ['position', x => x.position], ['event', x => x.event], ['ticket', x => x.platinum ? 'Platinum' : 'rare'],
       ['expected', x => x.expected], ['seen', x => x.seen], ['check', x => x.verdict, x => x.verdict === 'match' ? 'ok' : x.verdict === 'unverified' ? 'warn-t' : 'bad'],
-      ['new', x => x.new ? 'NEW' : ''], ['goal', x => x.goal ? '★' : '']], rolls.slice().reverse(), x => x.new && x.rarity >= 4 ? 'hl' : '', 'No draws in this run.');
+      ['new', x => x.new ? 'NEW' : ''], ['goal', x => x.goal ? '\u2605' : '']], rolls.slice().reverse(), x => x.new && x.rarity >= 4 ? 'hl' : '', 'No draws in this run.');
     if (rolls.length) badge('draws', rolls.length, true);
     const gt = S.gate || {};
     facts($('gate'), [['verdict', gt.ok === undefined ? undefined : gt.ok ? 'ticket: draw' : 'REFUSED'], ['why', gt.reason], ['event', gt.event],
@@ -816,7 +815,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     // Events (checked on the phone, or as scheduled)
     if (S.events) {
       table($('events-table'), [['event', e => e.label],
-        ['on the phone', e => e.seen === true ? '✓ shown' : e.seen === false ? '✗ not shown' : 'not checked', e => e.seen === false ? 'bad' : e.seen ? 'ok' : 'dim'], ['from', e => e.start], ['ends', e => e.end],
+        ['on the phone', e => e.seen === true ? '\u2713 shown' : e.seen === false ? '\u2717 not shown' : 'not checked', e => e.seen === false ? 'bad' : e.seen ? 'ok' : 'dim'], ['from', e => e.start], ['ends', e => e.end],
         ['rates R/SR/U/L', e => e.rates ? `${e.rates.rare}/${e.rates.supa}/${e.rates.uber}/${e.rates.legend}` : ''],
         ['Legend Rares', e => (e.legends || []).map(l => `${l.name} ${tick(l.owned)}`).join(', ')],
         ['Ubers', e => Array.isArray(e.ubers) ? `${e.ubers.filter(u => u.owned === false).length} missing of ${e.ubers.length}` : `${e.ubers} (Platinum)`],
@@ -840,7 +839,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     facts($('seed-facts'), [['seed', a.seed], ['position', a.position], ['from', a.source], ['confirmed by a draw', a.confirmed === undefined ? undefined : a.confirmed ? 'yes' : 'not yet'],
       ['draws made', a.rolls_made], ['storage', a.storage_used !== undefined ? `${a.storage_used}/${a.storage_capacity}` : undefined],
       ['bc.godfat.org seed', a.current_seed],
-      ['search', ss ? `${(100 * ss.done).toFixed(0)}% · ${ss.survivors} seeds still fit · ${ss.seconds}s` : undefined],
+      ['search', ss ? `${(100 * ss.done).toFixed(0)}% \u00b7 ${ss.survivors} seeds still fit \u00b7 ${ss.seconds}s` : undefined],
       ['found from', sf ? (sf.detail || []).join('; ') : undefined], ['other fits', sf && sf.alternatives && sf.alternatives.length ? sf.alternatives.join(', ') : undefined],
       ['history', a.history && a.history.length ? a.history.join(' | ') : undefined]]);
     table($('seed-obs'), [['file', x => x.file], ['time', x => x.time], ['read', x => x.raw], ['cat', x => x.name], ['Platinum', x => x.platinum ? 'yes' : '']],
@@ -857,7 +856,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     const L = S.legends;
     if (L) {
       stats($('leg-stats'), [['battles', L.battles], ['won', L.wins], ['lost', L.losses], ['losses running', L.streak], ['minutes', L.minutes]]);
-      $('leg-cleared').replaceChildren(...(L.cleared || []).map(x => h('li', '', x)), h('li', 'dim', `now: ${L.stage || '–'}${L.reason ? ` · stopped: ${L.reason}` : ''}`));
+      $('leg-cleared').replaceChildren(...(L.cleared || []).map(x => h('li', '', x)), h('li', 'dim', `now: ${L.stage || '\u2013'}${L.reason ? ` \u00b7 stopped: ${L.reason}` : ''}`));
       badge('legends', L.wins, true);
     }
     // Zombie Outbreaks
@@ -865,7 +864,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     if (O) {
       stats($('ob-stats'), [['battles', O.battles], ['won', O.wins], ['lost', O.losses], ['losses running', O.streak], ['minutes', O.minutes]]);
       $('ob-chapters').replaceChildren(...Object.entries(O.chapters || {}).map(([c, w]) => h('li', '', `${c}: ${w}`)),
-        h('li', 'dim', `now: ${O.stage || '–'}${O.reason ? ` · stopped: ${O.reason}` : ''}`));
+        h('li', 'dim', `now: ${O.stage || '\u2013'}${O.reason ? ` \u00b7 stopped: ${O.reason}` : ''}`));
       badge('outbreaks', O.wins, true);
     }
     // History
@@ -879,9 +878,9 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
   // -- what is saved -------------------------------------------------------------------------------
   function drawStatus() {
     const st = status;
-    if (!st || st.error) { $('idle-status').replaceChildren(h('p', 'bad', st ? st.error : 'loading…')); return; }
+    if (!st || st.error) { $('idle-status').replaceChildren(h('p', 'bad', st ? st.error : 'loading\u2026')); return; }
     const a = st.account || {}, o = st.owned || {};
-    const yes = (ok, text) => h('span', ok ? 'ok' : 'bad', (ok ? '✓ ' : '✗ ') + text);
+    const yes = (ok, text) => h('span', ok ? 'ok' : 'bad', (ok ? '\u2713 ' : '\u2717 ') + text);
     stats($('ov-stats'), [['owned cats', o.ok ? o.owned : '?'], ['position', a.ok ? a.position : '?'], ['rare tickets (last read)', a.rare ?? '?'],
       ['Platinum (last read)', a.platinum ?? '?'], ['saved result screens', st.captures]]);
     facts($('ov-account'), [['seed', a.ok ? yes(true, `${a.seed} at ${a.position}`) : yes(false, 'unknown')],
@@ -890,14 +889,14 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
     facts($('ov-data'), [['phone', st.phone ? yes(st.phone.ok, st.phone.mode === 'replay' ? 'replaying saved frames' : st.phone.ok ? 'connected' : st.phone.error || 'not connected') : ''],
       ['cat data', st.data.ok ? yes(true, `updated ${st.data.updated}`) : yes(false, 'missing')],
       ['tier list', st.tiers && st.tiers.ok ? yes(true, `${st.tiers.cats} cats, ${st.tiers.updated}`) : yes(false, 'missing')],
-      ['save’s map', st.map && st.map.ok ? yes(true, `${st.map.sagas} sagas`) : yes(false, 'not read yet')],
+      ['save\u2019s map', st.map && st.map.ok ? yes(true, `${st.map.sagas} sagas`) : yes(false, 'not read yet')],
       ['owned cats', o.ok ? yes(true, `${o.owned}, read ${o.scanned_at}`) : yes(false, 'not read yet')]]);
-    $('ov-checked').textContent = st.screen_checked ? `— the phone's capsule screen was last checked at ${st.screen_checked}` : '— as scheduled; a draw run checks which the phone shows';
+    $('ov-checked').textContent = st.screen_checked ? `\u2014 the phone's capsule screen was last checked at ${st.screen_checked}` : '\u2014 as scheduled; a draw run checks which the phone shows';
     $('ov-next').replaceChildren(...(st.next || []).map(x => h('li', '', x)));
     table($('ov-events'), [['event', e => e.label],
-      ['on the phone', e => e.on_phone === true ? '✓ shown' : e.on_phone === false ? '✗ not shown' : 'not checked', e => e.on_phone === false ? 'bad' : e.on_phone ? 'ok' : 'dim'],
+      ['on the phone', e => e.on_phone === true ? '\u2713 shown' : e.on_phone === false ? '\u2717 not shown' : 'not checked', e => e.on_phone === false ? 'bad' : e.on_phone ? 'ok' : 'dim'],
       ['ends', e => e.end], ['Ubers missing', e => `${e.ubers_missing} of ${e.ubers}`],
-      ['Legend Rares missing', e => e.legend_rares ? `${e.legend_rares_missing} of ${e.legend_rares}` : '–'], ['best missing tier', e => e.best_missing]], st.events || []);
+      ['Legend Rares missing', e => e.legend_rares ? `${e.legend_rares_missing} of ${e.legend_rares}` : '\u2013'], ['best missing tier', e => e.best_missing]], st.events || []);
     $('idle-status').replaceChildren(h('h2', '', 'Ready?'), h('dl', 'facts', ...[
       ['Phone', st.phone && st.phone.ok ? 'connected' : st.phone && st.phone.mode === 'replay' ? 'replay: plans only' : 'not connected'],
       ['Seed', a.ok ? `${a.position}${a.confirmed ? ', confirmed' : ''}` : 'found on the first run, free'],
@@ -925,7 +924,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
   try { targets = JSON.parse(localStorage.getItem('bc-targets') || '[]'); } catch (e) { targets = []; }
   function drawTargets() {
     $('targets').replaceChildren(...targets.map((u, i) => {
-      const up = h('button', 'small', '↑'), down = h('button', 'small', '↓'), del = h('button', 'small', '✕');
+      const up = h('button', 'small', '\u2191'), down = h('button', 'small', '\u2193'), del = h('button', 'small', '\u2715');
       [up, down, del].forEach(b => { b.type = 'button'; });
       up.title = 'Want it more'; down.title = 'Want it less'; del.title = 'Remove';
       up.disabled = i === 0; down.disabled = i === targets.length - 1;
@@ -933,7 +932,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       down.onclick = () => { [targets[i + 1], targets[i]] = [targets[i], targets[i + 1]]; formChanged(); };
       del.onclick = () => { targets.splice(i, 1); formChanged(); };
       return h('li', '', h('span', 'rank', `#${i + 1}`),
-        h('div', '', h('b', '', u.name), h('div', 'm', `${u.rarity_name}, tier ${u.tier}, ${u.owned ? 'already owned' : u.owned === false ? 'not owned' : 'owned ?'} · ${u.where}`)),
+        h('div', '', h('b', '', u.name), h('div', 'm', `${u.rarity_name}, tier ${u.tier}, ${u.owned ? 'already owned' : u.owned === false ? 'not owned' : 'owned ?'} \u00b7 ${u.where}`)),
         h('span', 'btns', up, down, del));
     }));
     $('targets-hint').hidden = targets.length > 0;
@@ -949,8 +948,8 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       if (seq !== searchSeq) return;
       $('results').replaceChildren(...(hits.length ? hits.map(u => {
         const b = h('button', '', h('span', 'n', u.name), h('span', u.owned ? 'dim' : 'ok', u.owned ? 'owned' : u.owned === false ? 'not owned' : ''),
-          h('span', 'm', `${u.rarity_name} · tier ${u.tier} · ${u.obtainable ? 'rolls on ' + u.where : 'not in any live event: cannot be drawn today'}`
-            + (u.matched && u.matched !== u.name ? ` · as “${u.matched}”` : '') + ` · #${u.id}`));
+          h('span', 'm', `${u.rarity_name} \u00b7 tier ${u.tier} \u00b7 ${u.obtainable ? 'rolls on ' + u.where : 'not in any live event: cannot be drawn today'}`
+            + (u.matched && u.matched !== u.name ? ` \u00b7 as \u201c${u.matched}\u201d` : '') + ` \u00b7 #${u.id}`));
         b.type = 'button';
         b.onclick = () => {
           if (!targets.some(t => t.id === u.id)) targets.push(u);
@@ -977,7 +976,7 @@ dialog h3 { font-size: 16px; text-transform: none; letter-spacing: 0; color: var
       events: [...$('events').querySelectorAll('input:checked')].map(i => i.value),
       legend_rares: $('legend-rares').checked, prefer: $('prefer').value || null,
       roll: $('roll').checked, rare: num('rare'), platinum: num('platinum'),
-      capsules, exchange: $('exchange').value, uncanny: $('uncanny').checked, outbreaks: $('outbreaks').checked, storage: $('storage').checked, update: $('update').checked,
+      capsules, exchange: $('exchange').value, uncanny: $('uncanny').checked, outbreaks: $('outbreaks').checked, storage: $('storage').checked,
       rescan_owned: $('rescan-owned').checked, rescan_map: $('rescan-map').checked,
     };
   }

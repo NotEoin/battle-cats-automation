@@ -17,7 +17,7 @@ from pathlib import Path
 
 import cv2
 
-from .data import RARE, UBER
+from .data import CAPSULE_RARITIES, RARE, Dataset
 from .gacha import Gacha, next_position
 
 # Draws further apart than this belong to different runs.
@@ -31,13 +31,16 @@ PLACE_WINDOW = 600
 
 @dataclass
 class Observation:
+    """One saved result screen and the cat read off it, if any."""
+
     file: str
     time: float
     raw: str
     cat_id: int | None
     platinum: bool | None
 
-    def to_json(self, dataset=None) -> dict:
+    def to_json(self, dataset: Dataset | None = None) -> dict:
+        """The observation for the live page, the cat named when `dataset` is given."""
         return dict(file=Path(self.file).name, time=dt.datetime.fromtimestamp(self.time).isoformat(timespec="seconds"),
                     raw=self.raw, cat_id=self.cat_id,
                     name=dataset.cat_name(self.cat_id) if dataset and self.cat_id is not None else None,
@@ -46,6 +49,8 @@ class Observation:
 
 @dataclass
 class Identified:
+    """The seed and position the saved screens point to, and how they were found."""
+
     seed: int | None = None
     index: int | None = None
     track: int | None = None
@@ -57,9 +62,11 @@ class Identified:
 
     @property
     def found(self) -> bool:
+        """True when both the seed and the position are known."""
         return self.seed is not None and self.index is not None
 
-    def to_json(self, dataset=None) -> dict:
+    def to_json(self, dataset: Dataset | None = None) -> dict:
+        """The finding for the live page and `bcgacha status`."""
         return dict(seed=self.seed, position=f"{self.index}{'AB'[self.track]}" if self.found else None,
                     last_cat=dataset.cat_name(self.last_cat_id) if dataset and self.last_cat_id is not None else None,
                     source=self.source, detail=self.detail, alternatives=self.alternatives,
@@ -67,7 +74,7 @@ class Identified:
 
 
 def _pool(events) -> set[int]:
-    return {c for e in events for r in (2, 3, 4, 5) for c in e.banner.slots.get(r) or []}
+    return {c for e in events for r in CAPSULE_RARITIES for c in e.banner.slots.get(r) or []}
 
 
 def read_captures(captures_dir: Path, ocr, dataset, events_on, log=print, should_stop=None) -> list[Observation]:
