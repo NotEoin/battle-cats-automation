@@ -1,12 +1,21 @@
+# Python
 .venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
 
-# Runtime state and captures — machine-local, never shared
-state/
-captures/
-logs/
+# What bcgacha writes lives in its own folder (see bcgacha/paths.py), but a
+# BCGACHA_HOME pointed at the checkout must not put it into git either.
+/state/
+/captures/
+/logs/
+/data/
+
+# Game screenshots: never shipped
 *.png
 *.jpg
 *.mp4
@@ -15,5 +24,3 @@ logs/
 secrets/
 *.p12
 *.mobileprovision
-data/*.pickle
-bcgacha.egg-info/
