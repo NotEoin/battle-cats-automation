@@ -1,0 +1,46 @@
+# Lint once, then run the tests on every platform bcgacha supports.
+# The tests need no phone and no network: they read the frozen dataset in
+# tests/fixtures/data.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uvx ruff check .                                   # style, imports, non-ASCII
+      - name: No non-ASCII text outside fixtures
+        run: |
+          if git grep -nIP '[^\x00-\x7F]' -- . ':!tests/fixtures'; then
+            echo "::error::non-ASCII characters found (see above)"; exit 1
+          fi
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.13"]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+          activate-environment: true
+      - if: runner.os == 'Linux'
+        run: sudo apt-get install -y libgl1                     # OpenCV's one system library
+      - run: uv pip install -e ".[test]"
+      - run: python -m pytest -q
+      - run: bcgacha --help                                     # the command installs and starts
