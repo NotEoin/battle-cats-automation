@@ -1,343 +1,195 @@
-# Battle Cats capsule automation
+# battle-cats-automation
 
-Rolls the Rare Cat Capsule on a USB-attached iPhone, and knows in advance what
-every roll will produce.
+![licence](https://img.shields.io/badge/licence-MIT-blue?style=flat-square)
+![python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square)
+![device](https://img.shields.io/badge/device-iOS%2027%2B-lightgrey?style=flat-square)
+[![CI](https://github.com/NotEoin/battle-cats-automation/actions/workflows/ci.yml/badge.svg)](https://github.com/NotEoin/battle-cats-automation/actions/workflows/ci.yml)
 
-The gacha is not random to an observer who knows the account's seed. One 32-bit
-xorshift state drives every rare capsule draw, the seed is shared across all
-banners, and nothing but a rare roll advances it. So the bot does not read roll
-results off the screen — it computes them, and reads the screen only to confirm
-it is on the screen it expects.
+> *Every Rare Cat Capsule, known before you open it.*
 
-## Quick start
+bcgacha (the command this repo installs) draws Battle Cats capsules for you
+on an iPhone or iPad plugged into your computer. It knows in advance what
+every draw will give, works out which banner to draw on at each step to reach
+the cats you want, and taps the phone's screen to do it.
 
-    bcgacha                 # guided: says what it knows, asks what you want, does it
+![The live page with a phone connected: the game's Rare Capsule screen with the buttons bcgacha recognised, the steps of the last run, and the planned draws with what each one gives](media/live-page.png)
 
-That is all that is needed. Every run on the phone also serves the live page at
-http://127.0.0.1:8765, which shows everything the bot sees and works out, and
-can stop it. Either one can do anything the other can:
+> **This breaks the game's rules.** PONOS's terms of service forbid "external
+> tools which falsely manipulate the Service such as BOT and/or cheat tools".
+> bcgacha is one. Using it can get your account banned. You use it at your own
+> risk.
 
-| You want to | Command line | Live page (`bcgacha ui`) |
-|---|---|---|
-| see what is known | `bcgacha status` | Overview tab |
-| get new events | automatic: every command downloads them first (or `bcgacha tools update`) | automatic before every run (or Update events & tiers) |
-| find a unit | `bcgacha search dark kasli` | search box under Start a run |
-| see the plan, spending nothing | `bcgacha plan -t "Dark Kasli"` | Plan |
-| draw for units, most wanted first | `bcgacha run -t "Dark Kasli" -t Gunduros --roll` | tick Draw, Start |
-| limit Platinum spending | `--platinum 2` (default: every one held, read off the screen) | Platinum: at most |
-| want every Uber of an event | `-e "Iron Legion"` (`--legend-rares` for its Legend Rares) | tick the event |
-| open Cat or Lucky Capsules | `--capsules cat:30` (`lucky`, `lucky_g`; no count: until out) | Normal capsules |
-| play the Uncanny Legends | `--play-legends` | Battles |
-| beat the Zombie Outbreaks | `--play-outbreaks` | Battles |
-| all of it in one go | `bcgacha run -t Gunduros --roll --capsules cat --play-legends` | tick them all |
-| stop | Ctrl+C (between taps) | Stop |
+## What it is for
 
-The page shows the command for whatever is ticked, so a run set up there can be
-repeated from a terminal. Setting up -- the save's map, the owned cats, the seed
--- happens on the first run by itself, and only again when asked.
+[The Battle Cats](https://battlecats.club/en/series/battlecats/) is a mobile
+strategy game by PONOS. You build a lineup of cats and send them across the
+battlefield to knock down the enemy base. Most of the strongest cats come from
+the Rare Cat Capsule, a gacha draw paid for with Rare Cat Tickets or Cat Food.
+On a standard banner, 5 draws in 100 give an Uber Rare, and each event banner
+offers its own Ubers for a limited time.
 
-## Status
+Which draws give an Uber is fixed by the account's seed; the banner you draw
+on only decides which Uber you get. Drawing blind wastes those draws on cats
+you already own, or on a banner whose Ubers you did not want. bcgacha picks
+the banner for every draw so that each Uber draw lands on a cat you want, then
+makes the draws itself, so a stack of tickets needs no tapping by hand.
 
-| Capability | State |
+## Highlights
+
+- **Plans before it spends.** `bcgacha plan` shows every draw on the way to
+  the cats you want, and what each one gives. It needs no phone after the
+  first run.
+- **Drives the real game.** It taps an unmodified phone over USB through
+  Apple's own developer features: no jailbreak, no modified app, no
+  developer account.
+- **Checks every step.** It reads each result off the screen and compares
+  it with the prediction. When they differ, it works out from the cat it saw
+  where the account really is.
+- **More than draws.** It also opens Cat Capsules and Lucky Capsules, clears
+  Cat Storage, and plays the Uncanny Legends and the Zombie Outbreaks with
+  the Cat CPU.
+- **A page you can watch.** While it runs, a page in your browser shows what
+  it sees, what it plans, and a Stop button. You can start runs from there
+  too.
+- **Made for people who have never used a terminal.** One install command,
+  and `bcgacha check` says what is wrong with the phone's setup and how to
+  fix it.
+
+## How it works
+
+The Rare Cat Capsule is not random to someone who knows the account's seed.
+One number drives every rare draw, it is shared by every banner, and only a
+rare draw moves it on. bcgacha reproduces the game's draw tables from
+godfat's [battle-cats-rolls](https://gitlab.com/godfat/battle-cats-rolls)
+dataset, so from the seed it can compute what any sequence of draws gives,
+and choose the banner at each step that brings you closer to your goal.
+
+On the phone side, it learns where each button is by reading the screen the
+first time it runs on a device, so it ships no pictures of the game. The
+[developer guide](docs/developer-guide.md) covers the details.
+
+## Tech stack
+
+Python 3.11 or later, with no compiled code of its own.
+
+| Part | Built with |
 |---|---|
-| Roll prediction from a seed | working, 1194 cells checked against bc.godfat.org |
-| Guaranteed-uber prediction | working, 179/179 against bc.godfat.org |
-| Seed recovery from observed rolls | working, unique hit in ~220s |
-| Device screen capture | working, ~0.35s per frame |
-| Synthetic taps | working, absolute coordinates |
-| Screen recognition | ~1ms from remembered titles; OCR only for a screen never seen |
-| Rare draw loop | ~13-14s a draw, humanised, reveals skipped |
-| Normal capsules | Cat and Lucky Capsules: 3.3s a capsule in tens, 14s singly |
-| Counter and capacity reading | tickets, Cat Food, XP, storage N/M |
-| Single-draw roll loop | working, ten consecutive draws verified |
-| Banner targeting | planner wired to the loop, switches by tapping tabs |
-| Collection index | reads the Cat Guide, ~1.6s per entry |
-| Tier rankings | 267 entries scraped, 185 cats matched |
-| Desync detection | each result checked against the prediction |
-| End to end | verified: plan, switch, roll, verify, advance |
+| Talking to the phone | [pymobiledevice3](https://github.com/doronz88/pymobiledevice3): a userspace tunnel to the device (no root, no Xcode), the DVT instruments channel for screenshots, and CoreDevice's HID touch service for taps at any point on the screen |
+| Draw prediction | a 32-bit xorshift generator and the game's draw tables, rebuilt from godfat's dataset (YAML, read with PyYAML) and tested against pages saved from bc.godfat.org |
+| Reading the screen | OpenCV template matching and colour masks for buttons and shapes; RapidOCR on ONNX Runtime for titles, names and numbers |
+| Matching names | rapidfuzz, so `kasli` or a typo still finds Dark Kasli |
+| Tier list | httpx, Beautiful Soup and lxml, to read the community tier list |
+| Live page | Python's own `http.server` and one plain HTML page, with no web framework or build step |
+| Install and CI | uv, setuptools, ruff and pytest; GitHub Actions on Windows, macOS and Linux |
 
-### Requirements
+## What you need
 
-Synthetic touch comes from Apple's CoreDevice remote-control feature, which
-refuses below **iOS 27** with error 9021 — iOS 26 is not enough. Screen capture
-works from iOS 17. Both need Developer Mode on and the Developer Disk Image
-mounted, neither needs root, and no Apple developer account or jailbreak is
-involved.
+- An iPhone or iPad running **iOS 27 or later** (iPadOS 27 on an iPad), with
+  The Battle Cats (English version) installed. Tapping the screen from a
+  computer needs iOS 27; older versions can be watched but not driven.
+  Updating also brings Apple's age checks in some countries; read
+  [the note before you update](docs/howto/prepare-your-device.md#before-you-update-to-ios-27).
+- A computer running Windows 10 or 11, macOS, or Linux.
+- A USB cable that carries data, not just charge.
 
-### Four things that will waste a day if nobody says them
+No Apple developer account, jailbreak or paid software is needed.
 
-HID coordinates are normalised against the device's **native portrait** frame,
-not the orientation the app draws in. This game is landscape only, so every
-coordinate must be rotated — see `layout.landscape_to_hid`. Sending landscape
-fractions straight through puts taps somewhere else entirely.
+## Install
 
-The result screen's Ok button **pulses a pink outline**, so template matching
-against it is unstable. Anchor on the static Use now / Exchange pair instead.
+Follow the guide for your computer.
 
-The Cat Guide's arrow and back buttons **do not respond to synthetic taps at
-all** — not at 50ms, not at 350ms. Only a flick across the artwork moves it, and
-the only dependable way to rewind the Guide is to leave to the Cat Base and come
-back in through Menu.
+- [Install on Windows](docs/howto/install-on-windows.md)
+- [Install on macOS](docs/howto/install-on-macos.md)
+- [Install on Linux](docs/howto/install-on-linux.md)
 
-Opening a Cat Guide entry that still carries a NEW! badge raises a Cat Food
-reward popup **over** the description panel, so "is the panel visible" is not a
-sufficient test for being on the detail view. Look for the popup's own button.
+Then get the phone ready: [Prepare your iPhone or iPad](docs/howto/prepare-your-device.md).
 
-## Any iPhone, and no captured images shipped
+In short, every guide comes down to installing `uv` and then this one command:
 
-Navigation ships no pictures of the game. `data/ui_graph.json` says what each
-screen reads and what each transition presses -- "Rare Capsule", the back
-arrow, the X -- and the bot learns where those are on whichever phone is
-attached.
+```
+uv tool install https://github.com/NotEoin/battle-cats-automation/archive/refs/heads/main.zip
+```
 
-The first time a screen is met it is read in full: OCR of the whole frame, and
-the game's gold pills and X discs found by shape (`perception`). What that
-finds is kept per resolution under `state/devices/WxH/` (`profile`): the box
-screen names are printed in, and a small template of each control the map
-uses. Once a title has named its screen, a grey picture of it is kept too,
-so after that a screen is recognised from templates alone, with no OCR: about
-a millisecond against most of a second. A title read cut short -- "Lucky
-Capsules" for "Lucky Capsules G", "Cat Base" for "Cat Base Select" -- is left
-to a full look rather than trusted. Only what the map names is learned, never
-timers or counters, so going over the same screens again leaves the profile
-untouched.
+## First run
 
-The navigator does not sleep after a tap: it watches until two still frames
-name the next screen, with a jittered pause before each tap standing in for a
-person finding the button. Store, Attack!, Draw for Free!, Trade for Ticket
-and Change to XP are refused whatever a map says.
+Plug the phone in, unlock it, open The Battle Cats, and in a terminal type:
 
-Each chapter's Cat Base stands in front of its own door, and the door names
-the chapter (`bases`). Doors are learned per device as well: on a phone that
-has not seen them, the bot steps into each chapter once. The save's sagas and
-chapters are scanned into `state/carousels.json` once per save.
+```
+bcgacha check     # checks the cable, the phone and its settings, and says how to fix each
+bcgacha           # asks what you want, step by step, and does it
+```
 
-Delete `state/devices/WxH/` to make a phone learn from scratch.
+The first run on a phone takes longer. bcgacha reads the game's menus to
+learn where the buttons are on your screen, and reads the Cat Guide to learn
+which cats you own. After that it remembers.
 
-## What a run does
+bcgacha also needs your account's seed once. If you have used bc.godfat.org
+before, you may know it already; if not, finding it costs about ten Rare Cat
+Tickets. See [Find your seed](docs/howto/find-your-seed.md).
 
-A run is a list of tasks, each done only when needed, each reported on the
-terminal and the page as it starts and ends (`jobs.py`):
+While anything runs on the phone, the live page is at
+<http://127.0.0.1:8765> in your browser.
 
-| Task | Does |
+## Everyday use
+
+| You want to | Type |
 |---|---|
-| map | this save's sagas and chapters, and this phone's Cat Base doors: once per save and phone |
-| storage | Use all on Cat Storage, when asked |
-| owned | reads every Cat Guide entry for what the account owns: once, or when asked |
-| capsule | before drawing: puts each live event on screen -- the schedule lists some the game does not show -- and reads the rare and Platinum ticket counters |
-| seed | the seed and position, found from the saved result screens in `captures/`, spending nothing |
-| goal | what is wanted and why, the route to it, and the whole run played out on paper |
-| roll | draws along the route, every result read and checked against the plan |
-| capsules | the normal machines, with their own tickets |
-| legends | the Uncanny Legends, stage after stage, with the Cat CPU |
-| outbreaks | each saga chapter's Zombie Outbreak, with the zombie deck and the Cat CPU |
+| see what bcgacha knows | `bcgacha status` |
+| find a unit by name | `bcgacha search kasli` |
+| see the plan without spending anything | `bcgacha plan -t "Dark Kasli"` |
+| draw for units, most wanted first | `bcgacha run -t "Dark Kasli" -t Gunduros --roll` |
+| want every Uber of an event | `bcgacha run -e "Iron Legion" --roll` |
+| open Cat Capsules or Lucky Capsules | `bcgacha run --capsules cat` |
+| play the Uncanny Legends | `bcgacha run --play-legends` |
+| beat the Zombie Outbreaks | `bcgacha run --play-outbreaks` |
+| do it all from the browser instead | `bcgacha ui` |
+| stop | press Ctrl+C, or Stop on the page |
 
-- What is wanted: the units named with `-t`, in that order, outrank everything;
-  then each event named with `-e`. With neither, every unowned Uber of every
-  live event. Platinum tickets go on named units first, then the best unowned
-  Platinum Ubers by tier -- twice as many are earmarked as tickets held, so
-  one that never comes up on the route does not strand a ticket.
-- Nothing the screen shows is typed in: the rare and Platinum ticket counts,
-  Cat Food and Cat Storage's size are all read off it. OCR cannot see a lone
-  digit -- the Platinum count, usually -- so `digits.py` reads one three ways
-  and trusts it only when they agree: by the glyphs of numbers it has read for
-  certain, set among those digits as a number, and drawn as a run of itself.
-- Each live event is a screen of the map: `goto("event:979")` selects Iron
-  Legion from anywhere, in one call. An event the tab strip does not show is
-  noted after one sweep of the tabs and left out of every plan that day.
-- Every draw is refused unless the button shows a ticket and a cost of 1, and
-  the position is saved the moment a draw is tapped.
-- Stop takes effect between draws; a run resumes from `state/account.json`.
-- A run spends no Platinum Ticket until one of its own draws has matched: a
-  draw made by hand since the last run moves the position unseen. A draw that
-  disagrees is placed on the banner it was drawn on, near the saved position.
-- Once a capsule has opened, a tap on the top bar skips its reveal. Log-in
-  bonus and reward notices in the way are pressed through with their Ok.
+bcgacha asks before it spends anything, unless you add `-y`. The
+[user guide](docs/user-guide.md) explains every option and what a run does.
 
-The normal machines press Try 10 times! while its face shows the 10, else Try
-once!, each face checked against how it looked when it first drew, and stop if
-the Cat Food counter ever falls.
+## Devices
 
-The Uncanny Legends player opens the topmost green chapter of the Legend Stages
-list that is not greyed out, picks its rightmost stage, keeps the Cat CPU item
-on CPU (a second tap turns it to skip-battle, which refuses a stage not yet
-cleared) and presses Attack!. Energy is refilled with Leadership; the offer to
-continue a lost battle for Cat Food is always refused. It stops when that
-topmost chapter is CLEAR, or when one stage is lost three times running, which
-needs a person. Each battle's end is kept under `logs/legends`.
-
-The Zombie Outbreak player goes through every saga chapter in turn. On each
-chapter's Stage Select, a purple OUTBREAK button on the left means an outbreak
-is up: pressing it selects the stage. If the Equip button beside Attack! does
-not name the zombie deck, Equip opens Organize Cats, whose arrows step through
-the decks until one named zombie comes up, and Back returns to the stage. Then
-the Cat CPU, Attack!, and the same battle handling as the Legends. A stage is
-fought until it is cleared or lost three times running; then on to the next
-chapter.
-
-Only one thing may drive the phone. A second `bcgacha run` while the page is up
-refuses, and says to start the run from the page.
-
-## What banner switching can and cannot do
-
-Rarity is decided by the seed, not by the banner: the rarity draw is
-`rarity_seed % 10000` compared against the banner's weights. Every standard
-banner uses the same 7000/2500/500 split, so an Uber position is an Uber
-position on all of them.
-
-So switching banners chooses **which** uber lands, not **whether** one lands.
-Rarity only moves when the weights move:
-
-| Banner | Uber weight | Ubers in 400 rolls (seed 123456789) |
-|---|---|---|
-| standard | 500 | 19 |
-| Queen's/King fest | 700 | 27 |
-| Uberfest / Superfest | 900 | 36 |
-| Epicfest | 1000 | 39 |
-| Platinum | 10000 | 400 |
-
-`bcgacha tools ubers` lists the positions that pay out, so rolls can be spent getting
-to them and the right banner selected when they arrive.
-
-## Setup
-
-    sudo apt install -y python3-dev usbmuxd
-    python3 -m venv .venv && .venv/bin/pip install -e .
-    .venv/bin/bcgacha tools update      # the event schedule and the tier list (any command does this first)
-
-`bcgacha` is then `.venv/bin/bcgacha` (or `python -m bcgacha`). To call it by
-name from anywhere without activating the venv, link it onto your PATH:
-
-    ln -s "$PWD/.venv/bin/bcgacha" ~/.local/bin/bcgacha
-
-On the phone, once: Settings > Privacy & Security > Developer Mode, on, and
-restart. The developer disk image comes off whenever the phone restarts;
-`bcgacha run` and `bcgacha ui` mount it again before connecting. By hand:
-
-    .venv/bin/pymobiledevice3 mounter auto-mount
-
-## Tools
-
-Single steps, for a closer look (`bcgacha tools --help`):
-
-    bcgacha tools probe                 # what the attached iPhone supports
-    bcgacha tools upkeep owned          # read the Cat Guide again (also: map, storage)
-    bcgacha tools resync --cat NAME     # fix the position after draws made by hand
-    bcgacha tools update                # the newest events and tier list, said in full (every command does it quietly)
-    bcgacha tools tiers                 # the tier list alone
-    bcgacha tools predict --seed S --event KEY
-    bcgacha tools ubers --seed S --event KEY
-    bcgacha tools find-seed --event KEY --cats "A,B,C,..."
-    bcgacha tools map                   # draw the screen map to logs/ui_graph.html
-
-`find-seed` wants 7–10 draws written down by hand; a run finds the seed from
-`captures/` by itself.
-
-`bcgacha ui --replay captures/` serves the page over saved frames, with no
-phone: plans work, nothing else.
-
-## How rolls are chosen
-
-Scoring is ownership first, quality second. A first copy of a unit dominates
-everything; a duplicate is not worthless, because extra copies raise a unit's
-level cap through the +N system, but it scores at a small fraction. Uber and
-Legend values are then scaled by community tier ranking, so a strong unit
-outranks a weak one of the same rarity.
-
-Platinum Tickets are only ever spent on an unowned Uber ranked A- or better.
-They read the same seed as every other banner, so a Platinum draw can be slotted
-into the route at a chosen position -- but they are scarce, so the planner
-refuses to waste one on a duplicate or a weak unit.
-
-## Things that will bite a naive bot
-
-- **Cat Storage holds 64, or 128 after Cats of the Cosmos Ch.3.** Not 200. A
-  full storage blocks rolling outright rather than warning.
-- **Rare Cat Tickets only ever do single draws.** There is no 11-draw with
-  tickets.
-- **The single-draw button silently changes currency.** With tickets in hand it
-  spends a ticket; the instant the stack empties, the same button at the same
-  position spends 150 Cat Food. Read the button, not its position.
-- Uber and Legend reveals play a longer animation, so fixed sleeps desync. Poll
-  for the action row instead.
-- The capsule screen is online-only; a clock or network error blocks rolling.
-
-## Terms of service
-
-PONOS's terms prohibit "external tools which falsely manipulate the Service such
-as BOT and/or cheat tools". This project is one. Running it risks the account.
-
-## Data
-
-Cat pools and rarity weights come from godfat's `battle-cats-rolls` dataset,
-downloaded before every command and every run from the live page (offline, the
-copy saved is used). Only the current copy matters, so `data/bc-en.yaml` and
-`data/tiers.json` are not kept in git. The tests diff this engine against live
-bc.godfat.org output saved under `tests/fixtures`.
-
-
-## Modules
-
-| Module | Does |
+| Device | Status |
 |---|---|
-| `cli` | the `bcgacha` command: guided mode, status, search, plan, run, ui, tools |
-| `jobs` | a run as a list of tasks, the one thing both the CLI and the page start |
-| `console` | what a run says on the terminal |
-| `liveview` | the live page: the screen, what is recognised, and every section of a run |
-| `units` | find a unit by any name, nickname or id |
-| `goals` | what a run wants, in what order, and why |
-| `planner` | which banner at each position, and when to spend Platinum |
-| `scoring` | what an outcome is worth: new, tier, duplicate |
-| `pipeline` | the rare draw loop and its checks, storage, owned list, seed |
-| `capsules` | the normal machines: Cat Capsules and both Lucky Capsules |
-| `legends` | the Uncanny Legends, battle after battle, with the Cat CPU |
-| `prng` | xorshift32 forward and inverse |
-| `data` | godfat's dataset: cat pools, rarity weights, schedule |
-| `gacha` | positions, tracks, dupe rerolls, guaranteed ubers |
-| `seedfind` | brute-force seed recovery from observed rolls |
-| `seedpos` | seed and position from saved result screens |
-| `tiers` | community rankings, with nickname aliases |
-| `catindex` | reads the Cat Guide to learn what is owned |
-| `events` | the live gacha events, each a screen of the map, and which the phone shows |
-| `results` | the cat on a result screen, or "unsure" |
-| `digits` | counters off the screen, down to a lone Platinum digit |
-| `draw` | whether the draw button spends a ticket or Cat Food |
-| `session` | one persistent tunnel for taps and frames |
-| `device` | what the phone supports, and whether one is plugged in |
-| `uigraph` | the screen map, recognition, and the navigator |
-| `perception` | reading a screen with no templates: OCR and gold shapes |
-| `profile` | what one device has learned: title box, controls, Cat Base doors |
-| `bases` | which chapter a Cat Base belongs to, from its door |
-| `carousel` | the save's sagas and chapters, scanned into the map |
-| `bannerpick` | the capsule screen's event tabs |
-| `mapdraw` | draws the screen map, for the page and as its own page |
-| `layout` | the portrait/landscape rotation taps need |
-| `timing` | jittered, human-looking delays |
+| iPhone 16e (2532 x 1170 screen) | tested |
+| other iPhones with a 2532 x 1170 screen (12, 13, 14 and their Pro models) | same screen shape, expected to work |
+| other iPhones | expected to work, not yet tested |
+| iPad | expected to work for drawing, not yet tested; the battle players are least likely to |
 
-## When the position drifts
+bcgacha finds most buttons by reading the screen, so it adapts to each device
+on the first run. A few positions, mostly in the battle players, were measured
+on one phone. On a device with a screen shape nobody has tested yet, bcgacha
+says so before it starts. If you try one, please
+[report how it went](docs/howto/report-a-new-device.md), whether it worked or not.
 
-The saved position is the one thing that must stay true. Any roll made by hand
-leaves it behind, and every later prediction is then wrong. The run loop reads
-the cat off each result screen and stops the moment one disagrees with the plan.
+## Help
 
-Recovering does not need the seed finding again -- the seed has not changed,
-only the position. Give `resync` the cat that actually came out:
+- [Troubleshooting](docs/troubleshooting.md): what an error means and how to fix it
+- [All documentation](docs/README.md)
+- [Open an issue](https://github.com/NotEoin/battle-cats-automation/issues) if you are stuck
 
-    bcgacha tools resync --cat "Figure Skating Cats"
+## For developers
 
-It searches forward for the position that would have produced it and corrects
-the state, refusing when the answer is not unique.
+```
+git clone https://github.com/NotEoin/battle-cats-automation
+cd battle-cats-automation
+uv venv && uv pip install -e ".[test]"
+uv run pytest            # needs no phone and no network
+uv run ruff check .
+```
 
-## Known limitations
+The [developer guide](docs/developer-guide.md) explains how it works, and
+[CONTRIBUTING.md](CONTRIBUTING.md) how to send a change.
 
-The Cat Guide walk reads a name per entry with OCR, which mangles the odd
-letter on a stylised font. Matching is fuzzy and requires a clear winner, so a
-missed entry is recorded as unowned rather than guessed at -- the failure mode
-is chasing a cat you already have, never skipping one you do not.
+## Credits and licence
 
-Storage contents are not part of the index: a cat sitting in Cat Storage has
-not joined the roster yet and does not appear in the Guide as unlocked.
+The cat pools and the event schedule come from godfat's
+[battle-cats-rolls](https://gitlab.com/godfat/battle-cats-rolls) dataset,
+downloaded when bcgacha runs. Tier rankings come from the community list at
+[battlecatstierlist.com](https://www.battlecatstierlist.com). Talking to the
+phone is done by [pymobiledevice3](https://github.com/doronz88/pymobiledevice3).
 
-The seed position is the one piece of state that must stay correct. It lives in
-`state/account.json`, which is deliberately not committed. Losing it costs
-another ten tickets to rediscover.
+bcgacha is released under the [MIT License](LICENSE). It is not affiliated
+with PONOS or Apple; see [NOTICE](NOTICE).

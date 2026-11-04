@@ -15,10 +15,11 @@ dist/
 /logs/
 /data/
 
-# Game screenshots: never shipped
+# Game screenshots: never shipped, except the README's picture of the live page
 *.png
 *.jpg
 *.mp4
+!/media/live-page.png
 
 # Credentials and device pairing material
 secrets/
