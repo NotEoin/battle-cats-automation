@@ -504,6 +504,15 @@ def simulate(ctx: Context, account, owned, events, rare: int, platinum: int, pre
 
 # -- the run ------------------------------------------------------------------------
 
+def held_after_draw(held: int | None) -> int | None:
+    """The tickets an account holds after one draw spent one; None stays unknown.
+
+    Counted from what the account held, never from what is left of a run's
+    budget: a run asked to spend 1 of 7 tickets leaves 6 held, not 0.
+    """
+    return None if held is None else max(0, held - 1)
+
+
 @dataclass
 class RunState:
     """What a draw run has done so far, and why it stopped."""
@@ -758,9 +767,12 @@ class GoalRun:
                 self._advance(step.cat_id if verdict != "desync" else seen, step.reroll_steps)
             if verdict == "match":
                 self.account.confirmed = True
-            # What is left travels with the position, so a resumed run knows.
-            self.account.tickets, self.account.platinum_tickets = s.rare_left, s.platinum_left
             if verdict != "no draw":
+                # What is held travels with the position, so a resumed run knows.
+                if platinum:
+                    self.account.platinum_tickets = held_after_draw(self.account.platinum_tickets)
+                else:
+                    self.account.tickets = held_after_draw(self.account.tickets)
                 self.account.save()
         if verdict == "no draw":
             return "the draw tap had no effect; nothing was spent or moved"
